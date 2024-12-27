@@ -1,0 +1,22 @@
+QFrame#StandardFrame {
+    background-color: white;
+    border-radius: 4px;
+    }
+
+QFrame#TableFrame {
+    background-color: white;
+    border-radius: 4px;
+    }
+
+QFrame#ImageFrame {
+    background-color: white;
+    border-radius: 4px;
+    }
+
+QPushButton#PB_Table:menu-indicator {
+    width: 0px;
+}
+
+QLabel#Grey {
+    color: #a9a9a9;
+}

@@ -1,0 +1,24 @@
+version = "0.3.2"
+
+[General]
+Language = "de"
+DatabasePath = "db/lessondata.db"
+ScheduleAll = true
+
+[DateTime]
+DateFormat = "dd.MM.yyyy"
+TimeFormat = "HH:mm"
+
+[Files]
+Pinned = [
+    "D:/Dokumente/Deutschunterricht/Kurse/Sumitomo/Stunde 04.10.2022.docx",
+    "D:/Dokumente/Deutschunterricht/Kurse/Watanabe/Stunde 21.12.2022.docx",
+    "D:/Dokumente/Deutschunterricht/Kurse/Watanabe/Stunde 10.08.2022.docx",
+]
+LastUsed = [
+    "D:/Dokumente/Deutschunterricht/Kurse/Watanabe/Stunde 10.08.2022.docx",
+    "D:/Dokumente/Deutschunterricht/Kurse/A2.1 (I)/Stunde 11.11.2022.docx"
+]
+
+[Lesson]
+CustomElements = []

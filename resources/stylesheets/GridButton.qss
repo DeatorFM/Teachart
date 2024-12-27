@@ -1,0 +1,8 @@
+QWidget {
+    background-color: #ececec;
+    border: 1px solid white;
+}
+
+QWidget[hovered='true'] {
+    background-color: #75b4ec;
+}

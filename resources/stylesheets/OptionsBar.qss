@@ -1,0 +1,20 @@
+QFrame {
+    background-color: rgb(240, 240, 240);
+    border-color: #ffffff;
+}
+
+QPushButton {
+    background-color: #f0f0f0;
+    color: #606060;
+    border-style: plain
+}
+
+QPushButton:hover {
+    background-color: #a9a9a9;
+    color: white;
+}
+
+QPushButton:pressed {
+    background-color: #f0f0f0;
+    color: #606060
+}

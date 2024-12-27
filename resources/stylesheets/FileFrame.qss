@@ -1,0 +1,20 @@
+QFrame {
+    background-color: #ffffff;
+}
+
+QFrame:hover {
+    background-color: #ececec;
+}
+
+QFrame [clicked='false'] {
+    background-color: #a9a9a9;
+}
+
+QLabel {
+    background-color: rgba(255, 255, 255, 0);
+    color: #000000;
+}
+
+QCheckBox {
+    background-color: rgba(255, 255, 255, 0);
+}

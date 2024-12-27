@@ -1,0 +1,213 @@
+QMainWindow, QWidget {
+    background-color: white;
+}
+
+QTabBar:close-button {
+    image: url(icons:ic_close.svg)
+}
+
+QLabel#FileLabel {
+    color: #606060 ;
+}
+
+QComboBox {
+    border: 1px solid #a9a9a9;
+}
+
+QComboBox::down-arrow {
+    image: url(icons:ic_arrowdown.svg)
+}
+
+QDateTimeEdit {
+    border: 1px solid #a9a9a9;
+}
+
+QDateTimeEdit::down-arrow {
+    image: url(icons:ic_arrowdown.svg)
+}
+
+QCalendarWidget QToolButton {
+    color: black;
+}
+
+QCalendarWidget QMenu::item:selected {
+    background-color: #ececec;
+}
+
+QScrollArea {
+    background-color: #ffffff;
+}
+
+QScrollBar:vertical {
+    border: 0px solid grey;
+    background: none;
+    max-width: 15px;
+    margin: 20px 0px 20px 0px;
+}
+
+QScrollBar:handle:vertical {
+    background: #e4e4e4;
+    min-width: 15px;
+}
+
+QScrollBar:horizontal {
+    border: 0px solid grey;
+    background: none;
+    max-height: 15px;
+    margin: 0px 20px 0px 20px;
+}
+
+QScrollBar:handle:horizontal {
+    background: #e4e4e4;
+    min-width: 15px;
+}
+
+QScrollBar::up-arrow:vertical,
+QScrollBar::down-arrow:vertical,
+QScrollBar::left-arrow:horizontal,
+QScrollBar::right-arrow:horizontal {
+    width: 19px;
+    height: 19px;
+    background: none;
+
+}
+
+QScrollBar::up-arrow {
+    image: url(icons:ic_arrowup.svg);
+    background: none;
+}
+
+QScrollBar::up-arrow:pressed {
+    image: url(icons:ic_arrowup.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::down-arrow {
+    image: url(icons:ic_arrowdown.svg);
+    background: none;
+}
+
+QScrollBar::down-arrow:pressed {
+    image: url(icons:ic_arrowdown.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::right-arrow {
+    image: url(icons:ic_arrowrigeduc.svg);
+    background: none;
+}
+
+QScrollBar::right-arrow:pressed {
+    image: url(icons:ic_arrowrigeduc.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::left-arrow {
+    image: url(icons:ic_arrowleft.svg);
+    background: none;
+}
+
+QScrollBar::left-arrow:pressed {
+    image: url(icons:ic_arrowleft.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar::add-line:vertical {
+    border: 0px solid grey;
+    background: none;
+    height: 19px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+} 
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical, QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: white;
+} 
+
+QScrollBar::sub-line:vertical {
+    border: 0px solid grey;
+    background: none;
+    height: 19px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:horizontal {
+    border: 0px solid grey;
+    background: none;
+    width: 19px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+} 
+
+QScrollBar::sub-line:horizontal {
+    border: 0px solid grey;
+    background: none;
+    width: 19px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+
+QSpinBox, QTimeEdit {
+    border: 1px solid #a9a9a9;
+    background-color: rgba(255, 255, 255, 0);
+    }
+
+QSpinBox::up-arrow, QTimeEdit::up-arrow {
+    image: url(icons:ic_arrowup_fill.svg);
+    width: 10px;
+    height: 10px;
+    }
+
+QSpinBox::down-arrow, QTimeEdit::down-arrow {
+    image: url(icons:ic_arrowdown_fill.svg);
+    width: 10px;
+    height: 10px;
+    }
+
+QSpinBox::up-button, QSpinBox:down-button, QTimeEdit::up-button, QTimeEdit:down-button {
+    border: none;
+    background: none;
+}
+
+QSpinBox::up-button:hover, QSpinBox::down-button:hover, QTimeEdit::up-button:hover, QTimeEdit::down-button:hover {
+    background-color: #ececec;
+    }
+
+QSpinBox::up-button:pressed, QSpinBox::down-button:pressed, QTimeEdit::up-button:pressed, QTimeEdit::down-button:pressed {
+    background-color: #a9a9a9;
+    }
+
+QMenu {
+    background-color: #f0f0f0;
+}
+
+QMenu::item:selected {
+    background-color: #90c8f6;
+}
+
+QMenu::item:disabled {
+    color: #8393a4;
+}
+
+QMenu::item:disabled:selected {
+    background-color: #e4e4e4;
+}
+
+QFrame [focussed='true'] {
+    border: 3px solid #196ebf;
+    background: none;
+}
+
+QFrame#PictureElement [focussed='true']  {
+    border: 3px solid #196ebf;
+    background: none;
+}
+
+QTextEdit {
+    background-color: white;
+}
