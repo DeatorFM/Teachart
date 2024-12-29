@@ -1,14 +1,14 @@
 import sys
 
 from typing import Any
-from PyQt6.QtWidgets import QAbstractItemDelegate, QStyledItemDelegate, QStyleOptionViewItem, QTableView, QApplication, QWidget, QTextEdit, QHeaderView, QListView, QFrame, QSizePolicy, QAbstractItemView
-from PyQt6.QtCore import QAbstractItemModel, QEvent, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QRectF, QSize, QAbstractTableModel, QMargins, pyqtSignal
+from PyQt6.QtWidgets import QAbstractItemDelegate, QStyledItemDelegate, QStyleOptionViewItem, QTableView, QApplication, QWidget, QTextEdit, QHeaderView, QListView, QFrame, QSizePolicy, QAbstractItemView, QStyle
+from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QEvent, QSize, QAbstractTableModel, QMargins, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPaintEngine, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent
 from abc import abstractmethod
 
 """
 Probleme: 
-- Wenn das erste Element einer Zelle ein Bild und danach ein Text foltist, verschwindet der Text beim Aufrufen des Zelleneditors: Zeilenhöhe = Originalhöhe des Bildes
+- Editor der List Items öffnen nicht bei Click
 """
 
 HTML = """
@@ -94,30 +94,28 @@ class CellModel(QAbstractListModel):
 class SwitchDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         # option.rect = option.rect.marginsAdded(QMargins(-5, -5, -5, -5))
-        option.features = QStyleOptionViewItem.ViewItemFeature.None_
-        option.backgroundBrush.setColor(0)
         model = index.data()
-        print("Model:", model)
-        model.delegate().paint(painter, option, index)
+        model.delegate(self.parent()).paint(painter, option, index)
 
     def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
         print("Editor for list item created!")
-        return index.data().delegate().createEditor(parent, option, index)
+        return index.data().delegate(self.parent()).createEditor(parent, option, index)
     
     def updateEditorGeometry(self, editor: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         print("Editor geometry updated!")
-        index.data().delegate().updateEditorGeometry(editor, option, index)
+        index.data().delegate(self.parent()).updateEditorGeometry(editor, option, index)
+        self.sizeHintChanged
 
     def setEditorData(self, editor: QWidget | None, index: QModelIndex) -> None:
         print("Editor data set!")
-        index.data().delegate().setEditorData(editor, index)
+        index.data().delegate(self.parent()).setEditorData(editor, index)
 
     def setModelData(self, editor: QWidget | None, model: QAbstractItemModel | None, index: QModelIndex) -> None:
-        index.data().delegate().setModelData(editor, model, index)
+        index.data().delegate(self.parent()).setModelData(editor, model, index)
         print("Model data updated!", model)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        return index.data().delegate().sizeHint(option, index)
+        return index.data().delegate(self.parent()).sizeHint(option, index)
 
     def destroyEditor(self, editor: QWidget | None, index: QModelIndex) -> None:
         print("Editor destroyed!")
@@ -130,41 +128,30 @@ class CellEditor(QListView):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setItemDelegate(SwitchDelegate(self))
         self.setStyleSheet(ListViewStyleSheet)
-        self.setEditTriggers(QListView.EditTrigger.SelectedClicked)
+        self.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizeAdjustPolicy(QListView.SizeAdjustPolicy.AdjustToContents)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.setSelectionRectVisible(True)
         self.setItemAlignment(Qt.AlignmentFlag.AlignTop)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-
-        # self.itemDelegate().sizeHintChanged.connect(self.update_list_geometry)
 
         self._editor_just_destroyed = False
 
     def update_list_geometry(self) -> None:
-        print("QListView: geometry updated")
         self.geometriesChanged.emit()
         self.viewport().update()
 
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         pass
 
-    # def closeEditor(self, editor: QWidget | None, hint: QAbstractItemDelegate.EndEditHint) -> None:
-    #     # print("Closing editor!")
-    #     super().closeEditor(editor, hint)
-    #     self.geometriesChanged.emit()
-    #     self._editor_just_destroyed = True
-
     def editorDestroyed(self, editor: QObject | None) -> None:
         self.geometriesChanged.emit()
         super().editorDestroyed(editor)
         self._editor_just_destroyed = True
-        self.scrollToTop()
+        # self.scrollToTop()
 
     def paintEvent(self, e: QPaintEvent | None) -> None:
         # print("painting list")
@@ -180,9 +167,29 @@ class CellEditor(QListView):
 
     def mousePressEvent(self, e):
         pos = e.pos()
-        i = self.indexAt(pos)
-        print(f"Index of clicked list item is {i.row()} | {i.column()} with rect height {self.rectForIndex(i).height()} compared to expected height {self.model().expected_cell_height(self.width())}")
-        super().mousePressEvent(e)#
+        index = self.indexAt(pos)
+        if index.isValid():
+            self.openPersistentEditor(index)
+            self.setCurrentIndex(index)
+            print("Clicked on valid index")
+        else:
+            print("Unvalid index")
+            self.closePersistentEditor(self.currentIndex())
+            self.clearSelection()
+        print(f"Index of clicked list item is {index.row()} | {index.column()} with rect height {self.rectForIndex(index).height()} compared to expected height {self.model().expected_cell_height(self.width())}")
+        super().mousePressEvent(e)
+    
+    def itemDelegateForIndex(self, index):
+        if index.isValid():
+            model = self.model().data(index)
+            delegate = model.delegate(self)
+            delegate.sizeHintChanged.connect(self.update_list_geometry)
+            return delegate
+        
+    # def focusOutEvent(self, e):
+    #     self.close()
+    #     print("Focussed out")
+    #     super().focusOutEvent(e)
 
     def sizeHint(self) -> QSize:
         return QSize(self.width(), self.model().expected_cell_height(self.width()))
@@ -190,23 +197,27 @@ class CellEditor(QListView):
 
 class TextDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
-        data = index.data()
+        data: QTextDocument = index.data()
         painter.save()
-        data.setTextWidth(float(option.rect.width()))
+
+        style = option.widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
+        print("Text width", option.rect.width())
         painter.translate(option.rect.topLeft())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         data.drawContents(painter)
         painter.restore()
-        super().paint(painter, option, index)
 
     def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
         print("Text Editor Created")
         editor = QTextEdit(parent)
-        editor.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        editor.setStyleSheet("background: none;")
         editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         editor.textChanged.connect(lambda: self.fit_to_text(editor, option, index))
         editor.setContentsMargins(3, 3, 3, 3)
+        editor.setFocus()
         return editor
     
     def setEditorData(self, editor: QTextEdit | None, index: QModelIndex) -> None:
@@ -222,47 +233,51 @@ class TextDelegate(QStyledItemDelegate):
         document = editor.document()
         docHeight = document.size().height()
         if 0 <= docHeight:
-            editor.setFixedHeight(int(docHeight) + 10)
+            editor.setFixedHeight(int(docHeight) + editor.currentFont().pixelSize() + 5)
         self.sizeHintChanged.emit(index)
         index.model().dataChanged.emit(index, index)
 
-    def destroyEditor(self, editor: QWidget | None, index: QModelIndex) -> None:
-        print("Editor destroyed!")
-        self.closeEditor.emit(editor)
-        super().destroyEditor(editor, index)
+    # def destroyEditor(self, editor: QWidget | None, index: QModelIndex) -> None:
+    #     print("Editor destroyed!")
+    #     self.closeEditor.emit(editor)
+    #     super().destroyEditor(editor, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         return index.data().expected_size(option.rect.width())
     
 class TextModel(QTextDocument, BaseModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setDocumentMargin(3.0)
+
     def editor(self) -> QWidget:
         return QTextEdit()
     
     def expected_size(self, width: int) -> QSize:
         self.setTextWidth(float(width))
         size = self.size().toSize()
-        print("Model's text height", size.height(), "with width", size.width())
+        print("Model's text height", size.height(), "with width", width)
         return size
     
     def editable(self) -> bool:
         return True
     
-    def delegate(self) -> TextDelegate:
-        return TextDelegate()
+    def delegate(self, parent: QWidget) -> TextDelegate:
+        return TextDelegate(parent)
     
 class ImageModel(BaseModel):
     def __init__(self, path: str) -> None:
         self.pixmap = QPixmap(path)
 
-    def delegate(self) -> QStyledItemDelegate:
-        return ImageDelegate()
+    def delegate(self, parent: QWidget) -> QStyledItemDelegate:
+        return ImageDelegate(parent)
     
     def editor(self) -> QWidget | None:
         return None
     
     def expected_size(self, width: int) -> QSize:
         size = self.pixmap.scaledToWidth(width).size()
-        print("Model's image height", size.height(), "with width", width)
+        # print("Model's image height", size.height(), "with width", width)
         return size
     
     def editable(self) -> bool:
@@ -272,13 +287,16 @@ class ImageDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         # print("Paint Image")
         painter.save()
+
+        style = option.widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
         image = index.data().pixmap
         image = image.scaledToWidth(option.rect.width(), Qt.TransformationMode.FastTransformation)
         option.rect = QRect(option.rect.x(), option.rect.y(), image.width(), image.height())
-        print("Image rect in row", index.row(), "is", option.rect.width(), option.rect.height())
+        # print("Image rect in row", index.row(), "is", option.rect.width(), option.rect.height())
         painter.drawPixmap(option.rect, image)
         painter.restore()
-        super().paint(painter, option, index)
 
     def createEditor(self, parent, option, index):
         return None
@@ -292,7 +310,6 @@ class CellDelegate(QStyledItemDelegate):
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
         self.extra_emit = False
-        self.editor_opened = False
 
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         # print("Paint complete cell")
@@ -301,43 +318,44 @@ class CellDelegate(QStyledItemDelegate):
         # print("Initial y offset", y_offset)
         # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
         # print("State", index.row(), index.column(), option.state)
-        cell_models = index.data()
+        cell = index.data()
+        sub_option = QStyleOptionViewItem(option)
         # print(cell_models)
-        if cell_models:
-            # print("Let's paint!")
-            for i, model in enumerate(cell_models):
+        if cell:
+            for i, model in enumerate(cell):
                 # print(model)
-                sub_option = QStyleOptionViewItem(option)
-                sub_option.rect = QRect(QPoint(option.rect.x(), option.rect.y() + y_offset), model.expected_size(option.rect.width()))
-                model.delegate().paint(painter, sub_option, cell_models.index(i))
+                print("Cell width", option.rect.width())
+                sub_option.rect = QRect(QPoint(option.rect.x(), option.rect.y() + y_offset), QSize(option.rect.width(), model.expected_size(option.rect.width()).height()))
+                model.delegate(self.parent()).paint(painter, sub_option, cell.index(i))
                 y_offset += model.expected_size(option.rect.width()).height()
                 # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
-        cell_models.height = y_offset + 5
+        cell.height = y_offset + 5
         if self.extra_emit:
             self.sizeHintChanged.emit(index)
-            self.extra_emit = False
-        print(f"Final Cell {index.row()} | {index.column()} height", y_offset)
+            self.extra_emit = False        
 
     def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
         print("Editor for cell items created")
         editor = CellEditor(parent)
         editor.geometriesChanged.connect(lambda: self.sizeHintChanged.emit(index))
-        self.editor_opened = True
+        editor.setFocus()
         return editor
     
     def updateEditorGeometry(self, editor: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         option.rect = option.rect.marginsAdded(QMargins(-5, -5, -5, -5))
         print(f"List's dimensions: {option.rect.width()} | {option.rect.height()}")
-        editor.setGeometry(option.rect)
+        if editor.geometry() != option.rect:
+            editor.setGeometry(option.rect)
+            editor.viewport().update()
     
     def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
         if editor:
-            editor.setModel(index.data())
+            editor.setModel(index.data())  
 
-    def destroyEditor(self, editor: QWidget | None, index: QModelIndex) -> None:
-        self.editor_opened = False
-        self.closeEditor.emit(editor)
-        super().destroyEditor(editor, index)    
+    def editorEvent(self, event, model, option, index):
+        if event.type() == QEvent.Type.MouseButtonPress:
+            print("Mouse pressed on cell")
+        return super().editorEvent(event, model, option, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         return QSize(option.rect.width(), index.data().expected_cell_height(option.rect.width()))
@@ -350,9 +368,9 @@ class Table(QTableView):
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setItemDelegate(CellDelegate(self))
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.verticalHeader().sectionResized.connect(self.update)
         self.horizontalHeader().setMinimumSectionSize(100)
-        self.horizontalHeader().sectionResized.connect(self.verticalHeader().resizeSections)
+        self.horizontalHeader().sectionResized.connect(self.close_all)
+        self.horizontalHeader().sectionResized.connect(self.check_section_size)
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)      
 
@@ -367,35 +385,53 @@ class Table(QTableView):
         else:
             return 30
 
+    def sizeHintForColumn(self, column: int) -> int:
+        if self.model():
+            return self.horizontalHeader().sectionSize(column)
+        else:
+            return 100
+
     def setModel(self, model: QAbstractItemModel | None) -> None:
         super().setModel(model)
         self._model_just_set = True
         self.model().dataChanged.connect(self.set_extra_emit)
+        self.update_row_geometries()
 
     def set_extra_emit(self):
         self.itemDelegate().extra_emit = True
 
-    def paintEvent(self, e: QPaintEvent | None) -> None:
-        super().paintEvent(e)
-        self.update_row_geometries()
-        # if self._model_just_set:
-        #     self._model_just_set = False
-        #     self.update_row_geometries()
-        #     self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-            
-    
-    def update_row_geometries(self) -> None:
-        print("Row geometries adjusted!")
-        print("Row sizes are", [self.verticalHeader().sectionSize(self.verticalHeader().logicalIndex(i)) for i in range(self.model().rowCount())])
+    def paintEvent(self, e):
         self.verticalHeader().resizeSections()
-        
-    
-    # def wheelEvent(self, a0: QWheelEvent | None) -> None:
-    #     self.update()
-    #     super().wheelEvent(a0)
+        super().paintEvent(e)
+            
+    def update_row_geometries(self) -> None:
+        self.update()
+        self.viewport().update()
+        print("Viewport updated")
+
+    def close_all(self) -> None:
+        self.closePersistentEditor(self.currentIndex())
+        self.clearSelection()
+
+    def check_section_size(self, logicalIndex, old, new) -> None:
+        print("Section size at", logicalIndex, "changed to", new)
+
+    def mousePressEvent(self, e):
+        index = self.indexAt(e.pos())
+        if index.isValid():
+            self.edit(index)
+            self.setCurrentIndex(index)
+            print("Clicked cell:", index.row(), index.column())
+        else:
+            print("Click outside of cell with current Index", )
+            self.closePersistentEditor(self.currentIndex())
+            self.clearSelection()
+            return
+        super().mousePressEvent(e)
 
     def closeEditor(self, editor: QWidget | None, hint: QAbstractItemDelegate.EndEditHint) -> None:
-        super().closeEditor(editor, hint)
+        print("An editor has been closed", editor)
+        super().closeEditor(editor, QAbstractItemDelegate.EndEditHint.NoHint)
         self.verticalHeader().resizeSections()
 
 class TableModel(QAbstractTableModel):
@@ -420,7 +456,6 @@ class TableModel(QAbstractTableModel):
                 column_list.append(cell)
             data.append(column_list)
         self._data = data
-
     
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         # print("Index called!")
