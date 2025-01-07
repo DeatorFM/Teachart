@@ -40,6 +40,7 @@ class HeaderView(QtWidgets.QHeaderView):
         self._last_section = 0
 
         self.setSectionsClickable(True)
+        self.setHighlightSections(True)
         self.line_edit.hide()
         self.line_edit.editingFinished.connect(self.on_editing_finished)
         self.sectionDoubleClicked.connect(self.activate_editor)
@@ -95,6 +96,8 @@ class HeaderView(QtWidgets.QHeaderView):
             rect = self.rect()
             pos = self.sectionPosition(section)
             self.line_edit.setGeometry(rect.x() + pos, rect.y(), self.sectionSize(section), rect.height())
+
+    
 
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()

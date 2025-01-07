@@ -266,7 +266,7 @@ class TableModel(QtCore.QAbstractTableModel):
                 self.headerDataChanged.emit(orientation, section, section)
                 return True
             else:
-                raise TypeError
+                return False
             
         except (IndexError, TypeError):
             return False
