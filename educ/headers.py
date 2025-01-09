@@ -86,6 +86,7 @@ class HeaderView(QtWidgets.QHeaderView):
             source_mindex = self.model().index(source, 0)
             destination_mindex = self.model().index(destination, 0)
             self.model().moveRow(source_mindex, source, destination_mindex, destination)
+        self.headerDataChanged.emit()
 
     def activate_editor(self, section: int) -> None:
         if self.orientation() == QtCore.Qt.Orientation.Horizontal:
@@ -96,8 +97,6 @@ class HeaderView(QtWidgets.QHeaderView):
             rect = self.rect()
             pos = self.sectionPosition(section)
             self.line_edit.setGeometry(rect.x() + pos, rect.y(), self.sectionSize(section), rect.height())
-
-    
 
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()

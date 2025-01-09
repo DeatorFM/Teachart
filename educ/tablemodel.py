@@ -200,7 +200,7 @@ class TableModel(QtCore.QAbstractTableModel):
         
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
         try:
-            self.beginMoveRows(sourceParent, sourceRow, sourceRow+count, destinationParent, destinationChild)
+            self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)
             self._data.insert(destinationChild, self._data.pop(sourceRow))
             self._header_data[QtCore.Qt.Orientation.Vertical].insert(destinationChild, self._header_data[QtCore.Qt.Orientation.Vertical].pop(sourceRow))
             print("Ended Move Operation successfully")

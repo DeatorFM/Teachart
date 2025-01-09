@@ -1,21 +1,20 @@
-from email import header
 import sys
 import random
 
 from typing import Any
 from PyQt6.QtWidgets import QAbstractItemDelegate, QStyledItemDelegate, QStyleOptionViewItem, QTableView, QApplication, QWidget, QTextEdit, QHeaderView, QListView, QFrame, QSizePolicy, QAbstractItemView, QStyle, QMenu, QLineEdit, QStyleOptionHeader
-from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QEvent, QSize, QAbstractTableModel, QDataStream, pyqtSignal, QIODevice
+from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QEvent, QSize, QAbstractTableModel, QDataStream, pyqtSignal, QIODevice, QByteArray
 from PyQt6.QtGui import QMouseEvent, QAction, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent, QPen, QFont
 from abc import abstractmethod
+from dataclasses import dataclass, field
 
 """
 Probleme: 
-    - Header zeigen kein Text
 """
 
 """
 Aufgaben:
-    - DragandDrop für Header
+    - DragundDrop im CellEditor
     - AudioElement -> Delegate programmieren
 """
 
@@ -100,6 +99,9 @@ class CellModel(QAbstractListModel):
         
     def flags(self, index: QModelIndex):
         return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+    
+    def __str__(self):
+        return str(self._data)
 
 class SwitchDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
@@ -360,7 +362,7 @@ class CellDelegate(QStyledItemDelegate):
         self.extra_emit = False
 
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
-        # print("Paint complete cell")
+        print("Paint complete cell")
         y_offset = 0
         # print("Initial y offset", y_offset)
         # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
@@ -413,13 +415,19 @@ class HeaderView(QHeaderView):
         super().__init__(orientation, parent)
         self.line_edit = QLineEdit(self)
         self._last_section = 0
+        self._state = QByteArray()
 
         self.setSectionsClickable(True)
         self.setHighlightSections(True)
         self.setStretchLastSection(False)
+        self.setSectionsMovable(True)
         self.line_edit.hide()
+
         self.line_edit.editingFinished.connect(self.on_editing_finished)
         self.sectionDoubleClicked.connect(self.activate_editor)
+        self.sectionPressed.connect(self.remember)
+        self.sectionMoved.connect(self.on_section_moved)
+        self.sectionResized.connect(self.on_section_resized)
 
         self.setStyleSheet("QHeaderView::section {color: black;}")
 
@@ -442,10 +450,31 @@ class HeaderView(QHeaderView):
             pos = self.sectionPosition(section)
             self.line_edit.setGeometry(rect.x() + pos, rect.y(), self.sectionSize(section), rect.height())
 
+    def on_section_resized(self, logicalIndex: int, oldSize: int, newSize: int) -> None:
+        if self.orientation() == Qt.Orientation.Horizontal:
+            self.model().setHeaderData(self.visualIndex(logicalIndex), self.orientation(), QSize(newSize, 30), Qt.ItemDataRole.SizeHintRole)
+    
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()
         self.model().setHeaderData(self._last_section, self.orientation(), text, Qt.ItemDataRole.DisplayRole)
         self.line_edit.hide()
+
+    def on_section_moved(self, section: int, source: int, destination: int):
+        print("Move", source, "to", destination)
+        self.restoreState(self._state)
+        if self.orientation() == Qt.Orientation.Horizontal:
+            self.model().moveColumn(QModelIndex(), source, QModelIndex(), destination)
+        else:
+            self.model().moveRow(QModelIndex(), source, QModelIndex(), destination)
+
+        if self.orientation() == Qt.Orientation.Horizontal:
+            for i in range(self.model().columnCount()):
+                qsize = self.model().headerData(i, self.orientation(), Qt.ItemDataRole.SizeHintRole)
+                self.resizeSection(self.logicalIndex(i), qsize.width())
+
+    def remember(self) -> None:
+        print("State stored")
+        self._state = self.saveState()
 
 class Table(QTableView):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -458,6 +487,8 @@ class Table(QTableView):
         self.setDragDropMode(QTableView.DragDropMode.DragDrop)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
+        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection) 
 
         self.setItemDelegate(CellDelegate(self))
 
@@ -465,9 +496,8 @@ class Table(QTableView):
         self.setVerticalHeader(HeaderView(Qt.Orientation.Vertical, self))  
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.horizontalHeader().sectionResized.connect(self.close_all)
-        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)      
+        self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
+        self.horizontalHeader().sectionResized.connect(self.close_all)     
 
         self.setStyleSheet(TableViewStyleSheet)
 
@@ -485,22 +515,18 @@ class Table(QTableView):
 
     def sizeHintForRow(self, row: int) -> int:
         if self.model():
-            return self.model().expected_row_height(self.verticalHeader().visualIndex(row))
+            return self.model().expected_row_height(row)
         else:
             return 30
 
-    def sizeHintForColumn(self, column: int) -> int:
-        if self.model():
-            return self.horizontalHeader().sectionSize(column)
-        else:
-            return 100
-
     def setModel(self, model: QAbstractItemModel | None) -> None:
         super().setModel(model)
-        # self.horizontalHeader().setModel(model)
-        # self.verticalHeader().setModel(model)
+        self.horizontalHeader().setModel(model)
+        self.verticalHeader().setModel(model)
         self._model_just_set = True
         self.model().dataChanged.connect(self.set_extra_emit)
+        self.model().columnsMoved.connect(self.update_row_geometries)
+        self.model().rowsMoved.connect(self.update_row_geometries)
         self.update_row_geometries()
 
     def set_extra_emit(self):
@@ -609,11 +635,27 @@ class Table(QTableView):
         super().closeEditor(editor, QAbstractItemDelegate.EndEditHint.NoHint)
         self.verticalHeader().resizeSections()
 
+@dataclass
+class HeaderDataItem:
+    orientation: Qt.Orientation
+    section_size: int
+    editable: bool = field(default=True)
+    text: str = field(default="")
+
+    @classmethod
+    def horizontal(cls) -> "HeaderDataItem":
+        return cls(Qt.Orientation.Horizontal, 100)
+
+    @classmethod
+    def vertical(cls) -> "HeaderDataItem":
+        return cls(Qt.Orientation.Vertical, 30, False)
+
 class TableModel(QAbstractTableModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._data: list[list[CellModel]]
-        self._header_data: dict[Qt.Orientation, list[str]] = {Qt.Orientation.Horizontal: [], Qt.Orientation.Vertical: []}
+        self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {Qt.Orientation.Horizontal: [], Qt.Orientation.Vertical: []}
+        self.header_index: tuple[int, int] = (0, 0)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -624,9 +666,8 @@ class TableModel(QAbstractTableModel):
     def supportedDropActions(self):
         return Qt.DropAction.MoveAction
     
-    def initiate_table(self, rows: int, columns: int):
+    def new(self, rows: int, columns: int):
         data = []
-        header_data = [""] * columns
         for row in range(rows):
             column_list = []
             for column in range(columns):
@@ -636,7 +677,8 @@ class TableModel(QAbstractTableModel):
                 column_list.append(cell)
             data.append(column_list)
         self._data = data
-        self._header_data[Qt.Orientation.Horizontal] = header_data
+        self._header_data[Qt.Orientation.Horizontal] = [HeaderDataItem.horizontal() for i in range(columns)]
+        self._header_data[Qt.Orientation.Vertical] = [HeaderDataItem.vertical() for i in range(rows)]
     
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         # print("Index called!")
@@ -644,34 +686,52 @@ class TableModel(QAbstractTableModel):
         
     def data(self, index: QModelIndex, role: int = ...) -> Any:
         return self._data[index.row()][index.column()] 
+    
+    def header_count(self, orientation: Qt.Orientation) -> int:
+        if orientation == Qt.Orientation.Horizontal:
+            return self.columnCount()
+        else:
+            return self.rowCount()
         
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                if self._header_data[orientation][section]:
-                    return self._header_data[orientation][section]
-                return str(section + 1)
-            elif orientation == Qt.Orientation.Vertical:  
-                return str(section + 1) 
-        elif role == Qt.ItemDataRole.FontRole:
-            font = QFont()
-            font.setFamily("Segoe UI Semibold")
-            return font
-        elif role == Qt.ItemDataRole.TextAlignmentRole:
-            return Qt.AlignmentFlag.AlignCenter  
+        try:
+            if role == Qt.ItemDataRole.DisplayRole:
+                if self._header_data[orientation][section].text:
+                    return self._header_data[orientation][section].text
+                else:
+                    return str(section + 1)
+            elif role == Qt.ItemDataRole.FontRole:
+                font = QFont()
+                font.setFamily("Segoe UI Semibold")
+                return font
+            elif role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignCenter  
+            elif role == Qt.ItemDataRole.SizeHintRole:
+                if orientation == Qt.Orientation.Horizontal:
+                    return QSize(self._header_data[orientation][section].section_size, 30)
+        except IndexError:
+            pass
 
-    def setHeaderData(self, section, orientation, value, role = ...):
-        if role is Qt.ItemDataRole.DisplayRole and isinstance(value, str):
-            self._header_data[orientation][section] = value
-            self.headerDataChanged.emit(orientation, section, section)
-            return True
-        else:
+    def setHeaderData(self, section, orientation, value, role = ...) -> bool:
+        try:
+            if role == Qt.ItemDataRole.DisplayRole and isinstance(value, str):
+                self._header_data[orientation][section].text = value
+                self.headerDataChanged.emit(orientation, section, section)
+                return True
+            elif role == Qt.ItemDataRole.SizeHintRole and isinstance(value, QSize):
+                self._header_data[orientation][section].section_size = value.width()
+                self.headerDataChanged.emit(orientation, section, section)
+                return True
+            else:
+                return False
+        except IndexError:
             return False
         
     def insertRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         try:
             self.beginInsertRows(QModelIndex(), row, row)
             self._data.insert(row, [CellModel(self) for _ in range(self.columnCount())])
+            self._header_data[Qt.Orientation.Vertical].insert(row, HeaderDataItem.vertical())
             self.endInsertRows()
             return True
         except IndexError:
@@ -682,6 +742,7 @@ class TableModel(QAbstractTableModel):
             self.beginInsertColumns(parent, column, column)
             for row in self._data:
                 row.insert(column, CellModel(self))
+            self._header_data[Qt.Orientation.Horizontal].insert(column, HeaderDataItem.horizontal())
             self.endInsertColumns()
             return True
         except IndexError:
@@ -693,6 +754,7 @@ class TableModel(QAbstractTableModel):
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
             del self._data[row]
+        del self._header_data[Qt.Orientation.Vertical][row]
         self.endRemoveRows()
         return True
 
@@ -703,31 +765,47 @@ class TableModel(QAbstractTableModel):
         for row in self._data:
             for _ in range(count):
                 del row[column]
+        del self._header_data[Qt.Orientation.Horizontal][column]
         self.endRemoveColumns()
         return True
-    
+
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
         try:
-            self.beginMoveRows(sourceParent, sourceRow, sourceRow+count, destinationParent, destinationChild)
-            self._data.insert(destinationChild, self._data.pop(sourceRow))
-            self._header_data[Qt.Orientation.Vertical].insert(destinationChild, self._header_data[Qt.Orientation.Vertical].pop(sourceRow))
-            print("Ended Move Operation successfully")
+            if sourceRow > destinationChild:  
+                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)
+                adjust = 0
+            else:
+                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild + 1)
+                adjust  = 0
+            self._data.insert(destinationChild + adjust, self._data.pop(sourceRow))
+            self._header_data[Qt.Orientation.Vertical].insert(destinationChild + adjust, self._header_data[Qt.Orientation.Vertical].pop(sourceRow))
             self.endMoveRows()
+            print("Moved row", sourceRow, "to", destinationChild, "successfully")
+            print("Table now:\n", self)
+            print("Headers:", self._header_data)
             return True
         except IndexError:
             return False
         
     def moveColumns(self, sourceParent: QModelIndex, sourceColumn: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
         try:
-            self.beginMoveColumns(sourceParent, sourceColumn, sourceColumn+count, destinationParent, destinationChild)
+            if sourceColumn > destinationChild: 
+                self.beginMoveColumns(sourceParent, sourceColumn, sourceColumn + count - 1, destinationParent, destinationChild)
+                adjust = 0
+            else:
+                self.beginMoveColumns(sourceParent, sourceColumn, sourceColumn + count - 1, destinationParent, destinationChild + 1)
+                adjust = 0
             for row in self._data:
-                row.insert(destinationChild, row.pop(sourceColumn))
-            self._header_data[Qt.Orientation.Horizontal].insert(destinationChild, self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn))
+                row.insert(destinationChild + adjust, row.pop(sourceColumn))
+            self._header_data[Qt.Orientation.Horizontal].insert(destinationChild + adjust, self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn))
             self.endMoveRows()
+            print("Moved column", sourceColumn, "to", destinationChild, "successfully")
+            print("Table now:\n", self)
+            print("Headers:", self._header_data)
             return True
         except IndexError:
             return False
-    
+
     def canDropMimeData(self, data, action, row, column, parent):
         if action == Qt.DropAction.IgnoreAction:
             return False
@@ -783,14 +861,18 @@ class TableModel(QAbstractTableModel):
     
     def flags(self, index):
         return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsDropEnabled | Qt.ItemFlag.ItemIsDragEnabled   
+    
+    def __str__(self):
+        l = ""
+        for row in self._data:
+            l += str(row) + "\n"
+        return l
 
-def create_table(row: int, column: int) -> list[list[CellModel]]:
-    return [[CellModel() for _ in range(column)] for _ in range(row)]
 
 def test_routine(table: Table) -> None:
     # print(raw_model)
     model = TableModel()
-    model.initiate_table(3, 5)
+    model.new(3, 5)
     cell = model.data(model.index(0, 2))
     text_model = TextModel()
     text_model.setHtml(HTML)
