@@ -3,10 +3,11 @@ import random
 
 from typing import Any
 from PyQt6.QtWidgets import QAbstractItemDelegate, QStyledItemDelegate, QStyleOptionViewItem, QTableView, QApplication, QWidget, QTextEdit, QHeaderView, QListView, QFrame, QSizePolicy, QAbstractItemView, QStyle, QMenu, QLineEdit, QStyleOptionHeader
-from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QEvent, QSize, QAbstractTableModel, QDataStream, pyqtSignal, QIODevice, QByteArray
-from PyQt6.QtGui import QMouseEvent, QAction, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent, QPen, QFont
+from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, QAbstractListModel, QRect, QEvent, QSize, QAbstractTableModel, QDataStream, pyqtSignal, QIODevice, QByteArray, QMimeData
+from PyQt6.QtGui import QMouseEvent, QAction, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent, QPen, QFont, QDrag, QCursor
 from abc import abstractmethod
 from dataclasses import dataclass, field
+from elements.audioelement import AudioModel
 
 """
 Probleme: 
@@ -57,6 +58,7 @@ class CellModel(QAbstractListModel):
         self._data: list[BaseModel] = []
         self.rects: list[QRect] = []
         self.height: int = 30
+        self.cell_index = (-1, -1)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -68,6 +70,11 @@ class CellModel(QAbstractListModel):
     def remove_model(self, i: int) -> None:
         self._data.pop(i)
         self.dataChanged.emit(self.index(0), self.index(len(self._data) - 1))
+
+    def pop_model(self, row: int) -> BaseModel:
+        model = self._data.pop(row)
+        self.layoutChanged.emit()
+        return model
 
     def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
         return self.createIndex(row, column)
@@ -83,7 +90,59 @@ class CellModel(QAbstractListModel):
         else:
             print("The data could not be saved into model.")
             return False
+
+    def mimeData(self, indexes):
+        mimedata = QMimeData()
+        encoded_data = QByteArray()
+        stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
+
+        # Write source info
+        index = indexes[0]
+        stream.writeInt32(self.cell_index[0])    # Table row
+        stream.writeInt32(self.cell_index[1])    # Table column
+        stream.writeInt32(index.row())           # Item index in cell
+        stream.writeInt32(1)                     # map_items
+        stream.writeQString('CellEditor')        # Source identifier
+
+        mimedata.setData('application/x-qabstractitemmodeldatalist', encoded_data)
+        return mimedata
+
+    def dropMimeData(self, data, action, row, column, parent):
+        if not data.hasFormat('application/x-qabstractitemmodeldatalist'):
+            return False
+
+        encoded_data = data.data('application/x-qabstractitemmodeldatalist')
+        stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
         
+        source_table_row = stream.readInt32()
+        source_table_column = stream.readInt32()
+        source_item_row = stream.readInt32()
+        map_items = stream.readInt32()
+        source_type = stream.readQString()
+        
+        if source_type != 'CellEditor':
+            return False
+            
+        # If same cell, move rows internally
+        if (source_table_row, source_table_column) == self.cell_index:
+            return self.moveRows(QModelIndex(), source_item_row, 1, 
+                            QModelIndex(), parent.row())
+                           
+        return False
+
+    def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
+        try:
+            if sourceRow > destinationChild:
+                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)
+            else:
+                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild + 1)
+            
+            self._data.insert(destinationChild, self._data.pop(sourceRow))
+            self.endMoveRows()
+            return True
+        except IndexError:
+            return False
+
     def __iter__(self):
         return iter(self._data)
 
@@ -147,10 +206,16 @@ class CellEditor(QListView):
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizeAdjustPolicy(QListView.SizeAdjustPolicy.AdjustToContents)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        # self.setItemAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
+        self.setDragEnabled(True)
+        self.setDragDropMode(QListView.DragDropMode.InternalMove)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+
         self._editor_just_destroyed = False
+        self._drag_start_position: QPoint | None = None
 
         # Create context menu
         self.context_menu = QMenu(self)
@@ -193,7 +258,28 @@ class CellEditor(QListView):
         image_model = ImageModel(random.choice(["D:/Bilder/312WEQ3JPPL.jpg", "D:/Bilder/Herzstich.png", "D:/Bilder/Perfume_JPN.jpg", "D:/Bilder/pngwing.com.png"]))
         self.model().add_model(image_model)
 
-    def mousePressEvent(self, e):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_position = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.MouseButton.LeftButton):
+            return
+            
+        if not self._drag_start_position:
+            return
+            
+        if (event.pos() - self._drag_start_position).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        drag = QDrag(self)
+        mime_data = self.model().mimeData([self.currentIndex()])
+        drag.setMimeData(mime_data)
+        
+        drag.exec(Qt.DropAction.MoveAction)
+
+    def mouseReleaseEvent(self, e) -> None:
         pos = e.pos()
         index = self.indexAt(pos)
         if e.button() == Qt.MouseButton.LeftButton:
@@ -209,9 +295,9 @@ class CellEditor(QListView):
         elif e.button() == Qt.MouseButton.RightButton:
             self.context_menu.exec(self.mapToGlobal(pos))
         print(f"Index of clicked list item is {index.row()} | {index.column()} with rect height {self.rectForIndex(index).height()} compared to expected height {self.model().expected_cell_height(self.width())}")
-        super().mousePressEvent(e)
+        super().mouseReleaseEvent(e)
     
-    def itemDelegateForIndex(self, index):
+    def itemDelegateForIndex(self, index) -> QStyledItemDelegate:
         if index.isValid():
             model = self.model().data(index)
             delegate = model.delegate(self)
@@ -276,6 +362,9 @@ class TextDelegate(QStyledItemDelegate):
             editor.setFixedHeight(int(docHeight) + editor.currentFont().pixelSize() + 5)
         self.sizeHintChanged.emit(index)
         index.model().dataChanged.emit(index, index)
+
+    def passthru(self) -> bool:
+        return False
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         size = index.data().expected_size(option.rect.width() - 10)
@@ -347,12 +436,18 @@ class ImageDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         return None
 
+    def passthru(self) -> None:
+        False
+
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         image: QPixmap = index.data().pixmap
         image = image.scaledToWidth(option.rect.width() - 10)
         size = image.rect().size()
         size.setHeight(size.height() + 10)
         return QSize(option.rect.width(), size.height())
+    
+    def can_pass_through(self) -> bool:
+        return False
         
 class CellDelegate(QStyledItemDelegate):
     editorOpened = pyqtSignal(QListView)
@@ -367,6 +462,8 @@ class CellDelegate(QStyledItemDelegate):
         # print("Initial y offset", y_offset)
         # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
         # print("State", index.row(), index.column(), option.state)
+        mouse_pos = QCursor.pos()
+        print("Mouse position", mouse_pos)
         if option.rect.width() < 140 and option.rect.width() > 135:
             # Text display problems between 125 and 130 to fix
             option.rect.setWidth(140)
@@ -396,6 +493,11 @@ class CellDelegate(QStyledItemDelegate):
         self.editorOpened.emit(editor)
         return editor
     
+    def editorEvent(self, event, model, option, index):
+        if event.type() == event.Type.MouseButtonPress:
+            print("I've been clicked at", event.pos())
+        return super().editorEvent(event, model, option, index)
+    
     def updateEditorGeometry(self, editor: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         print(f"List's dimensions: {option.rect.width()} | {option.rect.height()}")
         if editor.geometry() != option.rect:
@@ -404,7 +506,8 @@ class CellDelegate(QStyledItemDelegate):
     
     def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
         if editor:
-            editor.setModel(index.data())  
+            editor.setModel(index.data())
+            editor.model().cell_index = (index.row(), index.column())  
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         return QSize(option.rect.width(), index.data().expected_cell_height(option.rect.width()))
@@ -489,6 +592,7 @@ class Table(QTableView):
         self.setDropIndicatorShown(True)
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection) 
+        self.setMouseTracking(True)
 
         self.setItemDelegate(CellDelegate(self))
 
@@ -586,7 +690,7 @@ class Table(QTableView):
                 print("Clicked cell:", index.row(), index.column())
                 # if self.editor:
                 #     event = QMouseEvent(QMouseEvent.Type.MouseButtonPress, self.editor.viewport().mapFromGlobal(e.globalPosition()), Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
-                #     self.editor.mousePressEvent(event)
+                #     self.editor.mouseReleaseEvent(event)
             else:
                 print("Click outside of cell with current Index", )
                 self.closePersistentEditor(self.currentIndex())
@@ -595,7 +699,7 @@ class Table(QTableView):
         elif e.button() == Qt.MouseButton.RightButton:
             self.show_context_menu(e.pos())
             return
-        super().mousePressEvent(e)
+        super().mouseReleaseEvent(e)
 
     def show_context_menu(self, position):
         index = self.indexAt(position)
@@ -805,6 +909,21 @@ class TableModel(QAbstractTableModel):
             return True
         except IndexError:
             return False
+    
+    def mimeData(self, indexes):
+        mimedata = QMimeData()
+        encoded_data = QByteArray()
+        stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
+
+        # Write source info
+        index = indexes[0]
+        stream.writeInt32(index.row())
+        stream.writeInt32(index.column())
+        stream.writeInt32(1)  # map_items
+        stream.writeQString('Table')  # Source identifier
+
+        mimedata.setData('application/x-qabstractitemmodeldatalist', encoded_data)
+        return mimedata
 
     def canDropMimeData(self, data, action, row, column, parent):
         if action == Qt.DropAction.IgnoreAction:
@@ -824,22 +943,25 @@ class TableModel(QAbstractTableModel):
             
             encoded_data = data.data('application/x-qabstractitemmodeldatalist')
             stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
-            new_items = []
 
-            while not stream.atEnd():
-                srow = stream.readInt32()
-                scolumn = stream.readInt32()
-                map_items = stream.readInt32()
-                new_items.append((srow, scolumn, map_items))
+            source_table_row = stream.readInt32()
+            source_table_column = stream.readInt32()
+            source_item_row = stream.readInt32()
+            map_items = stream.readInt32()
+            source_type = stream.readQString()
 
-            if new_items:
-                source_row, source_column, map_items = new_items[0]
-                self.swap_items(self.index(source_row, source_column), parent)
+            if source_type == 'CellEditor':
+                # Move item between cells
+                source_cell = self._data[source_table_row][source_table_column]
+                target_cell = self._data[parent.row()][parent.column()]
+                
+                model = source_cell.pop_model(source_item_row)
+                target_cell.add_model(model)
                 return True
-
-            print("Source is row/column", srow, scolumn, map_items, new_items)
-
-            return False    
+            else:
+                # Handle table internal move
+                self.swap_items(self.index(source_table_row, source_table_column), parent)
+                return True
 
         return False   
 
@@ -873,6 +995,11 @@ def test_routine(table: Table) -> None:
     # print(raw_model)
     model = TableModel()
     model.new(3, 5)
+
+    cell = model.data(model.index(0, 0))
+    audio_model = AudioModel("D:/Dokumente/Deutschunterricht/Audio/Schritte_plus_Neu_4_Arbeitsbuchteil_Audio/601083_AB_L08_01.mp3", "601083_AB_L08_01.mp3")
+    cell.add_model(audio_model)
+
     cell = model.data(model.index(0, 2))
     text_model = TextModel()
     text_model.setHtml(HTML)

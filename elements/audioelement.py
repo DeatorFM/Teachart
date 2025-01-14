@@ -1,5 +1,6 @@
-from PyQt6.QtGui import QFocusEvent
-from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication, QSizePolicy
+from PyQt6.QtGui import QFocusEvent, QIcon, QPen
+from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins
 from PyQt6.QtXml import QDomElement
 from PyQt6.QtMultimedia import QMediaPlayer
 from elements.baseelement import BaseElement, BaseModel
@@ -79,6 +80,12 @@ class AudioModel(BaseModel):
     def set_end_time(self, msec: int) -> None:
         object.__setattr__(self, "end_time", msec)
 
+    def delegate(self, parent) -> QStyledItemDelegate:
+        return AudioDelegate(parent)
+    
+    def expected_size(self, width) -> QSize:
+        return QSize(width, 45)
+
 class ChapterObject:
     def __init__(self, start: QTime, end: QTime, name="") -> None:
         self.start = start
@@ -94,10 +101,12 @@ class AudioElement(BaseElement, AudioView):
         super().__init__(parent)
         self.setUi(self)
         self.main_frame.setProperty("focussed", False)
+        self.setAutoFillBackground(True)
 
         self._model = model
         self.is_own_model = False
         self.le_name.setText(self._model.name)
+        self.le_name.setCursorPosition(0)
 
         self.connect_signals()
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
@@ -154,3 +163,70 @@ class AudioElement(BaseElement, AudioView):
             self.playbackRequested.emit(self._model, False)
         self.focussed.emit(self)
         super().focusInEvent(a0)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        width = min(event.size().width(), 180) 
+        self.main_frame.setGeometry(0, 0, width, event.size().height())
+        self.le_name.setFixedWidth(width - 40) 
+        print(f"AudioElement resized to: {event.size()}")
+
+    # def sizeHint(self) -> QSize:
+    #     return QSize(300, 35)
+
+class AudioDelegate(QStyledItemDelegate):
+
+    def __init__(self, parent = ...):
+        super().__init__(parent)
+        self._play_icon = QIcon("resources/icons/ic_play.svg")
+
+    
+    def paint(self, painter, option, index):
+        print("Check state", option.showDecorationSelected)
+        sub_rect = option.rect.adjusted(5, 5, -5, -5)
+        button_rect = sub_rect.adjusted(3, 3, -7, -3)
+        button_rect.setWidth(23)
+        text_rect = QRect(sub_rect.left() + 33, sub_rect.top() + 10, min(sub_rect.width() - 33, 180 - 33), 20)
+
+        painter.save()
+
+        style = option.widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
+        # painter.setPen(Qt.GlobalColor.black)
+        # painter.drawRect(sub_rect)
+
+        button_option = QStyleOptionButton()
+        button_option.rect = button_rect
+        button_option.icon = self._play_icon
+        button_option.iconSize = QSize(20, 20)
+        button_option.state = QStyle.StateFlag.State_Enabled
+        button_option.features = QStyleOptionButton.ButtonFeature.Flat
+        QApplication.style().drawControl(QStyle.ControlElement.CE_PushButton, button_option, painter)
+
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, index.data().name)
+
+        painter.restore()
+
+        if index.row() < index.model().rowCount() - 1:
+            painter.save()
+            pen = QPen(Qt.GlobalColor.lightGray, 1)
+            painter.setPen(pen)
+            painter.drawLine(option.rect.bottomLeft().x() + 5, option.rect.bottomLeft().y(), option.rect.bottomRight().x() - 5, option.rect.bottomRight().y())
+            painter.restore()
+    
+    def createEditor(self, parent, option, index):
+        editor = AudioElement(index.data(), parent)
+        editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        return editor
+    
+    def updateEditorGeometry(self, editor, option, index):
+        sub_rect = option.rect.marginsAdded(QMargins(-6, -8, -5, -5))
+        print("Audio rect", sub_rect.width(), sub_rect.height())
+        editor.setGeometry(sub_rect)
+
+    def passthru(self) -> bool:
+        return True
+    
+    def sizeHint(self, option, index):
+        return QSize(option.rect.width(), 45)
