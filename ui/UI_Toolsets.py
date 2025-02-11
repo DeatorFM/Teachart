@@ -293,7 +293,7 @@ class TextToolbox:
 
     def retranslateUi(self) -> None:
         _translate = QtCore.QCoreApplication.translate
-        self.ac_element_options.setText(_translate("TextToolbox", "Text"))
+        self.ac_element_options.setText(_translate("TextToolbox", "Text ▼"))
         self.ac_bold.setToolTip(_translate("TextToolbox", "Bold"))
         self.ac_italic.setToolTip(_translate("TextToolbox", "Italic"))
         self.ac_underline.setToolTip(_translate("TextToolbox", "Underline"))
@@ -368,7 +368,7 @@ class PictureToolbox:
 
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
-        self.ac_element_options.setText(_translate("PictureToolset", "Picture"))
+        self.ac_element_options.setText(_translate("PictureToolset", "Picture ▼"))
         self.ac_width_label.setText(_translate("PictureToolset", "Width"))
         self.ac_height_label.setText(_translate("PictureToolset", "Height"))
         self.ac_keep_aspect_ratio.setToolTip(_translate("PictureToolset", "Keep aspect ratio when changing values"))
@@ -516,7 +516,7 @@ class AudioToolbox:
  
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
-        self.ac_element_options.setText(_translate("AudioToolset", "Audio"))
+        self.ac_element_options.setText(_translate("AudioToolset", "Audio ▼"))
         self.ac_play_pause.setToolTip(_translate("AudioToolset", "Play/Pause track."))
         self.pb_rew.setToolTip(_translate("AudioToolset", "Hold to rewind or double click reset playback."))
         self.ac_rew5.setToolTip(_translate("AudioToolset", "Rewind 5 seconds."))

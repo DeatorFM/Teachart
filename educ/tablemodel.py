@@ -93,7 +93,7 @@ class CellModel(QAbstractListModel):
 
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
         try:
-            if sourceRow == self.rowCount() - 1 and destinationChild == self.rowCount():
+            if sourceRow == self.rowCount() - 1 and destinationChild == self.rowCount() or destinationChild == -1:
                 return False
             if sourceRow > destinationChild:
                 self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)

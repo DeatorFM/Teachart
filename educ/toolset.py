@@ -15,6 +15,10 @@ import importlib
 import abc
 import asyncio
 
+ToolBarStyleSheet = """
+QToolButton::menu-indicator {image: none;}
+"""
+
 
 class BaseToolset(QToolBar):
     __metaclass__ = abc.ABCMeta
@@ -29,6 +33,7 @@ class BaseToolset(QToolBar):
         self.setSizePolicy(
         QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea)
+        self.setStyleSheet(ToolBarStyleSheet)
 
     @abc.abstractmethod
     def action(self) -> QAction:

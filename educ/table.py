@@ -75,6 +75,14 @@ class CellEditor(QListView):
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         pass
 
+    def setModel(self, model: QAbstractItemModel):
+        model.rowsRemoved.connect(self.close_current_editor)
+        super().setModel(model)
+    
+    def on_row_removed(self) -> None:
+        if self.model().rowCount() == 0:
+            pass
+
     def editorDestroyed(self, editor: QWidget | None) -> None:
         self.geometriesChanged.emit()
         super().editorDestroyed(editor)
