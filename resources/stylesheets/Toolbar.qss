@@ -1,7 +1,3 @@
-QFrame#ElementToolbar {
-    background-color: #b9c2c7;
-}
-
 QPushButton {
     background: transparent;
     color: #606060;
@@ -55,33 +51,3 @@ QLabel {
     color: #a9a9a9;
     background-color: white;
     }
-
-QComboBox {
-    border: 1px 
-    solid #a9a9a9;
-    }
-
-QComboBox::down-arrow {
-    image: url(icons:ic_arrowdown.svg);
-    width: 10px;
-    height: 10px;
-    }
-
-QFontComboBox {
-    border: 1px solid #a9a9a9;
-    }
-
-*::drop-down{
-    border-left-width: 1px;
-    border-left-style: solid; 
-}
-
-QScrollBar:vertical {
-    border: 0x plain white;
-    background: #ffffff;
-    width: 10px;
-}
-
-QScrollBar::handle:vertical {
-    background: #e4e4e4;
-}

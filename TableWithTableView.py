@@ -7,7 +7,7 @@ from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, Q
 from PyQt6.QtGui import QMouseEvent, QAction, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent, QPen, QFont, QDrag, QCursor
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from elements.audioelement import AudioModel
+from educ.elements.audioelement import AudioModel
 
 """
 Probleme: 
@@ -56,7 +56,7 @@ class CellModel(QAbstractListModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._data: list[BaseModel] = []
-        self.rects: list[QRect] = []
+        # self.rects: list[QRect] = []
         self.height: int = 30
         self.cell_index = (-1, -1)
 
@@ -142,6 +142,13 @@ class CellModel(QAbstractListModel):
             return True
         except IndexError:
             return False
+
+    def change_on_mouse_hover(self) -> bool:
+        for row in self:
+            if row.change_on_mouse_hover():
+                return True
+            else:
+                return False
 
     def __iter__(self):
         return iter(self._data)
@@ -245,7 +252,6 @@ class CellEditor(QListView):
         # print("painting list")
         self.scrollToTop()
         super().paintEvent(e)
-        print("List height", self.height())
         if self._editor_just_destroyed:            
             self._editor_just_destroyed = False
             self.geometriesChanged.emit()
@@ -389,6 +395,9 @@ class TextModel(QTextDocument, BaseModel):
     
     def delegate(self, parent: QWidget) -> TextDelegate:
         return TextDelegate(parent)
+
+    def change_on_mouse_hover(self) -> bool:
+        return False
     
 class ImageModel(BaseModel):
     def __init__(self, path: str) -> None:
@@ -407,6 +416,9 @@ class ImageModel(BaseModel):
         return size
     
     def editable(self) -> bool:
+        return False
+
+    def change_on_mouse_hover(self) -> bool:
         return False
 
 class ImageDelegate(QStyledItemDelegate):
@@ -437,7 +449,7 @@ class ImageDelegate(QStyledItemDelegate):
         return None
 
     def passthru(self) -> None:
-        False
+        return False
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         image: QPixmap = index.data().pixmap
@@ -457,17 +469,15 @@ class CellDelegate(QStyledItemDelegate):
         self.extra_emit = False
 
     def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
-        print("Paint complete cell")
+        # print("Paint complete cell")
         y_offset = 0
         # print("Initial y offset", y_offset)
         # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
         # print("State", index.row(), index.column(), option.state)
-        mouse_pos = QCursor.pos()
-        print("Mouse position", mouse_pos)
         if option.rect.width() < 140 and option.rect.width() > 135:
             # Text display problems between 125 and 130 to fix
             option.rect.setWidth(140)
-        cell = index.data()
+        cell: CellModel = index.data()
         sub_option = QStyleOptionViewItem(option)
         if cell:
             for i, model in enumerate(cell):
@@ -612,6 +622,7 @@ class Table(QTableView):
         self.setMinimumSize(800, 600)
 
         self._drag_start_position: QPoint | None = None
+        self._last_hover_pos = None
 
     @property
     def editor(self) -> QListView:
@@ -680,6 +691,11 @@ class Table(QTableView):
                 if distance >= QApplication.startDragDistance():
                     self.startDrag(Qt.DropAction.MoveAction)
         super().mouseMoveEvent(event)
+
+        cell = self.indexAt(event.pos()).data()
+        if cell and cell.change_on_mouse_hover():
+            # Force redraw of viewport
+            self.viewport().update()
 
     def mouseReleaseEvent(self, e):
         index = self.indexAt(e.pos())

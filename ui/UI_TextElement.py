@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets, QtCore, QtGui
-from ui.UI_Toolsets import FontSizeBox, ColorSplitButton, ColorMenu
+from ui.ui_toolsets import FontSizeBox, ColorSplitButton, ColorMenu
 from ui.StyledWidget import convertColors, fromStyle
 
 class TextMenu:

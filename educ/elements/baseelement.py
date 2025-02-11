@@ -1,24 +1,40 @@
-from PyQt6.QtCore import pyqtSignal, QObject, QXmlStreamWriter
-from PyQt6.QtWidgets import QWidget, QTextEdit, QFrame
+from PyQt6.QtCore import pyqtSignal, QXmlStreamWriter, QObject
+from PyQt6.QtWidgets import QWidget, QTextEdit, QFrame, QStyledItemDelegate
 from PyQt6.QtXml import QDomElement
 from educ.resmanager import ResourceType
-import abc
+from abc import abstractmethod
 
 class BaseModel(QObject):
 
-    @abc.abstractmethod
+    @abstractmethod
     def xml(self, stream: QXmlStreamWriter, path: str) -> QXmlStreamWriter:
         return QXmlStreamWriter
        
     @classmethod
-    @abc.abstractmethod
+    @abstractmethod
     def read(cls, domelement: QDomElement):
         return BaseModel
 
     @staticmethod
-    @abc.abstractmethod
+    @abstractmethod
     def restype() -> ResourceType:
-        return ResourceType    
+        return ResourceType
+
+    @abstractmethod
+    def delegate(self) -> QStyledItemDelegate:
+        return QStyledItemDelegate()
+    
+    @abstractmethod
+    def editor(self) -> QWidget | None:
+        return None
+    
+    @abstractmethod
+    def expected_height(self, width: int) -> int:
+        return 30
+    
+    @abstractmethod
+    def editable(self) -> bool:
+        return False    
     
 
 class BaseElement(QFrame):
@@ -39,15 +55,15 @@ class BaseElement(QFrame):
         self.on_focussed(self._isfocussed)
 
     @property
-    @abc.abstractmethod
+    @abstractmethod
     def toolset(self) -> str:
         return "BaseElement"
 
-    @abc.abstractmethod   
+    @abstractmethod   
     def model(self) -> BaseModel:
         return BaseModel
     
-    @abc.abstractmethod
+    @abstractmethod
     def on_focussed(self, focussed: bool) -> None:
         return
     
@@ -69,10 +85,10 @@ class BaseEditor(QTextEdit):
         self.on_focussed(self._isfocussed)
 
     @property
-    @abc.abstractmethod
+    @abstractmethod
     def toolset(self) -> str:
         return "BaseElement"
     
-    @abc.abstractmethod
+    @abstractmethod
     def on_focussed(self, focussed: bool) -> None:
         return

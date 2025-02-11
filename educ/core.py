@@ -10,6 +10,8 @@ import typing
 class HTCore(QtWidgets.QApplication):
     def __init__(self, argv: typing.List[str]) -> None:
         super().__init__(argv)
+        self.setStyle("windows11")
+        print(QtWidgets.QStyleFactory.keys())
 
     def import_settings(self):
         pass
@@ -18,8 +20,8 @@ class MainWindow(MainView):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.editors = []
-        self.scheduler = Scheduler("D:/Dokumente/Python Scripts/HotTeacher/db/lessondata.db")
-        self.courses = Courses("D:/Dokumente/Python Scripts/HotTeacher/db/lessondata.db")
+        self.scheduler = Scheduler("D:/Dokumente/Python Scripts/Educhart/db/lessondata.db")
+        self.courses = Courses("D:/Dokumente/Python Scripts/Educhart/db/lessondata.db")
         print(self.scheduler)
         print(self.courses)
 

@@ -82,6 +82,36 @@ class SwitchButton(QtWidgets.QPushButton):
 
     def state(self) -> int:
         return self._state
+    
+class SwitchAction(QtGui.QAction):
+    stateChanged = QtCore.pyqtSignal(int)
+
+    def __init__(self, icon1: QtGui.QIcon, icon2: QtGui.QIcon, parent=None) -> None:
+        super().__init__(icon1, None, parent)
+        self.icon1 = icon1
+        self.icon2 = icon2
+        self._state = 1
+        self.triggered.connect(self.switch_state)
+
+    def switch_state(self) -> None:
+        if self._state == 1:
+            self.setIcon(self.icon2)
+            self._state = 2
+        else:
+            self.setIcon(self.icon1)
+            self._state = 1
+        self.stateChanged.emit(self.state())
+
+    def changeState(self, state: int) -> None:
+        if state == 1:
+            self.setIcon(self.icon1)
+            self._state = 1
+        elif state == 2:
+            self.setIcon(self.icon2)
+            self._state = 2
+
+    def state(self) -> int:
+        return self._state
 
 class DoubleClickButton(QtWidgets.QPushButton):
     doubleClicked = QtCore.pyqtSignal()

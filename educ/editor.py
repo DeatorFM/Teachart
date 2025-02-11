@@ -1,13 +1,19 @@
 from PyQt6.QtWidgets import QInputDialog, QMessageBox, QWidget, QApplication
 from PyQt6.QtGui import QAction, QClipboard
-from PyQt6.QtCore import QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
-from ui.UI_Editor import EditorWidget
+from PyQt6.QtCore import QModelIndex, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
+from ui.ui_editor import EditorWidget
+from ui.ui_toolsets import CellActions
 from educ.lesson import Lesson
 from educ.dbmodels import Courses, ScheduleItem
 from educ.resmanager import ResourceContainer, ResourceType
-from educ.toolset import returnToolsets, BaseToolset
-from elements.baseelement import BaseElement
-import os
+from educ.toolset import returnToolsets
+from educ.tablemodel import TableModel
+from educ.elements.baseelement import BaseElement
+import os, enum
+
+class EditorMode(enum.Enum):
+    New = 0
+    Open = 1
 
 
 class EditorTab(EditorWidget):
@@ -15,17 +21,15 @@ class EditorTab(EditorWidget):
     focusConfirm = pyqtSignal(QWidget)
     schedule = pyqtSignal(ScheduleItem)
 
-    def __init__(self, courses: Courses, parent=None) -> None:
+    def __init__(self, courses: Courses, parent=None, mode=EditorMode.New) -> None:
         super().__init__(parent)
         # Models
         self.courses = courses
         self.lesson = Lesson(self.dt_DateTime.dateTime())
         self.schedule_item: ScheduleItem
 
-        print("Init toolsets")
-        self.toolsets: dict[str, BaseToolset] = self.get_toolsets()
+        self.toolsets: dict[str, int] = self.get_toolsets()
         self.rescont = ResourceContainer()
-        self._focussed_element = None
         self.issaved = False
         self.path: str
 
@@ -38,6 +42,9 @@ class EditorTab(EditorWidget):
         self.setMouseTracking(True)
         self.check_clipboard()
 
+        if mode == EditorMode.New:
+            self.set_table(2, 2)
+
     def connect_signals(self) -> None:
         # self.courses.contentChanged.connect(self.on_courses_changed)
         self.spb_SaveButton.lbutton.clicked.connect(self.saveToLes)
@@ -48,19 +55,19 @@ class EditorTab(EditorWidget):
         self.sb_LessonTime.valueChanged.connect(self.lesson.set_duration)
         self.te_comment.textChanged.connect(self.set_comment)
 
-        self.table_sizer.tableSize.connect(self.set_table)
-        self.table.cellSelected.connect(self.activate_table_buttons)
-        self.table.cellDeselected.connect(self.deactivate_table_buttons)
+        self.table.cellEditorOpened.connect(self.on_cell_opened)
+        self.table.cellEditorClosed.connect(self.on_cell_closed)
+        self.table.elementEditorClosed.connect(lambda: self.set_toolbar(None))
+        self.table.elementEditorOpened.connect(self.set_toolbar)
 
-        self.pb_NewRow.clicked.connect(self.table.newRow)
-        self.pb_NewColumn.clicked.connect(self.table.newColumn)
-        self.pb_DeleteRow.clicked.connect(self.table.removeRow)
-        self.pb_DeleteColumn.clicked.connect(self.table.removeColumn)
-        self.menu_element.triggered.connect(self.on_element_action)
-        self.pb_delete_element.clicked.connect(self.delete_element)
-        self.pb_move_up.clicked.connect(lambda: self.move_element(-1))
-        self.pb_move_down.clicked.connect(lambda: self.move_element(1))
-        self.pb_close_elem_toolbar.clicked.connect(self.remove_focussed_element)
+        self.table_toolset.ac_new_row.triggered.connect(lambda: self.tablemodel.insertRow(self.table.currentIndex().row()))
+        self.table_toolset.ac_new_column.triggered.connect(lambda: self.tablemodel.insertColumn(self.table.currentIndex().column()))
+        self.table_toolset.ac_delete_row.triggered.connect(lambda: self.tablemodel.removeRow(self.table.currentIndex().row()))
+        self.table_toolset.ac_delete_column.triggered.connect(lambda: self.tablemodel.removeColumn(self.table.currentIndex().column()))
+        self.table_toolset.ac_add_element.triggered.connect(self.on_about_to_add_model)
+        self.table_toolset.menu_element.triggered.connect(self.on_element_action)
+        # self.pb_delete_element.clicked.connect(self.delete_element)
+        # self.pb_close_elem_toolbar.clicked.connect(lambda: self.set_toolbar(None))
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 
@@ -85,17 +92,6 @@ class EditorTab(EditorWidget):
         item = ScheduleItem(self.dt_DateTime.time(), self.dt_DateTime.date(), file, self.lesson.course.ID)
         self.schedule.emit(item)
 
-    # def set_list(self) -> None:
-    #     self.cb_course.clear()
-    #     self.cb_course.addItem(tr("No course"), CourseItem.no_course())
-    #     for course in self.courses:
-    #         self.cb_course.addItem(course.name, course)
-    #     i = self.cb_course.findData(self.lesson.course, flags=Qt.MatchFlag.MatchContains)
-    #     print(i)
-    #     self.cb_course.setCurrentIndex(i)
-
-    # def on_courses_changed(self) -> None:
-    #     self.set_list()
 
     def add_course(self) -> None:
         cname, ok = QInputDialog.getText(None, tr("New Course"), tr("Course name"))
@@ -136,113 +132,97 @@ class EditorTab(EditorWidget):
 
     @pyqtSlot(int, int)
     def set_table(self, rows: int, columns: int) -> None:
-        self.table.new_table(rows, columns)
-        self.table_area_layout.setCurrentIndex(1)
+        model = TableModel(self.table)
+        model.new(rows, columns)
+        self.table.setModel(model)
 
-    def activate_table_buttons(self) -> None:
-        self.table_buttons.setEnabled(True)
-        self.pb_add_element.setEnabled(True)
-        self.set_focussed_element(None)
+    @property
+    def tablemodel(self) -> TableModel:
+        return self.table.model()
 
-    def deactivate_table_buttons(self) -> None:
-        self.table_buttons.setEnabled(False)
-        self.pb_add_element.setEnabled(False)
-        self.set_focussed_element(None)
-
+    def on_cell_opened(self) -> None:
+        if self.table.currentIndex().isValid() and self.table.editor:
+            print("Index", self.table.currentIndex().row(), "|", self.table.currentIndex().column(), "is valid")
+            self.table_toolset.cell_editor_actions.setEnabled(True)
+    
+    def on_cell_closed(self) -> None:
+        self.table_toolset.cell_editor_actions.setEnabled(False)
+        
+    @pyqtSlot(QAction)
     def on_element_action(self, action: QAction) -> None:
         if action.data() != "Clipboard":
             self.add_element(action)
         else:
             self.from_clipboard()
 
+    @pyqtSlot(QAction)
+    def on_element_menu_action(self, action: QAction) -> None:
+        editor = self.table.editor
+        if editor:
+            model = editor.model()
+            index = editor.currentIndex()
+            if action.data() == CellActions.Remove_Element:
+                print("Removing", index.row())
+                model.removeRow(index.row(), index)
+            elif action.data() == CellActions.Move_Up:
+                model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
+            elif action.data() == CellActions.Move_Down:
+                model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
+
+    def on_about_to_add_model(self) -> None:
+        print("About to add model")
+
     def add_element(self, action: QAction) -> None:
-        toolset = self.toolsets[action.data()]
+        print("Init adding model")
+        toolset = self.toolsets_container.widget(self.toolsets[action.data()])
 
-        if toolset.restype == ResourceType.TEXT:
-            respath = self.rescont.create(".html", ResourceType.TEXT)
-            element = toolset.createElement(respath)
-        elif toolset.restype != ResourceType.NONE:
-            path = toolset.getResource()
-            if path == None:
+        if self.table.editor:
+
+            if toolset.restype == ResourceType.TEXT:
+                respath = self.rescont.create(".html", ResourceType.TEXT)
+                model = toolset.createElement(respath)
+            elif toolset.restype != ResourceType.NONE:
+                path = toolset.getResource()
+                if path == None:
+                    return
+                respath = self.rescont.save(path, toolset.restype)
+                assert isinstance(respath, str)
+                model = toolset.createElement(respath)
+            else:
                 return
-            respath = self.rescont.save(path, toolset.restype)
-            assert isinstance(respath, str)
-            element = toolset.createElement(respath)
-        else:
-            element = toolset.createElement()
 
-        print(self.rescont.contents())
+            print(self.rescont.contents())
 
-        self.connect_element(element)
-
-        self.table.add_element(element)
-
-    def connect_element(self, element: BaseElement) -> None:
-        element.focussed.connect(self.set_focussed_element)
-        element.unfocussed.connect(self.remove_focussed_element)
-        element.requestToolset.connect(lambda: self.set_toolbar(self._focussed_element))
-        self.focusConfirm.connect(element.setFocussed)
-
-    def delete_element(self) -> None:
-        if self._focussed_element != None:
-            print(self._focussed_element)
-            self.table.delete_element(self._focussed_element)
-            self.remove_focussed_element()
-
-    def move_element(self, by: int) -> None:
-        if self._focussed_element is not None:
-            cell = self.table.model.cell_of(self._focussed_element)
-            assert cell is not None
-            cell.move(self._focussed_element, by)
+        
+            print("Model add to cell")
+            cell_model = self.table.editor.model()
+            cell_model.add_model(model)
             
 
     ### Toolset handling ###
     
     def get_toolsets(self) -> dict: 
         """Imports all Toolsets and integrates them into the ui. Adds actions to add elements to cells."""
-        toolsets = returnToolsets(self.element_toolbar)
-        for toolset in toolsets.values():
+        imported_toolsets = returnToolsets(self)
+        toolsets = {}
+        for i, toolset in enumerate(imported_toolsets, 1):
             print("Added", toolset, "with action", toolset.action())
-            self.menu_element.addAction(toolset.action())
-            self.elem_toolbar_layout.insertWidget(1, toolset)
-        print(self.menu_element.actions())
+            self.table_toolset.menu_element.addAction(toolset.action())
+            toolset.element_options_menu.triggered.connect(self.on_element_menu_action)
+            toolsets[toolset.name] = i
+            self.toolsets_container.addWidget(toolset)
         return toolsets
 
-    def set_toolbar(self, widget: BaseElement|None) -> None:
+    def set_toolbar(self, widget: BaseElement | None) -> None:
         """Makes the toolset visible for the corresponding element."""
-        for toolset in self.toolsets.values():
-            toolset.hide()
+        print("Trying to set toolbar for editor", widget)
 
-        if widget != None:
-            self.element_toolbar.show()
-            self.element_toolbar.setFixedWidth(self.toolsets[widget.toolset].sizeHint().width()+10)
-            self.toolsets[widget.toolset].show()
-            print(widget.toolset)
-            self.pb_delete_element.setEnabled(True)
-            self.pb_move_up.setEnabled(True)
-            self.pb_move_down.setEnabled(True)
+        if widget:
+            print("Show toolbar")
+            self.toolsets_container.setCurrentIndex(self.toolsets[widget.toolset])
+            self.toolsets_container.currentWidget().connect_editor(widget)
         else:
-            # print("No Element")
-            for toolset in self.toolsets.values():
-                toolset.hide()
-            self.element_toolbar.hide()
-            self.pb_delete_element.setEnabled(False)
-            self.pb_move_up.setEnabled(False)
-            self.pb_move_down.setEnabled(False)
-
-    def set_focussed_element(self, widget: BaseElement|None):
-        self._focussed_element = widget
-        print(self._focussed_element)
-        self.focusConfirm.emit(widget)
-        self.set_toolbar(widget)
-                
-    def remove_focussed_element(self):
-        self.set_focussed_element(None)
-        self.setFocus()
-
-    def is_focussed(self, widget: QWidget) -> bool:
-        if widget == self._focussed_element: return True
-        else: return False
+            self.toolsets_container.setCurrentIndex(0)
 
     def print_lesson(self) -> None:
         try:
@@ -255,32 +235,31 @@ class EditorTab(EditorWidget):
         clipboard = QApplication.clipboard()
         assert isinstance(clipboard, QClipboard)
         if clipboard.image() or clipboard.text():
-            self.ac_FromClipboard.setEnabled(True)
+            self.table_toolset.ac_FromClipboard.setEnabled(True)
             print("Text:", clipboard.mimeData().hasText())
             print("Image", clipboard.mimeData().hasImage())
         else:
-            self.ac_FromClipboard.setEnabled(False)
+            self.table_toolset.ac_FromClipboard.setEnabled(False)
 
     def from_clipboard(self) -> None:
         """Creates either a TextElement or a PictureElement with the contents of the clipboard."""
         clipboard = QApplication.clipboard()
-        assert isinstance(clipboard, QClipboard)
-        if clipboard.mimeData().hasImage():
-            image = clipboard.image()  
-            fname = self.rescont.create(".png", ResourceType.IMAGE)
-            path = os.path.join(self.rescont.tempdir.name, fname)  
-            image.save(path, "png")
-            toolset = self.toolsets["PictureToolset"]
-            element = toolset.createElement(path)
-        elif clipboard.mimeData().hasText():
-            fname = self.rescont.create(".html", ResourceType.TEXT)
-            toolset = self.toolsets["TextToolset"]
-            element = toolset.createElement(fname)
-            element.paste()
+        if clipboard:
+            if clipboard.mimeData().hasImage():
+                image = clipboard.image()  
+                fname = self.rescont.create(".png", ResourceType.IMAGE)
+                path = os.path.join(self.rescont.tempdir.name, fname)  
+                image.save(path, "png")
+                toolset = self.toolsets_container.widget(self.toolsets["PictureToolset"])
+                element = toolset.createElement(path)
+            elif clipboard.mimeData().hasText():
+                fname = self.rescont.create(".html", ResourceType.TEXT)
+                toolset = self.toolsets_container.widget(self.toolsets["TextToolset"])
+                element = toolset.createElement(fname)
+                element.setPlainText(clipboard.text())
 
-        self.connect_element(element)
-        self.table.add_element(element)
-            
+            self.table.add_element(element)
+                
     # Event handler
     # def mousePressEvent(self, a0: QMouseEvent) -> None:
     #     self.remove_focussed_element()

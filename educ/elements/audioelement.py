@@ -1,10 +1,10 @@
-from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication, QSizePolicy
-from PyQt6.QtGui import QFocusEvent, QIcon, QPen
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication, QSizePolicy, QWidget
+from PyQt6.QtGui import QFocusEvent, QIcon, QPen, QCursor, QColor, QPainter, QPainterPath
 from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins
 from PyQt6.QtXml import QDomElement
 from PyQt6.QtMultimedia import QMediaPlayer
-from elements.baseelement import BaseElement, BaseModel
-from ui.UI_AudioElement import AudioView
+from educ.elements.baseelement import BaseElement, BaseModel
+from ui.ui_AudioElement import AudioView
 from dataclasses import field, dataclass
 from educ.resmanager import ResourceType
 
@@ -83,6 +83,9 @@ class AudioModel(BaseModel):
     def delegate(self, parent) -> QStyledItemDelegate:
         return AudioDelegate(parent)
     
+    def change_on_mouse_hover(self) -> bool:
+        return True
+    
     def expected_size(self, width) -> QSize:
         return QSize(width, 45)
 
@@ -118,38 +121,27 @@ class AudioElement(BaseElement, AudioView):
     @property
     def toolset(self) -> str:
         return "AudioToolset"
-    
-    def on_focussed(self, focussed: bool) -> None:
-        self.main_frame.setProperty("focussed", focussed)
-        self.main_frame.style().polish(self.main_frame)
 
     def connect_signals(self) -> None:
         self.swi_PlayPause.stateChanged.connect(self.on_playpause)
         self.le_name.textChanged.connect(self._model.set_name)    
 
     def on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
-        if self.is_own_model == True:
-            if state == QMediaPlayer.PlaybackState.StoppedState:
-                self.swi_PlayPause.changeState(1)
-            elif state == QMediaPlayer.PlaybackState.PlayingState:
-                self.swi_PlayPause.changeState(2)
-            elif state == QMediaPlayer.PlaybackState.PausedState:
-                self.swi_PlayPause.changeState(1)
+        if state == QMediaPlayer.PlaybackState.StoppedState:
+            self.swi_PlayPause.changeState(1)
+        elif state == QMediaPlayer.PlaybackState.PlayingState:
+            self.swi_PlayPause.changeState(2)
+        elif state == QMediaPlayer.PlaybackState.PausedState:
+            self.swi_PlayPause.changeState(1)
 
     def on_playpause(self) -> None:
-        if self.is_own_model == True:
-            self.set_playback_state()
-            self.focussed.emit(self)
-        else:
-            self.focussed.emit(self)
-            self.playbackRequested.emit(self._model, True)      
+        self.set_playback_state()
 
     def set_playback_state(self) -> None:
         if self.swi_PlayPause.state() == 1:
             self.playbackStateChanged.emit(QMediaPlayer.PlaybackState.PausedState)
         elif self.swi_PlayPause.state() == 2:
             self.playbackStateChanged.emit(QMediaPlayer.PlaybackState.PlayingState)
-
 
     def on_model_set(self, model: AudioModel):
         if model == self._model:
@@ -158,10 +150,7 @@ class AudioElement(BaseElement, AudioView):
             self.is_own_model = False
 
     def focusInEvent(self, a0: QFocusEvent) -> None:
-        print("AudioElement focussed")
-        if self.is_own_model == False:
-            self.playbackRequested.emit(self._model, False)
-        self.focussed.emit(self)
+        self.playbackRequested.emit(self._model, False)
         super().focusInEvent(a0)
 
     def resizeEvent(self, event):
@@ -170,11 +159,10 @@ class AudioElement(BaseElement, AudioView):
         self.main_frame.setGeometry(0, 0, width, event.size().height())
         self.le_name.setFixedWidth(width - 40) 
         print(f"AudioElement resized to: {event.size()}")
-
-    # def sizeHint(self) -> QSize:
-    #     return QSize(300, 35)
+        
 
 class AudioDelegate(QStyledItemDelegate):
+    editorOpened = pyqtSignal(QWidget)
 
     def __init__(self, parent = ...):
         super().__init__(parent)
@@ -182,10 +170,10 @@ class AudioDelegate(QStyledItemDelegate):
 
     
     def paint(self, painter, option, index):
-        print("Check state", option.showDecorationSelected)
         sub_rect = option.rect.adjusted(5, 5, -5, -5)
-        button_rect = sub_rect.adjusted(3, 3, -7, -3)
+        button_rect = sub_rect.adjusted(3, 5, -7, -3)
         button_rect.setWidth(23)
+        button_rect.setHeight(23)
         text_rect = QRect(sub_rect.left() + 33, sub_rect.top() + 10, min(sub_rect.width() - 33, 180 - 33), 20)
 
         painter.save()
@@ -193,8 +181,13 @@ class AudioDelegate(QStyledItemDelegate):
         style = option.widget.style()
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
-        # painter.setPen(Qt.GlobalColor.black)
-        # painter.drawRect(sub_rect)
+        mouse_pos = option.widget.viewport().mapFromGlobal(QCursor.pos())
+
+        if button_rect.contains(mouse_pos):
+            path = QPainterPath()
+            path.addRoundedRect(button_rect.toRectF(), 4, 4) 
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.fillPath(path, QColor(236, 236, 236, 160))
 
         button_option = QStyleOptionButton()
         button_option.rect = button_rect
@@ -202,6 +195,7 @@ class AudioDelegate(QStyledItemDelegate):
         button_option.iconSize = QSize(20, 20)
         button_option.state = QStyle.StateFlag.State_Enabled
         button_option.features = QStyleOptionButton.ButtonFeature.Flat
+        
         QApplication.style().drawControl(QStyle.ControlElement.CE_PushButton, button_option, painter)
 
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, index.data().name)
@@ -218,6 +212,7 @@ class AudioDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         editor = AudioElement(index.data(), parent)
         editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.editorOpened.emit(editor)
         return editor
     
     def updateEditorGeometry(self, editor, option, index):
@@ -229,4 +224,7 @@ class AudioDelegate(QStyledItemDelegate):
         return True
     
     def sizeHint(self, option, index):
-        return QSize(option.rect.width(), 45)
+        if index.data():
+            return QSize(option.rect.width(), 45)
+        else:
+            return QSize(option.rect.width(), 0)

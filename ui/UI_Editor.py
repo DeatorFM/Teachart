@@ -1,17 +1,27 @@
 import typing
 from PyQt6 import QtCore, QtGui, QtWidgets
 from ui.StyledWidget import *
-from ui.UI_Commons import SplitButton, IconButton
-from educ.table import WidgetTable
+from ui.UI_Commons import SplitButton
+from educ.toolset import TableToolset
+from educ.table import Table
+
+EditorStyleSheet = """
+.QWidget {background-color: #e7f2f0;}
+"""
+
+ToolsetFrameStyleSheet = """
+QFrame#ToolsetsContainer {background-color: white; border-radius: 6px;}
+"""
+
 
 class EditorWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setUI()
         self.setObjectName("Editor")
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("QWidget#Editor {background-color: #ffffff;}") 
-        self.setAcceptDrops(True)
+        self.setProperty("EditorStyleSheet", True)
+        self.setStyleSheet(EditorStyleSheet)
+        self.setAutoFillBackground(True)
+        self.setUI()
 
     def setUI(self):
         # Main Layout for Editor-Tab
@@ -22,7 +32,6 @@ class EditorWidget(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
         self.main_info_frame = QtWidgets.QFrame(self)
-        self.main_info_frame.setStyleSheet("QFrame {background-color: #f9f9f9;}")
         self.main_info_frame.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.main_info_frame.setSizePolicy(sizePolicy)
@@ -99,7 +108,6 @@ class EditorWidget(QtWidgets.QWidget):
         
         self.sb_LessonTime = QtWidgets.QSpinBox(self.topbar)
         self.sb_LessonTime.setButtonSymbols(QtWidgets.QAbstractSpinBox.ButtonSymbols.UpDownArrows)
-        # self.sb_LessonTime.setStyleSheet(self.fromStyle("SB_LessonTime"))
         self.sb_LessonTime.setMinimumSize(0, 22)
         self.sb_LessonTime.setMaximum(300)
         self.sb_LessonTime.setObjectName("SB_LessonTime")
@@ -144,212 +152,53 @@ class EditorWidget(QtWidgets.QWidget):
         font.setFamily("Calibri")
         font.setPointSize(12)
         self.te_comment.setFont(font)
-        self.te_comment.setStyleSheet("QTextEdit#TE_Goals {background-color: rgb(255, 255, 255); border-color: #a9a9a9;}")
+        self.te_comment.setStyleSheet("QTextEdit#TE_Comment {background-color: rgb(255, 255, 255); border-color: #a9a9a9;}")
         self.te_comment.setFrameShape(QtWidgets.QFrame.Shape.Box)
         self.te_comment.setAcceptRichText(False)
-        self.te_comment.setObjectName("TE_Goals")
+        self.te_comment.setObjectName("TE_Comment")
         self.main_info_layout.addWidget(self.te_comment)
 
         self.main_layout.addWidget(self.main_info_frame)
 
+        self.edit_frame = QtWidgets.QFrame(self)
+        self.edit_frame.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+
         # Begin of editing area
         self.edit_area_layout = QtWidgets.QVBoxLayout()
-        self.edit_area_layout.setContentsMargins(10, 0, 10, -1)
+        self.edit_area_layout.setContentsMargins(10, 0, 10, 0)
         self.edit_area_layout.setObjectName("EditAreaLayout")
+        self.edit_area_layout.setSpacing(10)
+        self.edit_frame.setLayout(self.edit_area_layout)
 
-        self.table_toolbar = QtWidgets.QFrame(self)
-        self.table_toolbar.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.table_toolbar.sizePolicy().hasHeightForWidth())
-        self.table_toolbar.setSizePolicy(sizePolicy)
-        self.table_toolbar.setStyleSheet(fromStyle("Toolbar"))
-        self.table_toolbar.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.table_toolbar.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.table_toolbar.setLineWidth(0)
-        self.table_toolbar.setObjectName("TableToolbar")
+        self.toolsets_container = QtWidgets.QStackedWidget(self)
+        self.toolsets_container.setObjectName("ToolsetsContainer")
+        self.toolsets_container.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.toolsets_container.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
+        graphics_effect = QtWidgets.QGraphicsDropShadowEffect()
+        graphics_effect.setBlurRadius(10)
+        graphics_effect.setXOffset(1)
+        graphics_effect.setYOffset(1)
+        graphics_effect.setColor(QtCore.Qt.GlobalColor.black)
+        self.toolsets_container.setGraphicsEffect(graphics_effect)
+        self.toolsets_container.setStyleSheet(ToolsetFrameStyleSheet)
+        self.toolsets_container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.table_toolset = TableToolset(self)
+        self.toolsets_container.setFixedHeight(self.table_toolset.sizeHint().height()) 
+        self.toolsets_container.addWidget(self.table_toolset)
 
-        self.table_toolbar_layout = QtWidgets.QHBoxLayout(self.table_toolbar)
-        self.table_toolbar_layout.setContentsMargins(3, 0, 3, 0)
-        self.table_toolbar_layout.setSpacing(3)
-        self.table_toolbar_layout.setObjectName("TableToolbarLayout")  
-        self.table_toolbar.setLayout(self.table_toolbar_layout)
+        self.edit_area_layout.addWidget(self.toolsets_container, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
-        self.table_buttons = QtWidgets.QWidget(self.table_toolbar)
-        self.table_buttonsLayout = QtWidgets.QHBoxLayout(self.table_buttons)
-        self.table_buttons.setLayout(self.table_buttonsLayout)
+        # self.view_layout = QtWidgets.QHBoxLayout(self) 
+        # self.view_layout.setContentsMargins(0, 0, 0, 0)
+        # self.view_layout.setSpacing(0)
 
-        # Inserts new row under selected row
-        self.pb_NewRow = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_NewRow.setMinimumSize(QtCore.QSize(16, 16))
-        self.pb_NewRow.setText("")
-        icon8 = QtGui.QIcon()
-        icon8.addPixmap(QtGui.QPixmap("resources/icons/ic_insertRowBottom.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_NewRow.setIcon(icon8)
-        self.pb_NewRow.setIconSize(QtCore.QSize(20, 20))
-        self.pb_NewRow.setObjectName("PB_NewRow")
-        self.table_buttonsLayout.addWidget(self.pb_NewRow)
+        self.table = Table(self)
+        self.table.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.edit_area_layout.addWidget(self.table)
 
-        # Inserts new column to the right of the selected column
-        self.pb_NewColumn = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_NewColumn.setMinimumSize(QtCore.QSize(16, 16))
-        self.pb_NewColumn.setText("")
-        icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap("resources/icons/ic_insertColumnRight.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_NewColumn.setIcon(icon9)
-        self.pb_NewColumn.setIconSize(QtCore.QSize(20, 20))
-        self.pb_NewColumn.setObjectName("PB_NewColumn")
-        self.table_buttonsLayout.addWidget(self.pb_NewColumn)
+        # self.edit_area_layout.addLayout(self.view_layout)
 
-        ln11 = QtWidgets.QFrame(self.table_toolbar)
-        ln11.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-        ln11.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.table_buttonsLayout.addWidget(ln11)
-
-        # Delete row of selected cell
-        self.pb_DeleteRow = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_DeleteRow.setMinimumSize(QtCore.QSize(16, 16))
-        self.pb_DeleteRow.setText("")
-        icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap("resources/icons/ic_deleterow.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_DeleteRow.setIcon(icon10)
-        self.pb_DeleteRow.setIconSize(QtCore.QSize(20, 20))
-        self.pb_DeleteRow.setObjectName("PB_DeleteRow")
-        self.table_buttonsLayout.addWidget(self.pb_DeleteRow)
-
-        # Delete column of selected cell
-        self.pb_DeleteColumn = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_DeleteColumn.setText("")
-        icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap("resources/icons/ic_deletecolumn.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_DeleteColumn.setIcon(icon11)
-        self.pb_DeleteColumn.setIconSize(QtCore.QSize(20, 20))
-        self.pb_DeleteColumn.setObjectName("PB_DeleteColumn")
-        self.table_buttonsLayout.addWidget(self.pb_DeleteColumn)
-
-        ln12 = QtWidgets.QFrame(self.table_toolbar)
-        ln12.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-        ln12.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.table_buttonsLayout.addWidget(ln12)
-
-        self.pb_LockSize = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_LockSize.setMinimumSize(QtCore.QSize(16, 16))
-        self.pb_LockSize.setText("")
-        icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap("resources/icons/ic_notpinned.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_LockSize.setIcon(icon12)
-        self.pb_LockSize.setIconSize(QtCore.QSize(20, 20))
-        self.pb_LockSize.setObjectName("PB_LockSize")
-        self.table_buttonsLayout.addWidget(self.pb_LockSize)
-
-        self.table_buttons.setEnabled(False)
-        self.table_toolbar_layout.addWidget(self.table_buttons)
-
-        spi2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.table_toolbar_layout.addItem(spi2)
-
-        self.pb_add_element = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_add_element.setMinimumSize(QtCore.QSize(80, 25))
-        self.pb_add_element.setText("")
-        # self.pb_add_element.setProperty("text", True)
-        self.pb_add_element.setStyleSheet(fromStyle("PB_text"))
-        self.pb_add_element.setObjectName("PB_add_element")
-
-        self.menu_element = QtWidgets.QMenu()
-        self.ac_FromClipboard = self.menu_element.addAction("")
-        self.ac_FromClipboard.setEnabled(False)
-        self.ac_FromClipboard.setData("Clipboard")
-        self.menu_element.addSeparator()
-
-        self.pb_add_element.setMenu(self.menu_element)
-        self.pb_add_element.setEnabled(False)
-        self.table_toolbar_layout.addWidget(self.pb_add_element)
-
-        self.pb_delete_element = QtWidgets.QPushButton(self.table_toolbar)
-        self.pb_delete_element.setMinimumSize(QtCore.QSize(16, 16))
-        self.pb_delete_element.setText("")
-        icon13 = QtGui.QIcon()
-        icon13.addPixmap(QtGui.QPixmap("resources/icons/ic_trash.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_delete_element.setIcon(icon13)
-        self.pb_delete_element.setIconSize(QtCore.QSize(20, 20))
-        self.pb_delete_element.setObjectName("PB_delete_element")
-        self.pb_delete_element.setEnabled(False)
-        self.table_toolbar_layout.addWidget(self.pb_delete_element)
-
-        ln13 = QtWidgets.QFrame(self.table_toolbar)
-        ln13.setFixedHeight(20)
-        ln13.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-        ln13.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.table_toolbar_layout.addWidget(ln13)
-
-        self.pb_move_up = IconButton("resources/icons/ic_move_up.svg", self.table_toolbar)
-        self.pb_move_up.setObjectName("pb_move_up")
-        self.pb_move_up.setEnabled(False)
-        self.table_toolbar_layout.addWidget(self.pb_move_up)
-
-        self.pb_move_down = IconButton("resources/icons/ic_move_down.svg", self.table_toolbar)
-        self.pb_move_down.setObjectName("pb_move_up")
-        self.pb_move_down.setEnabled(False)
-        self.table_toolbar_layout.addWidget(self.pb_move_down)
-
-        self.edit_area_layout.addWidget(self.table_toolbar)
-
-        self.view_layout = QtWidgets.QHBoxLayout(self) 
-        self.view_layout.setSpacing(0)
-
-        self.table_background = QtWidgets.QWidget(self)
-        self.table_background.setObjectName("TableBackground")
-        self.table_background.setStyleSheet("QWidget#TableBackground {background-color: #c9d3e2;}")
-        self.table_background.setContentsMargins(20, 20, 20, 20)
-
-        self.table_area_layout = QtWidgets.QStackedLayout(self.table_background)
-        self.table_area_layout.setContentsMargins(0, 0, 0, 0)
-        self.table_background.setLayout(self.table_area_layout)
-
-        self.table_sizer = TableGrid(self.table_background)
-        self.table_area_layout.addWidget(self.table_sizer)
-
-        self.table = WidgetTable(self)
-        self.table_area_layout.addWidget(self.table)
-
-        self.table_area_layout.setCurrentIndex(0)
-
-        self.view_layout.addWidget(self.table_background)
-
-        self.element_toolbar = QtWidgets.QFrame(self)
-        self.element_toolbar.setStyleSheet(fromStyle("Toolbar"))
-        self.element_toolbar.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.element_toolbar.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.element_toolbar.setAttribute(QtCore.Qt.WidgetAttribute.WA_NoMousePropagation, True)
-        self.element_toolbar.setFixedWidth(230)
-        self.element_toolbar.setObjectName("ElementToolbar")
-        self.element_toolbar.setVisible(False)
-
-        self.elem_toolbar_layout = QtWidgets.QVBoxLayout(self.element_toolbar)
-        self.elem_toolbar_layout.setSpacing(7)
-        self.elem_toolbar_layout.setObjectName("LToolbarLayout")
-        self.element_toolbar.setLayout(self.elem_toolbar_layout)
-
-        self.pb_close_elem_toolbar = QtWidgets.QPushButton(self.element_toolbar)
-        self.pb_close_elem_toolbar.setMinimumSize(QtCore.QSize(22, 22))
-        self.pb_close_elem_toolbar.setText("")
-        icon14 = QtGui.QIcon()
-        icon14.addPixmap(QtGui.QPixmap("resources/icons/ic_close.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        self.pb_close_elem_toolbar.setIcon(icon14)
-        self.pb_close_elem_toolbar.setIconSize(QtCore.QSize(20, 20))
-        self.pb_close_elem_toolbar.setObjectName("pb_close_elem_toolbar")
-        self.pb_close_elem_toolbar.setAttribute(QtCore.Qt.WidgetAttribute.WA_NoMousePropagation, True)
-        self.elem_toolbar_layout.addWidget(self.pb_close_elem_toolbar)
-
-        spi3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
-        self.elem_toolbar_layout.addItem(spi3)
-
-        self.view_layout.addWidget(self.element_toolbar)
-
-        self.edit_area_layout.addLayout(self.view_layout)
-
-        self.main_layout.addLayout(self.edit_area_layout)
+        self.main_layout.addWidget(self.edit_frame)
 
         self.retranslateUi()
 
@@ -363,18 +212,6 @@ class EditorWidget(QtWidgets.QWidget):
         self.ac_saveTo.setText(_translate("Editor", "Save to"))
         self.pb_ReadMode.setToolTip(_translate("Editor", "Read Mode"))
         self.te_comment.setPlaceholderText(_translate("Editor", "Comment"))
-        self.pb_NewRow.setToolTip(_translate("Editor", "Insert new row under selected cell"))
-        self.pb_NewColumn.setToolTip(_translate("Editor", "Insert new Column next to selected cell"))
-        self.pb_DeleteRow.setToolTip(_translate("Editor", "Delete row of selected cell"))
-        self.pb_DeleteColumn.setToolTip(_translate("Editor", "Delete column of selected cell"))
-        self.pb_add_element.setText(_translate("Editor", "Add to cell"))
-        self.ac_FromClipboard.setText(_translate("Editor", "Add from clipboard"))
-        self.pb_delete_element.setToolTip(_translate("Editor", "Delete focussed element"))
-        self.pb_move_up.setToolTip(_translate("Editor", "Move active element up"))
-        self.pb_move_down.setToolTip(_translate("Editor", "Move active element down"))
-
-    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        return super().closeEvent(a0)
 
 class TableGrid(QtWidgets.QWidget):
     tableSize = QtCore.pyqtSignal(int, int)

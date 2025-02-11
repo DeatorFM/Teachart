@@ -22,39 +22,11 @@ QPushButton::checked {
     background-color: #a9a9a9;
 }
 
-/* CB_Courses */
-
-QComboBox {
-    border: 1px solid #a9a9a9;
-    background-color: white;
-    }
-
-QComboBox:down-arrow, QDateTimeEdit:down-arrow {
-    image: url(icons:ic_arrowdown.svg);
-    width: 12px;
-    height: 12px;
-    }
-
-QComboBox QAbstractItemView {
-    background-color: white;
-    selection-background-color: lightgray;
-}
-
-*:drop-down{
-    border-left-width: 1px;
-    border-left-style: solid;
-}
-
 /* DT_DateTime */
 
 QDateTimeEdit {
     border: 1px solid #a9a9a9;
     background-color: white;
-}
-
-QDateTimeEdit QSpinBox:down-button {
-    background: none;
-    border: none;
 }
 
 QCalendarWidget {

@@ -5,12 +5,17 @@ from ui.StyledWidget import *
 from educ.dbmodels import Scheduler
 import typing
 
+stylesheet = """
+QWidget#StartWidget {background-color: white;}
+"""
+
 class StartWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setUI()
         self.setObjectName("StartWidget")
+        self.setAutoFillBackground(True)
 
     def setUI(self):       
         self.central_layout = QtWidgets.QHBoxLayout(self)

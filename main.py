@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QDir
+from PyQt6.QtCore import QDir, QCoreApplication
 from educ.core import HTCore, MainWindow
 import sys
 import os

@@ -1,122 +1,67 @@
-from PyQt6 import QtCore, QtGui, QtWidgets
-from educ.headers import HeaderView
-from ui.StyledWidget import fromStyle
+from PyQt6.QtWidgets import QStyledItemDelegate, QListView, QStyleOptionViewItem, QWidget
+from PyQt6.QtCore import QModelIndex, pyqtSignal, QRect, QObject, QSize, QPoint, QEvent
+from PyQt6.QtGui import QPainter
 
-class Table(QtWidgets.QScrollArea):
-    def __init__(self, parent=None) -> None:
+class CellDelegate(QStyledItemDelegate):
+    editorOpened = pyqtSignal(QListView)
+
+    def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
-        self.setUi()
-        self.setObjectName("Table")
-        self.setStyleSheet(fromStyle("Table"))
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)       
+        self.extra_emit = False
+        self.installEventFilter(self)
+
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        # print("Paint complete cell")
+        y_offset = 0
+        # print("Initial y offset", y_offset)
+        # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
+        # print("State", index.row(), index.column(), option.state)
+        if option.rect.width() < 140 and option.rect.width() > 135:
+            # Text display problems between 125 and 130 to fix
+            option.rect.setWidth(140)
+        cell = index.data()
+        sub_option = QStyleOptionViewItem(option)
+        if cell:
+            for i, model in enumerate(cell):
+                if model:
+                    # print("Cell width", option.rect.width())
+                    delegate = model.delegate(self.parent())
+                    sub_option.rect = QRect(QPoint(option.rect.x(), option.rect.y() + y_offset), delegate.sizeHint(sub_option, cell.index(i)))
+                    delegate.paint(painter, sub_option, cell.index(i))
+                    y_offset += delegate.sizeHint(sub_option, cell.index(i)).height()
+                    # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
+                
+        cell.height = y_offset + 20
+        # print("Cell offset height", y_offset, "vs. expected height", cell.expected_cell_height(option.rect.width()))
+
+        if self.extra_emit:
+            self.sizeHintChanged.emit(index)
+            self.extra_emit = False        
+
+    def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
+        print("Editor for cell items created")
+        from educ.table import CellEditor
+        editor = CellEditor(parent)
+        editor.geometriesChanged.connect(lambda: self.sizeHintChanged.emit(index))
+        editor.setFocus()
+        self.editorOpened.emit(editor)
+        return editor
     
-    def setUi(self):
-        self.setWidgetResizable(True)
-        self.grid_widget = GridWidget(self)
-        self.grid_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)  
-        self.grid_widget.setContentsMargins(0, 0, 0, 0)
-        self.grid_widget.resized.connect(self.on_resized)
+    def updateEditorGeometry(self, editor: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        print(f"List's dimensions: {option.rect.width()} | {option.rect.height()}")
+        if editor.geometry() != option.rect:
+            editor.setGeometry(option.rect)
+            editor.viewport().update()
 
-        self.grid = QtWidgets.QGridLayout(self)
-        self.grid.setContentsMargins(1, 1, 0, 0)
-        self.grid.setSpacing(0)
-        self.grid.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.grid_widget.setLayout(self.grid)
-        self.setWidget(self.grid_widget)
+    def eventFilter(self, object, event):
+        if event.type() == 9:
+            return True
+        return super().eventFilter(object, event)
+    
+    def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
+        if editor:
+            editor.setModel(index.data())
+            editor.model().cell_index = (index.row(), index.column())  
 
-        self.margins = QtCore.QMargins(30, 30, 0, 0)
-        self.setViewportMargins(self.margins)
-
-        self.sa_hheaders = QtWidgets.QScrollArea(self)
-        self.sa_hheaders.setWidgetResizable(True)
-        self.sa_hheaders.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)        
-        self.sa_hheaders.horizontalScrollBar().setStyleSheet("QScrollBar {width:0px;}")
-        self.sa_hheaders.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.sa_hheaders.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-
-        self.hheaders = HeaderView(QtCore.Qt.Orientation.Horizontal, self)
-        self.hheaders.setDefaultSectionSize(100)
-        self.hheaders.setAutoFillBackground(True)
-        self.hheaders.setSectionsMovable(True)
-        self.hheaders.setMinimumSectionSize(100)
-        self.hheaders.setMaximumHeight(30)
-        self.sa_hheaders.setWidget(self.hheaders)
-
-        self.sa_vheaders = QtWidgets.QScrollArea(self)
-        self.sa_vheaders.setWidgetResizable(True)
-        self.sa_vheaders.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.sa_vheaders.verticalScrollBar().setStyleSheet("QScrollBar {height:0px;}")
-        self.sa_vheaders.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.sa_vheaders.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-
-        self.vheaders = HeaderView(QtCore.Qt.Orientation.Vertical,  self)
-        self.vheaders.setAutoFillBackground(True)
-        self.vheaders.setSectionsMovable(True)
-        self.vheaders.setDefaultSectionSize(30)
-        self.vheaders.setMinimumSectionSize(30)
-        self.vheaders.setMaximumWidth(30)
-        self.vheaders.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Fixed)
-
-        self.sa_vheaders.setWidget(self.vheaders)
-
-        self.horizontalScrollBar().valueChanged.connect(self.on_scroll_bar_moved)
-        self.verticalScrollBar().valueChanged.connect(self.on_scroll_bar_moved)
-
-    def on_resized(self) -> None:
-        self.hheaders.setMinimumWidth(self.grid_widget.width())
-        self.vheaders.setMinimumHeight(self.grid_widget.height())
-        self.updateGeometry()
-
-    def on_scroll_bar_moved(self) -> None:
-        self.sa_hheaders.horizontalScrollBar().setValue(self.horizontalScrollBar().value())
-        self.sa_vheaders.verticalScrollBar().setValue(self.verticalScrollBar().value())
-
-    def scrollContentsBy(self, dx: int, dy: int) -> None:
-        self.hheaders.scrollDirtyRegion(dx, 0)
-        self.vheaders.scrollDirtyRegion(0, dy)
-        super().scrollContentsBy(dx, dy)
-
-    def resizeEvent(self, a0: QtGui.QResizeEvent | None) -> None:
-        rect = self.viewport().geometry()
-        self.sa_hheaders.setGeometry(
-            rect.x() +1, rect.y() - self.margins.top(), rect.width(), self.margins.top()
-        )
-        self.sa_vheaders.setGeometry(
-            rect.x()  - self.margins.left(), rect.y() + 1, self.margins.left(), rect.height()
-        )
-        super().resizeEvent(a0)
-
-class GridWidget(QtWidgets.QWidget):
-    resized = QtCore.pyqtSignal(int, int)
-    resized2 = QtCore.pyqtSignal()
-
-    def resizeEvent(self, event: QtGui.QResizeEvent | None) -> None:
-        super().resizeEvent(event)
-        self.resized.emit(self.width(), self.height())
-        self.resized2.emit()
-
-
-class CellWidget(QtWidgets.QFrame):
-    resized = QtCore.pyqtSignal()
-    selected = QtCore.pyqtSignal(QtWidgets.QFrame)
-
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setUi()
-        self.setObjectName("CellWidget")
-        self.setProperty("selected", False)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
-        self.setBaseSize(100, 30)
-
-    def setUi(self) -> None:
-        self.element_layout = QtWidgets.QVBoxLayout(self)
-        self.element_layout.setContentsMargins(3, 3, 3, 3)
-        self.element_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.setLayout(self.element_layout)
-
-        self.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-
-    def sizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(100, 30)
-
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        return QSize(option.rect.width(), index.data().expected_cell_height(option.rect.width()))
