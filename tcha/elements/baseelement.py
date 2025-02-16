@@ -1,7 +1,7 @@
 from PyQt6.QtCore import pyqtSignal, QXmlStreamWriter, QObject
 from PyQt6.QtWidgets import QWidget, QTextEdit, QFrame, QStyledItemDelegate
 from PyQt6.QtXml import QDomElement
-from educ.resmanager import ResourceType
+from tcha.resmanager import ResourceType
 from abc import abstractmethod
 
 class BaseModel(QObject):

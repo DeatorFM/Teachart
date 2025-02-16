@@ -52,7 +52,7 @@ class CellModel(QAbstractListModel):
             print("The data could not be saved into model.")
             return False
 
-    def mimeData(self, indexes):
+    def mimeData(self, indexes) -> QMimeData:
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
@@ -84,26 +84,27 @@ class CellModel(QAbstractListModel):
         if source_type != 'CellEditor':
             return False
             
-        # If same cell, move rows internally
+        # Handle internal moves
         if (source_table_row, source_table_column) == self.cell_index:
+            print("Dropped from", source_item_row, "to", row)
             return self.moveRows(QModelIndex(), source_item_row, 1, 
-                            QModelIndex(), parent.row())
+                               QModelIndex(), row)
                            
         return False
 
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
+        print("Begin moving rows")
         try:
-            if sourceRow == self.rowCount() - 1 and destinationChild == self.rowCount() or destinationChild == -1:
-                return False
-            if sourceRow > destinationChild:
-                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)
+            if destinationChild > sourceRow:
+                target = destinationChild + 1
             else:
-                self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild + 1)
-            
+                target = destinationChild
+
+            self.beginMoveRows(sourceParent, sourceRow, sourceRow, destinationParent, target)
             self._data.insert(destinationChild, self._data.pop(sourceRow))
             self.endMoveRows()
-            print("Moved successfully")
             return True
+            
         except IndexError:
             return False
 
@@ -346,18 +347,23 @@ class TableModel(QAbstractTableModel):
             map_items = stream.readInt32()
             source_type = stream.readQString()
 
+            if source_type == 'Table':
+                # Handle cell swapping
+                source_index = self.index(source_table_row, source_table_column)
+                self.swap_items(source_index, parent)
+                return True
+
             if source_type == 'CellEditor':
-                # Move item between cells
-                source_cell = self._data[source_table_row][source_table_column]
                 target_cell = self._data[parent.row()][parent.column()]
-                
-                model = source_cell.pop_model(source_item_row)
-                target_cell.add_model(model)
-                return True
-            else:
-                # Handle table internal move
-                self.swap_items(self.index(source_table_row, source_table_column), parent)
-                return True
+                if (source_table_row, source_table_column) == (parent.row(), parent.column()):
+                    # Internal cell move
+                    return target_cell.dropMimeData(data, action, row, column, parent)
+                else:
+                    # Move between cells
+                    source_cell = self._data[source_table_row][source_table_column]
+                    model = source_cell.pop_model(source_item_row)
+                    target_cell.add_model(model)
+                    return True
 
         return False   
 

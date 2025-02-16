@@ -4,9 +4,9 @@ from PyQt6.QtCore import QSize, pyqtSignal, pyqtSlot, Qt, QUrl, QFile, QTime, QP
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaFormat
 from PyQt6 import uic
 from ui.ui_toolsets import TextToolbox, PictureToolbox, AudioToolbox, TableToolbox
-from educ.elements.baseelement import BaseElement, BaseModel
-from educ.elements.audioelement import AudioModel
-from educ.resmanager import ResourceType
+from tcha.elements.baseelement import BaseElement, BaseModel
+from tcha.elements.audioelement import AudioModel
+from tcha.resmanager import ResourceType
 from pathlib import Path
 from os.path import basename
 import json
@@ -67,10 +67,10 @@ class BaseToolset(QToolBar):
 
 def returnToolsets(parent) -> list[BaseToolset]:
     toolsets = []
-    with open("educ/toolsets.json", "r", encoding="utf-8") as f:
+    with open("tcha/toolsets.json", "r", encoding="utf-8") as f:
         names = json.load(f)
     for name in names:
-        toolset = getattr(importlib.import_module("educ.toolset"), name)
+        toolset = getattr(importlib.import_module("tcha.toolset"), name)
         toolset = toolset(parent)
         toolsets.append(toolset)
     return toolsets
@@ -84,6 +84,7 @@ class TableToolset(QToolBar, TableToolbox):
         self.setIconSize(QSize(23, 23))
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea)
+        self.setStyleSheet(ToolBarStyleSheet)
 
     def mousePressEvent(self, a0):
         print("Clicked")
@@ -133,7 +134,7 @@ class TextToolset(BaseToolset, TextToolbox):
         return ""
     
     def createElement(self, respath="") -> BaseModel:
-        model = getattr(importlib.import_module("educ.elements.textelement"), "TextModel")
+        model = getattr(importlib.import_module("tcha.elements.textelement"), "TextModel")
         model = model(respath)
 
         return model
@@ -418,7 +419,7 @@ class SymbolDialog(QDialog):
         self.ui.PB_Paste.clicked.connect(self.emit_character)
 
     def load_character_set(self) -> dict[str, list[int]]:
-        with open("educ/unicodechart.json", "r", encoding="utf-8") as f:
+        with open("tcha/unicodechart.json", "r", encoding="utf-8") as f:
             return json.load(f)
     
     def import_character_sets(self) -> None:
@@ -497,17 +498,18 @@ class PictureToolset(BaseToolset, PictureToolbox):
             return None
 
     def createElement(self, respath="") -> BaseElement:
-        model = getattr(importlib.import_module("educ.elements.pictureelement"), "PictureModel")
+        model = getattr(importlib.import_module("tcha.elements.pictureelement"), "PictureModel")
         model = model(respath, 100, 100)
         return model
 
-    def connect_editor(self, editor: BaseElement) -> None:
+    def connect_editor(self, editor: BaseElement) -> None:#
         if editor:
-            self.sizeChanged.connect(editor.model().set_size)
+            self.sizeChanged.connect(editor.set_size)
             self.rotateRight.connect(editor.rotate_right)
             self.rotateLeft.connect(editor.rotate_left)
 
             editor.imageChanged.connect(self.on_size_changed)
+            editor.refresh()
     
     def openElement(self, model: BaseModel) -> BaseElement:
         return super().openElement(model)
@@ -611,13 +613,12 @@ class AudioToolset(BaseToolset, AudioToolbox):
             return None
     
     def createElement(self, respath="") -> BaseModel:
-        model = getattr(importlib.import_module("educ.elements.audioelement"), "AudioModel")
+        model = getattr(importlib.import_module("tcha.elements.audioelement"), "AudioModel")
         model = model(respath, basename(respath))
         return model
 
     def connect_editor(self, editor: BaseElement) -> None:
         print("Connect Editor to Audio Toolset")
-        self.disconnect()
         editor.playbackStateChanged.connect(self.set_playback_state)
         editor.playbackRequested.connect(self.set_player)
 

@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QDateTime, QTime, QDate, QXmlStreamWriter
 from PyQt6.QtXml import QDomElement
-from educ.dbmodels import CourseItem
+from tcha.dbmodels import CourseItem
 from dataclasses import dataclass, field
 
 @dataclass

@@ -2,9 +2,9 @@ from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal, QXmlStreamWriter, QModelIndex, QRect
 from PyQt6.QtGui import QPixmap, QFocusEvent, QMouseEvent, QTransform, QPainter, QPen
 from PyQt6.QtXml import QDomElement
-from educ.resmanager import ResourceType
+from tcha.resmanager import ResourceType
 from ui.UI_PictureElement import PictureView
-from educ.elements.baseelement import BaseElement, BaseModel
+from tcha.elements.baseelement import BaseElement, BaseModel
 from dataclasses import dataclass, field
 import os, sys
 
@@ -71,12 +71,13 @@ class PictureModel(BaseModel):
     def set_resource(self, path: str) -> None:
         object.__setattr__(self, "resource", path)
 
-    def set_by_width(self, width: int) -> None:
+    def set_by_width(self, width: int, paint_mode=False) -> None:
         if not self.adjusted:
             height = self.pixmap.scaledToWidth(width).height()
             object.__setattr__(self, "width", width)
             object.__setattr__(self, "height", height)
-            self.sizeChanged.emit(self.width, self.height)
+            if not paint_mode:
+                self.sizeChanged.emit(self.width, self.height)
 
     def set_adjusted(self, user_adjusted: bool) -> None:
         object.__setattr__(self, "adjusted", user_adjusted)
@@ -159,6 +160,9 @@ class PictureElement(BaseElement, PictureView):
 
     def rotate_left(self) -> None:
         self._model.rotate_by(-90)
+
+    def set_size(self, width: int, height: int) -> None:
+        self._model.set_size(width, height)
         
     def current_size(self) -> tuple[int, int]:
         return self._model.width, self._model.height
@@ -168,10 +172,6 @@ class PictureElement(BaseElement, PictureView):
     
     def current_height(self) -> int:
         return self._model.height
-
-    # def focusInEvent(self, e: QFocusEvent) -> None:
-    #     print(self.current_size())
-    #     self.imageChanged.emit(self.current_width(), self.current_height())
 
     def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
         self.open_in_subprocess()
@@ -194,7 +194,7 @@ class PictureDelegate(QStyledItemDelegate):
         if model.rotation % 360 > 0:
             image = image.transformed(QTransform().rotate(model.rotation))
         if not model.adjusted or sub_rect.width() < model.width:
-            model.set_by_width(sub_rect.width())
+            model.set_by_width(sub_rect.width(), True)
             model.set_adjusted(False)
             painter.drawPixmap(sub_rect, image)
         else:
@@ -218,6 +218,10 @@ class PictureDelegate(QStyledItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect.adjusted(5, 5, -5, -5))
+
+    def setModelData(self, editor: PictureElement, model, index):
+        editor.model().sizeChanged.disconnect()
+        editor.model().rotationChanged.disconnect()
 
     def passthru(self) -> None:
         return False

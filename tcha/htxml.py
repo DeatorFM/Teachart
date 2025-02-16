@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QXmlStreamWriter
-from educ.tablemodel import TableModel
-from educ.resmanager import ResourceContainer
-from educ.lesson import Lesson
+from tcha.tablemodel import TableModel
+from tcha.resmanager import ResourceContainer
+from tcha.lesson import Lesson
 import zipfile
 
 class HtxWriter:

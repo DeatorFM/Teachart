@@ -40,7 +40,7 @@ class CellDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
         print("Editor for cell items created")
-        from educ.table import CellEditor
+        from tcha.table import CellEditor
         editor = CellEditor(parent)
         editor.geometriesChanged.connect(lambda: self.sizeHintChanged.emit(index))
         editor.setFocus()

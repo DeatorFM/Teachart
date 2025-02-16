@@ -10,10 +10,6 @@ QLabel#FileLabel {
     color: #606060 ;
 }
 
-QComboBox {
-    border: 1px solid #a9a9a9;
-}
-
 
 QCalendarWidget QToolButton {
     color: black;

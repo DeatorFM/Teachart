@@ -2,8 +2,8 @@ import typing
 from PyQt6 import QtCore, QtGui, QtWidgets
 from ui.StyledWidget import *
 from ui.UI_Commons import SplitButton
-from educ.toolset import TableToolset
-from educ.table import Table
+from tcha.toolset import TableToolset
+from tcha.table import Table
 
 EditorStyleSheet = """
 .QWidget {background-color: #e7f2f0;}

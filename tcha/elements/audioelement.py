@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication, QSizePolicy, QWidget
 from PyQt6.QtGui import QFocusEvent, QIcon, QPen, QCursor, QColor, QPainter, QPainterPath
-from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins
+from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins, QModelIndex
 from PyQt6.QtXml import QDomElement
 from PyQt6.QtMultimedia import QMediaPlayer
-from educ.elements.baseelement import BaseElement, BaseModel
+from tcha.elements.baseelement import BaseElement, BaseModel
 from ui.ui_AudioElement import AudioView
 from dataclasses import field, dataclass
-from educ.resmanager import ResourceType
+from tcha.resmanager import ResourceType
 
 @dataclass(frozen=True)
 class AudioModel(BaseModel):
@@ -198,7 +198,7 @@ class AudioDelegate(QStyledItemDelegate):
         
         QApplication.style().drawControl(QStyle.ControlElement.CE_PushButton, button_option, painter)
 
-        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, index.data().name)
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWrapAnywhere, index.data().name)
 
         painter.restore()
 
@@ -219,6 +219,19 @@ class AudioDelegate(QStyledItemDelegate):
         sub_rect = option.rect.marginsAdded(QMargins(-6, -8, -5, -5))
         print("Audio rect", sub_rect.width(), sub_rect.height())
         editor.setGeometry(sub_rect)
+
+    def setModelData(self, editor, model, index):
+        self.destroyEditor(editor, index)
+
+    def destroyEditor(self, editor: AudioElement, index: QModelIndex) -> None:
+        """Disconnects signals and destroys the editor."""
+        print("Destroying AudioElement")
+        try:
+            editor.playbackRequested.disconnect()
+        except TypeError:
+            pass
+        editor.deleteLater()
+        super().destroyEditor(editor, index)
 
     def passthru(self) -> bool:
         return True

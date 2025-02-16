@@ -2,10 +2,10 @@ from PyQt6.QtWidgets import QSizePolicy, QInputDialog, QMessageBox, QMenu, QAppl
 from PyQt6.QtGui import QKeyEvent, QColor, QFont, QTextListFormat, QTextCursor, QFocusEvent, QMouseEvent, QTextLength, QTextCharFormat, QContextMenuEvent, QTextDocument, QPainter, QPen, QTextOption
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt, QSize, QPoint, QMimeData, QXmlStreamWriter, QModelIndex, QRect, QT_TR_NOOP as tr
 from PyQt6.QtXml import QDomElement
-from educ.elements.baseelement import BaseEditor, BaseModel
-from educ.resmanager import ResourceType
+from tcha.elements.baseelement import BaseEditor, BaseModel
+from tcha.resmanager import ResourceType
 from ui.ui_TextElement import TextMenu
-from educ.settings import get
+from tcha.settings import get
 from dataclasses import dataclass
 from typing import Protocol
 import webbrowser

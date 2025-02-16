@@ -3,12 +3,12 @@ from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtCore import QModelIndex, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
 from ui.ui_editor import EditorWidget
 from ui.ui_toolsets import CellActions
-from educ.lesson import Lesson
-from educ.dbmodels import Courses, ScheduleItem
-from educ.resmanager import ResourceContainer, ResourceType
-from educ.toolset import returnToolsets
-from educ.tablemodel import TableModel
-from educ.elements.baseelement import BaseElement
+from tcha.lesson import Lesson
+from tcha.dbmodels import Courses, ScheduleItem
+from tcha.resmanager import ResourceContainer, ResourceType
+from tcha.toolset import returnToolsets
+from tcha.tablemodel import TableModel
+from tcha.elements.baseelement import BaseElement
 import os, enum
 
 class EditorMode(enum.Enum):
@@ -162,7 +162,7 @@ class EditorTab(EditorWidget):
             model = editor.model()
             index = editor.currentIndex()
             if action.data() == CellActions.Remove_Element:
-                print("Removing", index.row())
+                editor.close_current_editor()
                 model.removeRow(index.row(), index)
             elif action.data() == CellActions.Move_Up:
                 model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
@@ -216,6 +216,11 @@ class EditorTab(EditorWidget):
     def set_toolbar(self, widget: BaseElement | None) -> None:
         """Makes the toolset visible for the corresponding element."""
         print("Trying to set toolbar for editor", widget)
+        if self.toolsets_container.currentIndex() != 0:
+            try:
+                self.toolsets_container.currentWidget().disconnect()
+            except TypeError:
+                pass
 
         if widget:
             print("Show toolbar")

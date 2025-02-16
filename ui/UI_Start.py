@@ -2,7 +2,7 @@ from __future__ import annotations
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt, QPoint, QDate
 from ui.StyledWidget import *
-from educ.dbmodels import Scheduler
+from tcha.dbmodels import Scheduler
 import typing
 
 stylesheet = """

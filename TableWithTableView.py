@@ -7,7 +7,7 @@ from PyQt6.QtCore import QAbstractItemModel, QPoint, Qt, QModelIndex, QObject, Q
 from PyQt6.QtGui import QMouseEvent, QAction, QPaintEvent, QPainter, QTextDocument, QPixmap, QWheelEvent, QPen, QFont, QDrag, QCursor
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from educ.elements.audioelement import AudioModel
+from tcha.elements.audioelement import AudioModel
 
 """
 Probleme: 

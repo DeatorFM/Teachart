@@ -1,8 +1,8 @@
 from unittest.mock import Base
 from PyQt6.QtWidgets import QTableView, QListView, QHeaderView, QWidget, QApplication, QMenu, QSizePolicy, QStyledItemDelegate, QLineEdit
-from PyQt6.QtCore import Qt, QPoint, QAbstractItemModel, QModelIndex, pyqtSignal, pyqtSlot, QSize, QByteArray, QItemSelectionModel
-from PyQt6.QtGui import QAction, QMouseEvent, QWheelEvent, QPaintEvent, QDrag
-from educ.elements.baseelement import BaseElement
+from PyQt6.QtCore import Qt, QPoint, QAbstractItemModel, QModelIndex, pyqtSignal, pyqtSlot, QSize, QByteArray, QItemSelectionModel, QRect
+from PyQt6.QtGui import QAction, QMouseEvent, QWheelEvent, QPaintEvent, QDrag, QDragEnterEvent, QDropEvent
+from tcha.elements.baseelement import BaseElement
 from ui.ui_table import CellDelegate
 
 TableViewStyleSheet = """
@@ -28,7 +28,7 @@ class CellEditor(QListView):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setStyleSheet(ListViewStyleSheet)
-        self.setEditTriggers(QListView.EditTrigger.CurrentChanged)
+        self.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameShape(QListView.Shape.NoFrame)
@@ -64,6 +64,7 @@ class CellEditor(QListView):
     
     @pyqtSlot(QWidget)
     def on_editor_opened(self, editor: QWidget) -> None:
+        print("Editor opened", editor)
         if editor:
             self.editorOpened.emit(editor)
             self._editor = editor
@@ -72,34 +73,35 @@ class CellEditor(QListView):
         self.geometriesChanged.emit()
         self.viewport().update()
 
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        pass
+    def wheelEvent(self, e):
+        e.ignore()
+        return super().wheelEvent(e)
 
     def setModel(self, model: QAbstractItemModel):
         model.rowsRemoved.connect(self.close_current_editor)
         super().setModel(model)
     
-    def on_row_removed(self) -> None:
-        if self.model().rowCount() == 0:
-            pass
+    def remove_current_row(self, index: int) -> None:
+        self.close_current_editor()
 
-    def editorDestroyed(self, editor: QWidget | None) -> None:
-        self.geometriesChanged.emit()
-        super().editorDestroyed(editor)
-        self._editor_just_destroyed = True
-        # self.scrollToTop()
+    # def editorDestroyed(self, editor: QWidget | None) -> None:
+    #     super().editorDestroyed(editor)
+    #     self.geometriesChanged.emit()
+    #     self._editor_just_destroyed = True
 
-    def closeEditor(self, editor, hint) -> None:
+    def closeEditor(self, editor, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
         print("An element editor has been closed:", editor)
         if editor:
-            super().closeEditor(editor, QStyledItemDelegate.EndEditHint.NoHint)
+            super().closeEditor(editor, hint)
             self.editorClosed.emit()
             self.clearSelection()
+            self._editor_just_destroyed = True
             self._editor = None
+            print("Close complete")
     
     def close_current_editor(self) -> None:
         if self._editor:
-            self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
+            self.closeEditor(self._editor)
 
     def paintEvent(self, e: QPaintEvent | None) -> None:
         # print("painting list")
@@ -110,7 +112,7 @@ class CellEditor(QListView):
             self.geometriesChanged.emit()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        # index = self.indexAt(event.pos())
+        print("My mouse has clicked yeah")
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.pos()
                 # self.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
@@ -140,19 +142,32 @@ class CellEditor(QListView):
         index = self.indexAt(pos)
         if e.button() == Qt.MouseButton.LeftButton:
             if index.isValid():
-                self.closeEditor(self.editor, QStyledItemDelegate.EndEditHint.NoHint)
+                self.close_current_editor()
+                self.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
                 self.edit(index)
-                self.setCurrentIndex(index)
                 print("Clicked on valid element")
             else:
                 print("Unvalid index")
-                self.closeEditor(self.editor, QStyledItemDelegate.EndEditHint.NoHint)
+                self.close_current_editor()
                 self.clearSelection()
-        # elif e.button() == Qt.MouseButton.RightButton:
-        #     self.context_menu.exec(self.mapToGlobal(pos))
         print(f"Index of clicked list item is {index.row()} | {index.column()} with rect height {self.rectForIndex(index).height()} compared to expected height {self.model().expected_cell_height(self.width())}")
         super().mouseReleaseEvent(e)
-    
+
+    def dropEvent(self, event: QDropEvent):
+        print("Drop event")
+        if event.source() == self:
+            event.setDropAction(Qt.DropAction.MoveAction)
+            event.accept()
+
+            global_pos = self.mapToGlobal(event.position().toPoint())
+            cell_pos = self.mapFromGlobal(global_pos)
+
+            drop_index = self.indexAt(cell_pos)
+            print("Dropped index at", drop_index.row())
+            drop_row = drop_index.row() if drop_index.isValid() else self.model().rowCount()
+
+            self.model().dropMimeData(event.mimeData(), event.dropAction(), drop_row, 0, QModelIndex())
+
     def itemDelegateForIndex(self, index: QModelIndex) -> QStyledItemDelegate | None:
             model = self.model().data(index)
             if model:
@@ -247,6 +262,7 @@ class Table(QTableView):
         self.setDragDropMode(QTableView.DragDropMode.DragDrop)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
+
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection) 
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
@@ -264,7 +280,7 @@ class Table(QTableView):
 
         self.setStyleSheet(TableViewStyleSheet)
 
-        self.pressed.connect(self.on_cell_pressed)
+        # self.pressed.connect(self.on_cell_pressed)
 
         self.itemDelegate().sizeHintChanged.connect(self.update_row_geometries)
         self.itemDelegate().editorOpened.connect(self.on_editor_opened)
@@ -316,18 +332,13 @@ class Table(QTableView):
             self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
     
     def on_editor_opened(self, editor: CellEditor) -> None:
+        """Connects the cell editor with the signals to notify the editor tab"""
         print("Editor opened", editor)
         if editor:
             self._editor = editor
             self.cellEditorOpened.emit(self._editor)
             self._editor.editorOpened.connect(self.elementEditorOpened.emit)
             self._editor.editorClosed.connect(self.elementEditorClosed.emit)
-
-    def on_element_editor_opened(self, editor) -> None:
-        ... 
-
-    def on_cell_pressed(self, index: QModelIndex) -> None:
-        ...
 
     def on_selection_changed(self, selected, deselected) -> None:
         print("Changed selection")
@@ -396,6 +407,24 @@ class Table(QTableView):
         elif e.key() == Qt.Key.Key_Enter:
             return
         super().keyPressEvent(e)
+
+    def dropEvent(self, event: QDropEvent):
+        if self._editor:
+            editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
+            editor_rect = QRect(editor_rect, self._editor.size())
+
+            # Get the drop position in global coordinates
+            drop_position = self.mapToGlobal(event.position().toPoint())
+
+            # Check if the editor's rectangle contains the drop position
+            if editor_rect.contains(drop_position):
+                print("Disallowed drop in table")
+                drop_position = self._editor.mapFromGlobal(self.mapToGlobal(event.position()))
+                editor_event = QDropEvent(drop_position, event.dropAction(), event.mimeData(), event.buttons(), event.modifiers())
+                self._editor.dropEvent(editor_event)
+                event.ignore()
+                return
+        super().dropEvent(event)
 
     def show_context_menu(self, position):
         index = self.indexAt(position)

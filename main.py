@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QDir
-from educ.core import HTCore, MainWindow
+from tcha.core import AppCore, MainWindow
 import sys
 import os
 
@@ -7,7 +7,7 @@ def main() -> None:
     root = os.path.dirname(os.path.abspath(__file__)) 
     QDir.addSearchPath("icons", os.path.join(root, "resources/icons"))
     QDir.addSearchPath("stylesheet", os.path.join(root, "resources/stylesheets"))
-    app = HTCore(sys.argv)
+    app = AppCore(sys.argv)
     vm = MainWindow()
     vm.show()
     sys.exit(app.exec())

@@ -2,12 +2,12 @@ from PyQt6 import QtWidgets
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from ui.UI_Core import MainView
-from educ.start import Start
-from educ.editor import EditorTab
-from educ.dbmodels import Scheduler, Courses
+from tcha.start import Start
+from tcha.editor import EditorTab
+from tcha.dbmodels import Scheduler, Courses
 import typing
 
-class HTCore(QtWidgets.QApplication):
+class AppCore(QtWidgets.QApplication):
     def __init__(self, argv: typing.List[str]) -> None:
         super().__init__(argv)
         self.setStyle("windows11")
@@ -20,8 +20,8 @@ class MainWindow(MainView):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.editors = []
-        self.scheduler = Scheduler("D:/Dokumente/Python Scripts/Educhart/db/lessondata.db")
-        self.courses = Courses("D:/Dokumente/Python Scripts/Educhart/db/lessondata.db")
+        self.scheduler = Scheduler("D:/Dokumente/Python Scripts/tchahart/db/lessondata.db")
+        self.courses = Courses("D:/Dokumente/Python Scripts/tchahart/db/lessondata.db")
         print(self.scheduler)
         print(self.courses)
 

@@ -2,8 +2,8 @@ from PyQt6 import QtGui
 from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QTreeWidgetItem
 from PyQt6.QtCore import pyqtSignal, QT_TR_NOOP as tr
 from ui.UI_Start import StartWidget, FileWidget
-from educ.settings import loadSettings, saveSettings
-from educ.dbmodels import Scheduler, Courses
+from tcha.settings import loadSettings, saveSettings
+from tcha.dbmodels import Scheduler, Courses
 import os
 
 class Start(StartWidget):

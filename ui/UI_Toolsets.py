@@ -94,7 +94,7 @@ class TableToolbox:
 
     def retranslateUi(self) -> None:
         _translate = QtCore.QCoreApplication.translate
-        self.ac_add_element.setText(_translate("TableToolset", "Add to cell"))
+        self.ac_add_element.setText(_translate("TableToolset", "Add to cell ▼"))
         self.ac_FromClipboard.setText(_translate("TableToolset", "From Clipboard"))
         
 
@@ -522,7 +522,7 @@ class AudioToolbox:
         self.ac_rew5.setToolTip(_translate("AudioToolset", "Rewind 5 seconds."))
         self.ac_fwd5.setToolTip(_translate("AudioToolset", "Forward 5 seconds."))
         self.pb_fwd.setToolTip(_translate("AudioToolset", "Hold to move fast forward."))
-        self.sb_RepeatTimes.setSuffix(_translate("AudioToolset", "times"))
+        self.sb_RepeatTimes.setSuffix(_translate("AudioToolset", " times"))
         self.ac_pause_length_label.setText(_translate("AudioToolset", "Pause Length"))
         self.sb_PauseLength.setSuffix(_translate("AudioToolset", "s"))
         self.sb_PauseLength.setToolTip(_translate("AudioToolset", "Sets the pause length between repeats"))
