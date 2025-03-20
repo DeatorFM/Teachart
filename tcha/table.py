@@ -220,6 +220,9 @@ class HeaderView(QHeaderView):
             pos = self.sectionPosition(section)
             self.line_edit.setGeometry(rect.x() + pos, rect.y(), self.sectionSize(section), rect.height())
 
+    def paintSection(self, painter, rect, logicalIndex):
+        super().paintSection(painter, rect, logicalIndex)
+
     def on_section_resized(self, logicalIndex: int, oldSize: int, newSize: int) -> None:
         if self.orientation() == Qt.Orientation.Horizontal:
             self.model().setHeaderData(self.visualIndex(logicalIndex), self.orientation(), QSize(newSize, 30), Qt.ItemDataRole.SizeHintRole)
@@ -305,8 +308,12 @@ class Table(QTableView):
         self.verticalHeader().setModel(model)
         self._model_just_set = True
         self.model().dataChanged.connect(self.set_extra_emit)
+        self.model().dataChanged.connect(self.update_row_geometries)
         self.model().columnsMoved.connect(self.update_row_geometries)
         self.model().rowsMoved.connect(self.update_row_geometries)
+        for column in range(self.model().columnCount()):
+            size = self.model().headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.SizeHintRole).width()    
+            self.horizontalHeader().resizeSection(column, size)
         self.update_row_geometries()
 
     def add_element(self, element) -> None:

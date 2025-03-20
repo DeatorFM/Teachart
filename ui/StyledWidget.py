@@ -1,8 +1,8 @@
-from PyQt6.QtGui import QColor, QPainter, QPixmap
-
 def fromStyle(stylesheet: str) -> str:
     with open(f"resources/stylesheets/{stylesheet}.qss", "r", encoding="utf-8") as f:
         return f.read()
+    
+from PyQt6.QtGui import QColor
 
 def convertColors(colors: list[str]) -> list[QColor]:
     converted = []
@@ -10,7 +10,8 @@ def convertColors(colors: list[str]) -> list[QColor]:
         converted.append(QColor().fromString(color))
     return converted
 
-def paintIcon(svgpath: str, color: QColor) -> QPixmap:
+def paintIcon(svgpath: str, color: QColor) -> "QPixmap":
+    from PyQt6.QtGui import QPixmap, QPainter
     img = QPixmap(svgpath)
     painter = QPainter(img)
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)

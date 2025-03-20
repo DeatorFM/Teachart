@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html class=" zxyab idc0_343" lang="en" data-content_root="./"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="search" title="Search" href="https://doc.qt.io/qtforpython-6/search.html"><link rel="next" title="Module Index" href="https://doc.qt.io/qtforpython-6/contents.html">
+
+    <link rel="shortcut icon" href="https://doc.qt.io/qtforpython-6/_static/qtforpython.ico"><!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06.dev1 -->
+        <title>Qt for Python</title>
+      <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/pygments.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/furo.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/graphviz.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/copybutton.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/sphinx-design.min.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/furo-extensions.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/qt_font.css">
+    <link rel="stylesheet" type="text/css" href="Qt%20for%20Python-Dateien/qt_style.css">
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  --color-brand-primary: #27138b;
+  --color-brand-content: #27138b;
+  --color-admonition-title--important: #27138b;
+  --font-stack: 'Titillium Web', sans-serif;
+  --color-background: rgba(255, 255, 255, 0.9);
+  --color-background-font: #000000;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  --color-brand-primary: #2cde85;
+  --color-brand-content: #2cde85;
+  --color-admonition-title--important: #2cde85;
+  --color-admonition-title-background--important: #474b53;
+  --font-stack: 'Titillium Web', sans-serif;
+  --color-background: rgba(0, 0, 0, 0.9);
+  --color-background-font: #FFFFFF;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  --color-brand-primary: #2cde85;
+  --color-brand-content: #2cde85;
+  --color-admonition-title--important: #2cde85;
+  --color-admonition-title-background--important: #474b53;
+  --font-stack: 'Titillium Web', sans-serif;
+  --color-background: rgba(0, 0, 0, 0.9);
+  --color-background-font: #FFFFFF;
+  
+      }
+    }
+  }
+</style></head>
+  <body data-theme="auto">
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"></path>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"></path>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"></path>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"></line>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"></line>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"></line>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"></line>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"></line>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"></line>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"></line>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"></line>
+      <circle cx="14.5" cy="9.55" r="3.6"></circle>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"></path>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"></line>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"></line>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"></line>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"></line>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"></line>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"></line>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"></line>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"></line>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"></circle>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"></path>
+      <path d="M13.5 6.5l4 4"></path>
+      <path d="M20 21l2 -2l-2 -2"></path>
+      <path d="M17 17l-2 2l2 2"></path>
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path>
+      <path d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008"></path>
+      <path d="M20 21l2 -2l-2 -2"></path>
+      <path d="M17 17l-2 2l2 2"></path>
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="#"><div class="brand">Qt for Python</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="Qt%20for%20Python-Dateien/qtforpython.png" alt="Logo">
+  </div>
+  
+  <span class="sidebar-brand-text">Qt for Python</span>
+  
+</a><select id="qds-vdropdown" style="visibility: visible; margin: 0px 20px;"><option value="/qtforpython-6/" selected="selected">6.8</option><option value="/qtforpython-6.7/">6.7</option><option value="/qtforpython-6.5/">6.5</option></select>
+<form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search" value="QAction">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  
+  
+  
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/commercial/index.html">Commercial Use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/building_from_source/index.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/package_details.html">Package Details</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/api.html">Modules API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/tools/index.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/videos.html">Videos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/deployment/index.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/considerations.html">Considerations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/developer/index.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/release_notes/index.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="https://doc.qt.io/qtforpython-6/contents.html">Module Index</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="project">
+<h1>Qt for Python<a class="headerlink" href="#project" title="Link to this heading">¶</a></h1>
+<p><strong>Qt for Python</strong> offers the official Python bindings for <a class="reference external" href="https://doc.qt.io/">Qt</a>,
+which enables you to use Python to write your Qt applications.
+The project has two main components:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="https://doc.qt.io/qtforpython-6/gettingstarted.html#getting-started"><span class="std std-ref">PySide6</span></a>, so that you can use Qt6 APIs in your Python applications, and</p></li>
+<li><p><a class="reference external" href="https://doc.qt.io/qtforpython-6/shiboken6/index.html">Shiboken6</a>, a binding generator tool, which can
+be used to expose C++ projects to Python, and a Python module with
+some utility functions.</p></li>
+</ul>
+<p><a class="reference internal" href="https://doc.qt.io/qtforpython-6/faq/porting_from2.html#faq-porting-from2"><span class="std std-ref">Porting from PySide2 to PySide6</span></a> provides information on porting existing
+PySide2 applications.</p>
+<p>This project is available under the LGPLv3/GPLv3 and the <a class="reference external" href="https://www.qt.io/licensing/%60">Qt commercial license</a>.</p>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h2>
+<p>You can obtain the latest stable version by running <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pyside6</span></code>.
+If you want to build it yourself, check the <a class="reference internal" href="https://doc.qt.io/qtforpython-6/building_from_source/index.html#buildingfromsource"><span class="std std-ref">Building from Source</span></a> guide.</p>
+<p>To learn how to use it, check out <span class="xref std std-ref">write your first application</span>,
+and to learn what is installed with the <code class="docutils literal notranslate"><span class="pre">pyside6</span></code>, check the
+<a class="reference internal" href="https://doc.qt.io/qtforpython-6/package_details.html#package-details"><span class="std std-ref">package content, structure, and tools</span></a> page.</p>
+</section>
+<section id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h2>
+<div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
+<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-3 sd-row-cols-md-3 sd-row-cols-lg-3 sd-g-2 sd-g-xs-2 sd-g-sm-2 sd-g-md-2 sd-g-lg-2 docutils">
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Desktop.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Write your first Qt application.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/gettingstarted.html#getting-started"><span class="std std-ref">Start here!</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Support.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Building from Source.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/building_from_source/index.html"><span class="doc">Build Instructions</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Commercial.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Packages, installation, and details.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/commercial/index.html#commercial-page"><span class="std std-ref">Commercial</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Dev.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">PySide API reference.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/api.html#pyside-api"><span class="std std-ref">API Docs</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Tutorials.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Learn with step-by-step guides.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/tutorials/index.html"><span class="doc">Tutorials</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Examples.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Check all the available examples.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/examples/index.html"><span class="doc">Examples</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Training.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Watch webinars, talks, and more.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/videos.html"><span class="doc">Videos</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Tooling.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Discover the tools included.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/tools/index.html#package-tools"><span class="std std-ref">Tooling</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Deployment.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Learn to deploy your applications.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/deployment/index.html#deployment-guides"><span class="std std-ref">Deployment</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/cpp_python.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Generate C++ to Python bindings.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference external" href="https://doc.qt.io/qtforpython-6/shiboken6/index.html"><span>Shiboken</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/stopwatch.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">API differences and known issues.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/considerations.html"><span class="doc">Considerations</span></a></span></p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row text-center docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<img alt="" class="sd-card-img-top" src="Qt%20for%20Python-Dateien/Development.svg">
+<div class="sd-card-body docutils">
+<p class="sd-card-text">Notes for Developers.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-outline-primary reference internal" href="https://doc.qt.io/qtforpython-6/developer/index.html#developer-notes"><span class="std std-ref">Developers</span></a></span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>We have also a <a class="reference external" href="https://wiki.qt.io/Qt_for_Python">wiki page</a> where you can find how to report bugs, contribute or contact the community.</p>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="https://doc.qt.io/qtforpython-6/contents.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Module Index</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright © 2025 The Qt Company Ltd. Documentation 
+contributions included herein are the copyrights of their respective 
+owners. The documentation provided herein is licensed under the terms of
+ the GNU Free Documentation License version 1.3 
+(https://www.gnu.org/licenses/fdl.html) as published by the Free 
+Software Foundation. Qt and respective logos are trademarks of The Qt 
+Company Ltd. in Finland and/or other countries worldwide. All other 
+trademarks are property of their respective owners.
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me/">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Qt for Python</a><ul>
+<li><a class="reference internal" href="#quick-start">Quick Start</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="Qt%20for%20Python-Dateien/documentation_options.js"></script>
+    <script src="Qt%20for%20Python-Dateien/doctools.js"></script>
+    <script src="Qt%20for%20Python-Dateien/sphinx_highlight.js"></script>
+    <script src="Qt%20for%20Python-Dateien/furo.js"></script>
+    <script src="Qt%20for%20Python-Dateien/clipboard.min.js"></script>
+    <script src="Qt%20for%20Python-Dateien/copybutton.js"></script>
+    <script src="Qt%20for%20Python-Dateien/design-tabs.js"></script>
+    <script src="Qt%20for%20Python-Dateien/pyside-vselect.js"></script>
+
+</body></html>

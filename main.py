@@ -4,10 +4,11 @@ import sys
 import os
 
 def main() -> None:
+    print("About to create app")
+    app = AppCore(sys.argv)
     root = os.path.dirname(os.path.abspath(__file__)) 
     QDir.addSearchPath("icons", os.path.join(root, "resources/icons"))
     QDir.addSearchPath("stylesheet", os.path.join(root, "resources/stylesheets"))
-    app = AppCore(sys.argv)
     vm = MainWindow()
     vm.show()
     sys.exit(app.exec())

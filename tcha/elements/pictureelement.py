@@ -1,11 +1,11 @@
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
-from PyQt6.QtCore import QSize, Qt, pyqtSignal, QXmlStreamWriter, QModelIndex, QRect
-from PyQt6.QtGui import QPixmap, QFocusEvent, QMouseEvent, QTransform, QPainter, QPen
-from PyQt6.QtXml import QDomElement
-from tcha.resmanager import ResourceType
+from PyQt6.QtCore import QSize, Qt, pyqtSignal, QXmlStreamWriter, QModelIndex, QRect, QXmlStreamAttributes
+from PyQt6.QtGui import QPixmap,  QMouseEvent, QTransform, QPainter, QPen
+from tcha.resmanager import ResourceType, ResourceObject
 from ui.UI_PictureElement import PictureView
 from tcha.elements.baseelement import BaseElement, BaseModel
 from dataclasses import dataclass, field
+from typing import Self
 import os, sys
 
 @dataclass(frozen=True)
@@ -13,7 +13,7 @@ class PictureModel(BaseModel):
     rotationChanged = pyqtSignal()
     sizeChanged = pyqtSignal(int, int)
 
-    resource: str
+    resource: ResourceObject
     width: int
     height: int
     rotation: int = field(default=0)
@@ -22,28 +22,29 @@ class PictureModel(BaseModel):
 
     def __post_init__(self, parent=None) -> None:
         super().__init__(parent)
-        object.__setattr__(self, "pixmap", QPixmap(self.resource))
+        pixmap = QPixmap()
+        pixmap.loadFromData(self.resource.get_data())
+        object.__setattr__(self, "pixmap", pixmap)
     
-    def xml(self, stream: QXmlStreamWriter, path: str) -> QXmlStreamWriter:
-        stream.writeEmptyElement("h", "element")
-        stream.writeAttribute("h", "type", "PictureElement")
-        stream.writeAttribute("h", "resource", path)
-        stream.writeAttribute("h", "width", str(self.width))
-        stream.writeAttribute("h", "height", str(self.height))
-        stream.writeAttribute("h", "rotation", str(self.rotation))
-        stream.writeEndElement()
-        return stream
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        writer.writeEmptyElement("element")
+        writer.writeAttribute("type", "PictureElement")
+        root, suffix = os.path.splitext(self.resource.path)
+        writer.writeAttribute("file", self.resource.make_serialised_name("image", suffix))
+        writer.writeAttribute("width", str(self.width))
+        writer.writeAttribute("height", str(self.height))
+        writer.writeAttribute("rotation", str(self.rotation))
+        writer.writeAttribute("adjusted", str(int(self.adjusted)))
+        return writer
 
     @classmethod
-    def read(cls, domelement: QDomElement) -> "PictureModel":
-        if domelement.attribute("type") == "PictureElement":
-            resource = domelement.attribute("resource")
-            width = int(domelement.attribute("width"))
-            height = int(domelement.attribute("height"))
-            rotation = int(domelement.attribute("rotation"))
-            return cls(resource, width, height, rotation)
-        else:
-            raise TypeError("DOM-Element has not attribute: type=PictureElement.")
+    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> "PictureModel":
+        model = cls(resobj, 
+                    int(xml.value("width")), 
+                    int(xml.value("height")), 
+                    int(xml.value("rotation")), 
+                    bool(xml.value("adjusted")))
+        return model
 
     @staticmethod
     def restype() -> ResourceType:
@@ -54,6 +55,10 @@ class PictureModel(BaseModel):
     
     def editor(self) -> QWidget | None:
         return None
+    
+    @property
+    def path(self) -> str:
+        return self.resource.path
     
     def expected_size(self, width: int) -> QSize:
         size = self.pixmap.scaledToWidth(width).size()
@@ -115,7 +120,12 @@ class PictureModel(BaseModel):
             self.rotationChanged.emit()
         else:
             raise ValueError("Number must be a multiple of 90.")
-    
+        
+    def __del__(self) -> None:
+        self.resource.delete_member()  
+
+def return_model() -> PictureModel:
+    return PictureModel  
 
 class PictureElement(BaseElement, PictureView):
     imageChanged = pyqtSignal(int, int)
@@ -150,11 +160,6 @@ class PictureElement(BaseElement, PictureView):
     def refresh(self) -> None:
         self.imageChanged.emit(self._model.width, self._model.height)
 
-    def open_in_subprocess(self) -> None:
-        if sys.platform == "win32":
-            adjusted_path = self._model.resource.replace("/", "\\")
-            os.startfile(f'"{adjusted_path}"')
-
     def rotate_right(self) -> None:
         self._model.rotate_by(90)
 
@@ -172,10 +177,6 @@ class PictureElement(BaseElement, PictureView):
     
     def current_height(self) -> int:
         return self._model.height
-
-    def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
-        self.open_in_subprocess()
-        super().mouseDoubleClickEvent(e)
 
 
 class PictureDelegate(QStyledItemDelegate):

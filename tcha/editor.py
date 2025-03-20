@@ -1,37 +1,61 @@
-from PyQt6.QtWidgets import QInputDialog, QMessageBox, QWidget, QApplication
+from PyQt6.QtWidgets import QInputDialog, QMessageBox, QApplication, QFileDialog
 from PyQt6.QtGui import QAction, QClipboard
-from PyQt6.QtCore import QModelIndex, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QObject, QEvent, Qt, QRunnable, QThreadPool, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
 from ui.ui_editor import EditorWidget
 from ui.ui_toolsets import CellActions
 from tcha.lesson import Lesson
 from tcha.dbmodels import Courses, ScheduleItem
-from tcha.resmanager import ResourceContainer, ResourceType
+from tcha.resmanager import ResourceContainer, ResourceType, ResourceObject
 from tcha.toolset import returnToolsets
 from tcha.tablemodel import TableModel
+from tcha.lfio import LessonFile
 from tcha.elements.baseelement import BaseElement
-import os, enum
+from typing import Self
+from os.path import basename
+import enum
+
+class EditorModeError(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
 
 class EditorMode(enum.Enum):
     New = 0
     Open = 1
 
+class SaveWorkerSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
+
+class SaveWorker(QRunnable):
+    def __init__(self, lessonfile, lesson, rescont, tablemodel):
+        super().__init__()
+        self._lessonfile: LessonFile = lessonfile
+        self._lesson = lesson
+        self._rescont = rescont
+        self._tablemodel = tablemodel
+        self.signals = SaveWorkerSignals()
+        
+    @pyqtSlot()
+    def run(self):
+        self._lessonfile.save(self._lesson, self._rescont, self._tablemodel)
+        self.signals.finished.emit()
 
 class EditorTab(EditorWidget):
-    widgetClicked = pyqtSignal(QWidget)
-    focusConfirm = pyqtSignal(QWidget)
     schedule = pyqtSignal(ScheduleItem)
+    nameChanged = pyqtSignal(EditorWidget, str)
 
-    def __init__(self, courses: Courses, parent=None, mode=EditorMode.New) -> None:
+    def __init__(self, courses: Courses, rescont: ResourceContainer = ResourceContainer(), mode=EditorMode.New, parent=None) -> None:
         super().__init__(parent)
         # Models
         self.courses = courses
         self.lesson = Lesson(self.dt_DateTime.dateTime())
         self.schedule_item: ScheduleItem
+        self.rescont = rescont
+        self.lessonfile: LessonFile | None = None
+        
+        self.mode = mode
 
         self.toolsets: dict[str, int] = self.get_toolsets()
-        self.rescont = ResourceContainer()
-        self.issaved = False
-        self.path: str
 
         self.connect_signals()
         self.cb_course.setModel(self.courses)
@@ -46,9 +70,9 @@ class EditorTab(EditorWidget):
             self.set_table(2, 2)
 
     def connect_signals(self) -> None:
-        # self.courses.contentChanged.connect(self.on_courses_changed)
-        self.spb_SaveButton.lbutton.clicked.connect(self.saveToLes)
-        self.ac_save.triggered.connect(self.saveToLes)
+        self.spb_SaveButton.lbutton.clicked.connect(self.save_lesson)
+        self.ac_save.triggered.connect(self.save_lesson)
+        self.ac_save_copy.triggered.connect(lambda: self.save_lesson(True))
         self.pb_AddCourse.clicked.connect(self.add_course)
         self.cb_course.activated.connect(self.set_course)
         self.dt_DateTime.dateTimeChanged.connect(self.lesson.set_datetime)
@@ -62,14 +86,25 @@ class EditorTab(EditorWidget):
 
         self.table_toolset.ac_new_row.triggered.connect(lambda: self.tablemodel.insertRow(self.table.currentIndex().row()))
         self.table_toolset.ac_new_column.triggered.connect(lambda: self.tablemodel.insertColumn(self.table.currentIndex().column()))
-        self.table_toolset.ac_delete_row.triggered.connect(lambda: self.tablemodel.removeRow(self.table.currentIndex().row()))
-        self.table_toolset.ac_delete_column.triggered.connect(lambda: self.tablemodel.removeColumn(self.table.currentIndex().column()))
-        self.table_toolset.ac_add_element.triggered.connect(self.on_about_to_add_model)
+        self.table_toolset.ac_delete_row.triggered.connect(self.on_about_to_remove_row)
+        self.table_toolset.ac_delete_column.triggered.connect(self.on_about_to_remove_column)
         self.table_toolset.menu_element.triggered.connect(self.on_element_action)
-        # self.pb_delete_element.clicked.connect(self.delete_element)
-        # self.pb_close_elem_toolbar.clicked.connect(lambda: self.set_toolbar(None))
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
+
+    @classmethod
+    def from_saved_file(cls: Self, courses: Courses, lesson: Lesson, tablemodel: TableModel, rescont: ResourceContainer, lessonfile: LessonFile, parent=None) -> Self:
+        editor = cls(courses, rescont, EditorMode.Open, parent)
+        editor.set_lesson(lesson)
+        editor.table.setModel(tablemodel)
+        editor.set_lessonfile(lessonfile)
+        return editor
+
+    def set_lessonfile(self, lessonfile: LessonFile) -> None:
+        if self.mode == EditorMode.Open:
+            self.lessonfile = lessonfile
+        else:
+            raise EditorModeError(f"Editor is in wrong mode to set a IO to serialised document: {EditorMode.New}")
 
     def set_lesson(self, lesson: Lesson) -> None:
         self.lesson = lesson
@@ -85,8 +120,25 @@ class EditorTab(EditorWidget):
             i = self.courses.index_from_id(lesson.course.ID)
             self.cb_course.setCurrentIndex(i)
 
-    def saveToLes(self) -> None:
-        print("Saved")
+    def save_lesson(self, save_copy=False) -> None:
+        def save() -> None:
+            self.spb_SaveButton.setDisabled(True)
+            worker = SaveWorker(self.lessonfile, self.lesson, self.rescont, self.table.model())
+            worker.signals.finished.connect(self._on_saving_finished)
+            QThreadPool.globalInstance().start(worker)
+
+        if self.lessonfile and not save_copy:
+            save()
+        else:
+            path, suffix = QFileDialog.getSaveFileName(self, tr("Save lesson chart"), "", tr("Lesson file (*.lesson)"))
+            if path:
+                self.lessonfile = LessonFile("w", path)
+                save()
+        
+    def _on_saving_finished(self) -> None:
+        print("Save successfull")
+        self.spb_SaveButton.setEnabled(True)
+        self.nameChanged.emit(self, basename(self.lessonfile.path))
 
     def schedule_lesson(self, file: str) -> None:
         item = ScheduleItem(self.dt_DateTime.time(), self.dt_DateTime.date(), file, self.lesson.course.ID)
@@ -132,8 +184,7 @@ class EditorTab(EditorWidget):
 
     @pyqtSlot(int, int)
     def set_table(self, rows: int, columns: int) -> None:
-        model = TableModel(self.table)
-        model.new(rows, columns)
+        model = TableModel.new(rows, columns)
         self.table.setModel(model)
 
     @property
@@ -165,12 +216,21 @@ class EditorTab(EditorWidget):
                 editor.close_current_editor()
                 model.removeRow(index.row(), index)
             elif action.data() == CellActions.Move_Up:
-                model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
+                if index.row() > 0:
+                    model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
             elif action.data() == CellActions.Move_Down:
-                model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
+                if not index.row() == model.rowCount() - 1:
+                    model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
 
-    def on_about_to_add_model(self) -> None:
-        print("About to add model")
+    def on_about_to_remove_row(self) -> None:
+        current_row = self.table.currentIndex().row()
+        self.table.close_current_editor()
+        self.tablemodel.removeRow(current_row)
+
+    def on_about_to_remove_column(self) -> None:
+        current_column = self.table.currentIndex().column()
+        self.table.close_current_editor()
+        self.tablemodel.removeColumn(current_column)
 
     def add_element(self, action: QAction) -> None:
         print("Init adding model")
@@ -179,19 +239,19 @@ class EditorTab(EditorWidget):
         if self.table.editor:
 
             if toolset.restype == ResourceType.TEXT:
-                respath = self.rescont.create(".html", ResourceType.TEXT)
-                model = toolset.createElement(respath)
+                resobj = self.rescont.create(ResourceType.TEXT)
+                model = toolset.createElement(resobj)
             elif toolset.restype != ResourceType.NONE:
                 path = toolset.getResource()
                 if path == None:
                     return
-                respath = self.rescont.save(path, toolset.restype)
-                assert isinstance(respath, str)
-                model = toolset.createElement(respath)
+                resobj = self.rescont.save(toolset.restype, path)
+                assert isinstance(resobj, ResourceObject)
+                model = toolset.createElement(resobj)
             else:
                 return
 
-            print(self.rescont.contents())
+            print(self.rescont)
 
         
             print("Model add to cell")
@@ -252,30 +312,20 @@ class EditorTab(EditorWidget):
         if clipboard:
             if clipboard.mimeData().hasImage():
                 image = clipboard.image()  
-                fname = self.rescont.create(".png", ResourceType.IMAGE)
-                path = os.path.join(self.rescont.tempdir.name, fname)  
+                path = self.rescont.make_path(".png")
                 image.save(path, "png")
+                resobj = self.rescont.save(ResourceType.IMAGE, path)
                 toolset = self.toolsets_container.widget(self.toolsets["PictureToolset"])
-                element = toolset.createElement(path)
+                element = toolset.createElement(resobj)
             elif clipboard.mimeData().hasText():
-                fname = self.rescont.create(".html", ResourceType.TEXT)
+                resobj = self.rescont.create(ResourceType.TEXT)
                 toolset = self.toolsets_container.widget(self.toolsets["TextToolset"])
-                element = toolset.createElement(fname)
+                element = toolset.createElement(resobj)
                 element.setPlainText(clipboard.text())
 
             self.table.add_element(element)
-                
-    # Event handler
-    # def mousePressEvent(self, a0: QMouseEvent) -> None:
-    #     self.remove_focussed_element()
-    #     super().mousePressEvent(a0)
 
-    # def resizeEvent(self, a0: QResizeEvent | None) -> None:
-    #     rect = self.table.viewport().geometry()
-    #     self.table.hheaders.setGeometry(
-    #         rect.x(), rect.y() - self.table.margins.top(), rect.width(), self.table.margins.top()
-    #     )
-    #     self.table.vheaders.setGeometry(
-    #         rect.x()  - self.table.margins.left(), rect.y(), self.table.margins.left(), rect.height()
-    #     )
-    #     super().resizeEvent(a0)
+    def close_streams(self):
+        self.rescont = None
+        if self.lessonfile:
+            self.lessonfile = None

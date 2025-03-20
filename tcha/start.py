@@ -1,5 +1,5 @@
 from PyQt6 import QtGui
-from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QTreeWidgetItem
+from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QTreeWidgetItem, QFileDialog
 from PyQt6.QtCore import pyqtSignal, QT_TR_NOOP as tr
 from ui.UI_Start import StartWidget, FileWidget
 from tcha.settings import loadSettings, saveSettings
@@ -28,6 +28,7 @@ class Start(StartWidget):
         self.scheduler.contentChanged.connect(self.on_scheduler_content_changed)
         self.cw_MyCalendar.selectionChanged.connect(self.set_list)
         self.pb_NewLesson.clicked.connect(self.editorRequest.emit)
+        self.pb_OpenLesson.clicked.connect(self.openFile)
         self.tw_UpcomingLessons.itemDoubleClicked.connect(lambda: self.openFile(self.tw_UpcomingLessons.selectedItems()[0].path))
 
     def on_scheduler_content_changed(self) -> None:
@@ -47,8 +48,10 @@ class Start(StartWidget):
             self.tw_UpcomingLessons.addTopLevelItem(tree_item)
             print("Added")
 
-    def openFile(self, fPath=None|str) -> None:
-        print(fPath)
+    def openFile(self) -> None:
+        path, filter = QFileDialog.getOpenFileName(self, tr("Open Lesson-File"), "/home", "Lesson (*.lesson)")
+        if path:
+            self.openFileRequest.emit(path)
 
     def set_file_list(self, layout: QVBoxLayout) -> None:
         self.clear_layout(layout)

@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QDialog, QTableWidgetItem, QMessageBox, QFileDialog, QToolBar, QSizePolicy
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat,  QTextListFormat, QAction, QIcon
-from PyQt6.QtCore import QSize, pyqtSignal, pyqtSlot, Qt, QUrl, QFile, QTime, QPoint, QT_TR_NOOP as tr
+from PyQt6.QtCore import QSize, pyqtSignal, pyqtSlot, Qt, QBuffer, QTime, QEvent, QByteArray, QUrl, QT_TR_NOOP as tr
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaFormat
 from PyQt6 import uic
 from ui.ui_toolsets import TextToolbox, PictureToolbox, AudioToolbox, TableToolbox
 from tcha.elements.baseelement import BaseElement, BaseModel
 from tcha.elements.audioelement import AudioModel
-from tcha.resmanager import ResourceType
+from tcha.resmanager import ResourceType, ResourceObject
 from pathlib import Path
 from os.path import basename
 import json
@@ -133,10 +133,10 @@ class TextToolset(BaseToolset, TextToolbox):
     def getResource(self) -> str:
         return ""
     
-    def createElement(self, respath="") -> BaseModel:
+    def createElement(self, resobj= ResourceObject) -> BaseModel:
         model = getattr(importlib.import_module("tcha.elements.textelement"), "TextModel")
-        model = model(respath)
-
+        resobj.add_member()
+        model = model(resobj)
         return model
 
     def connect_editor(self, editor: BaseElement) -> None:
@@ -490,16 +490,17 @@ class PictureToolset(BaseToolset, PictureToolbox):
     def restype(self) -> ResourceType:
         return ResourceType.IMAGE
 
-    def getResource(self) -> str|None:
+    def getResource(self) -> str | None:
         path = QFileDialog.getOpenFileName(self, directory=str(Path.home()), filter=tr("Image files *.png, *.bmp *.jpeg *.jpg"))
         if path[0]:
             return path[0]
         else: 
             return None
 
-    def createElement(self, respath="") -> BaseElement:
+    def createElement(self, resobj: ResourceObject) -> BaseElement:
         model = getattr(importlib.import_module("tcha.elements.pictureelement"), "PictureModel")
-        model = model(respath, 100, 100)
+        resobj.add_member()
+        model = model(resobj, 100, 100)
         return model
 
     def connect_editor(self, editor: BaseElement) -> None:#
@@ -583,11 +584,11 @@ class AudioToolset(BaseToolset, AudioToolbox):
         self.player = QMediaPlayer()
         self.aoutput = QAudioOutput()
         self.player.setAudioOutput(self.aoutput)
-        self._model = AudioModel("", "")
-        self._model.repeatToggled.connect(self.ac_repeat.setChecked)
-        self._model.repeatTimesChanged.connect(self.update_repeat_times)
+        self._model: AudioModel | None = None
+        self._buffer: QBuffer | None = None
         self.repeats = 0
         self.winding = False
+        self._stopped = True
 
         self.connect_signals()
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
@@ -612,9 +613,10 @@ class AudioToolset(BaseToolset, AudioToolbox):
         else: 
             return None
     
-    def createElement(self, respath="") -> BaseModel:
+    def createElement(self, resobj: ResourceObject) -> BaseModel:
         model = getattr(importlib.import_module("tcha.elements.audioelement"), "AudioModel")
-        model = model(respath, basename(respath))
+        resobj.add_member()
+        model = model(resobj)
         return model
 
     def connect_editor(self, editor: BaseElement) -> None:
@@ -624,7 +626,7 @@ class AudioToolset(BaseToolset, AudioToolbox):
 
         self.playbackStateSet.connect(editor.on_playback_state_changed)
         # self.modelSet.connect(editor.on_model_set)
-        self.set_player(editor.model(), False)
+        # self.set_player(editor.model(), False)
 
 
     def openElement(self, model: BaseModel) -> BaseElement:
@@ -652,48 +654,76 @@ class AudioToolset(BaseToolset, AudioToolbox):
     def print_player_notifications(self) -> None:
         print("Notification: ", self.player.mediaStatus(), "with", self.player.source())
         print("Error: ", self.player.error(), self.player.errorString())
+        if self.player.mediaStatus() == QMediaPlayer.MediaStatus.BufferedMedia:
+            print("Set to position", self._model.current_time)
+            self.player.setPosition(self._model.current_time)
 
-    def set_player(self, model: AudioModel, play: bool) -> None:
-        if model == self._model:
+    def set_player(self, model: AudioModel | None, play: bool) -> None:
+        print("I've got a new model?")
+        if model is None:
+            print("Model is None")
+            if self._model:
+                self._model.disconnect()
+            self._model = None
+            self.on_model_set()
+        elif model == self._model:
+            print("Model is model")
             return
         else:
+            print("Model is new")
             self.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
-            self._model.disconnect()
+            if self._model:
+                self._model.disconnect()
             self._model = model
             print("Audio Toolset has new model:", self._model)
-            self.modelSet.emit(model)
             self.on_model_set()
             if play:
                 self.set_playback_state(QMediaPlayer.PlaybackState.PlayingState)
 
     def on_model_set(self) -> None:
-        print("Applying model's properties")
-        self._verify_audio_file(self._model.resource)
-        self._model.repeatToggled.connect(self.ac_repeat.setChecked)
-        self._model.repeatTimesChanged.connect(self.update_repeat_times)
-        self.player.setSource(QUrl.fromLocalFile(self._model.resource))
-        self.repeats = self._model.repeats
-        self.ac_repeat.setChecked(self._model.is_repeating)
-        self.sb_RepeatTimes.disconnect()
-        self.sb_RepeatTimes.setValue(self._model.repeats)
-        self.sb_RepeatTimes.valueChanged.connect(lambda: self._model.set_repeats(self.sb_RepeatTimes.value()))
-        self.sb_PauseLength.disconnect()
-        self.sb_PauseLength.setValue(self._model.pause_length)
-        self.sb_PauseLength.valueChanged.connect(lambda: self._model.set_pause_length(self.sb_PauseLength.value()))
-        print("Properties", self.player.duration(), self._model)
-        print("Notification: ", self.player.mediaStatus(), "with", self.player.source())
-        print("Error: ", self.player.error(), self.player.errorString())
+        if self._model:
+            self._model.repeatToggled.connect(self.ac_repeat.setChecked)
+            self._model.repeatTimesChanged.connect(self.update_repeat_times)
+            buffer = QBuffer()
+            buffer.setData(QByteArray(self._model.resource.get_data()))
+            buffer.open(QBuffer.OpenModeFlag.ReadOnly)
+            self._buffer = buffer
+            print("Before source set")
+            self.player.setSourceDevice(self._buffer, QUrl(self._model.resource.path))
+            print("Source set")
+            self.repeats = self._model.repeats
+            self.ac_repeat.setChecked(self._model.is_repeating)
+            self.sb_RepeatTimes.disconnect()
+            self.sb_RepeatTimes.setValue(self._model.repeats)
+            self.sb_RepeatTimes.valueChanged.connect(lambda: self._model.set_repeats(self.sb_RepeatTimes.value()))
+            self.sb_PauseLength.disconnect()
+            self.sb_PauseLength.setValue(self._model.pause_length)
+            self.sb_PauseLength.valueChanged.connect(lambda: self._model.set_pause_length(self.sb_PauseLength.value()))
+            print("Properties", self.player.duration(), self._model)
+            print("Notification: ", self.player.mediaStatus(), "with", self.player.source())
+            print("Error: ", self.player.error(), self.player.errorString())
+        else:
+            self.player.setSourceDevice(None)
+            if self._buffer is not None:
+                self._buffer.close()
+            self._buffer = None
 
-    def _verify_audio_file(self, path):
-        print("=== File Verification ===")
-        file = QFile(path)
-        print(f"Path: {path}")
-        print(f"Exists: {file.exists()}")
-        if file.open(QFile.OpenModeFlag.ReadOnly):
-            print(f"Size: {file.size()} bytes")
-            print(f"Readable: True")
-            file.close()
-        
+    def file_format(self, path: str) -> QMediaFormat:
+        if path.lower().endswith('.mp3'):
+            return QMediaFormat(QMediaFormat.FileFormat.MP3)
+        elif path.lower().endswith('.wav'):
+            return QMediaFormat(QMediaFormat.FileFormat.Wave)
+        elif path.lower().endswith(".aac"):
+            return QMediaFormat(QMediaFormat.FileFormat.AAC)
+        elif path.lower().endswith(".m4a"):
+            return QMediaFormat(QMediaFormat.FileFormat.MPEG4)
+        elif path.lower().endswith(".flac"):
+            return QMediaFormat(QMediaFormat.FileFormat.FLAC)
+        elif path.lower().endswith(".wma"):
+            return QMediaFormat(QMediaFormat.FileFormat.WMA)
+        else:
+            return QMediaFormat(QMediaFormat.FileFormat.UnspecifiedFormat)
+
     def set_track_length(self) -> None:
         print("Duration: ", self.player.duration())
         self.hs_PlayTime.setMaximum(self.player.duration())
@@ -709,11 +739,13 @@ class AudioToolset(BaseToolset, AudioToolbox):
         self.te_EndTime.setTime(QTime.fromMSecsSinceStartOfDay(end))
 
     def set_current_position(self, duration: int) -> None:
-        if not self.hs_PlayTime.isSliderDown():
+        if not self.hs_PlayTime.isSliderDown() and self._model is not None:
             self.hs_PlayTime.setSliderPosition(duration)
             self.te_PlayTime.setTime(QTime(0, 0, 0).addMSecs(duration))
+            if not self._stopped:
+                self._model.set_current_time(duration)
             if self._model.end_time > 0 and self.player.position() // 100 == (self.player.duration() - self._model.end_time) // 100:
-                print("Stopping now!")
+                self._model.set_current_time(0)
                 self.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
 
     def on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
@@ -733,10 +765,13 @@ class AudioToolset(BaseToolset, AudioToolbox):
         """Sets player's 'PlayerbackState'"""
         print(f"Got PlayBackState {state}")
         if state is QMediaPlayer.PlaybackState.StoppedState:
+            self._stopped = True
             self.player.stop()
         elif state is QMediaPlayer.PlaybackState.PlayingState:
+            self._stopped = False
             self.player.play()
         elif state is QMediaPlayer.PlaybackState.PausedState:
+            self._stopped = False
             self.player.pause() 
 
     def play_(self) -> None:
@@ -749,7 +784,7 @@ class AudioToolset(BaseToolset, AudioToolbox):
         self.player.setPosition(self.hs_PlayTime.sliderPosition())
 
     async def on_stop(self) -> None:
-        if self._model.is_repeating:
+        if self._model and self._model.is_repeating:
             if self.repeats > 0:
                 print("Repeating")
                 self.repeats -= 1
@@ -801,12 +836,18 @@ class AudioToolset(BaseToolset, AudioToolbox):
 
     def reset(self) -> None:
         self.repeats = 0
+        self._model.set_current_time(0)
         self.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
         self.repeats = self._model.repeats
 
-    def hideEvent(self, a0):
+    def hideEvent(self, event) -> None:
+        print("Hid")
+        if self.window().windowState() & Qt.WindowState.WindowMinimized:
+            event.ignore()
+            return
+        self.set_player(None, False)
         self.player.pause()
-        super().hideEvent(a0)
+        super().hideEvent(event)
 
     def sizeHint(self) -> QSize:
         return QSize(240, 160)

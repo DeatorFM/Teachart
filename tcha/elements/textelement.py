@@ -1,13 +1,13 @@
 from PyQt6.QtWidgets import QSizePolicy, QInputDialog, QMessageBox, QMenu, QApplication, QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
-from PyQt6.QtGui import QKeyEvent, QColor, QFont, QTextListFormat, QTextCursor, QFocusEvent, QMouseEvent, QTextLength, QTextCharFormat, QContextMenuEvent, QTextDocument, QPainter, QPen, QTextOption
-from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt, QSize, QPoint, QMimeData, QXmlStreamWriter, QModelIndex, QRect, QT_TR_NOOP as tr
+from PyQt6.QtGui import QKeyEvent, QColor, QFont, QTextListFormat, QTextCursor,  QMouseEvent, QTextLength, QTextCharFormat, QContextMenuEvent, QTextDocument, QPainter, QPen, QTextOption
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt, QSize, QPoint, QMimeData, QXmlStreamWriter, QXmlStreamAttributes, QModelIndex, QRect, QT_TR_NOOP as tr
 from PyQt6.QtXml import QDomElement
 from tcha.elements.baseelement import BaseEditor, BaseModel
-from tcha.resmanager import ResourceType
+from tcha.resmanager import ResourceType, ResourceObject
 from ui.ui_TextElement import TextMenu
 from tcha.settings import get
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, Self
 import webbrowser
 
 class TextElement(Protocol):
@@ -18,28 +18,26 @@ class TextDelegate(Protocol):
 
 @dataclass
 class TextModel(QTextDocument, BaseModel):
-    resource: str
+    resource: ResourceObject
 
     def __post_init__(self, parent=None) -> None:
         super().__init__(parent)
         # option = QTextOption()
         self.setDefaultStyleSheet("p {background-color: white;}")
 
-    def xml(self, stream: QXmlStreamWriter, path: str) -> QXmlStreamWriter:
-        stream.writeEmptyElement("h", "element")
-        stream.writeAttribute("h", "type", "TextElement")
-        stream.writeAttribute("h", "resource", path)
-        stream.writeEndElement()
-        return stream
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        writer.writeEmptyElement("element")
+        writer.writeAttribute("type", "TextElement")
+        writer.writeAttribute("file", self.resource.make_serialised_name("text", ".html"))
+        self.resource.set_data(bytes(self.toHtml(), "utf-8"))
+        return writer
     
     @classmethod
-    def read(cls, domelement: QDomElement) -> "TextModel":
-        if domelement.attribute("type") == "TextElement":
-            resource = domelement.attribute("resource")
-            model = cls(resource)
-            return model
-        else:
-            raise TypeError("DOM-Element has not attribute type=TextElement.")
+    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> "TextModel":
+        model = cls(resobj)
+        html = resobj.get_data().decode("utf-8")
+        model.setHtml(html)
+        return model
     
     @staticmethod
     def restype() -> ResourceType:
@@ -62,6 +60,12 @@ class TextModel(QTextDocument, BaseModel):
 
     def change_on_mouse_hover(self) -> bool:
         return False
+
+    def __del__(self) -> None:
+        self.resource.delete_member()
+
+def return_model() -> TextModel:
+    return TextModel
     
 class TextElement(BaseEditor):
     requestTextProps = pyqtSignal()
@@ -101,12 +105,8 @@ class TextElement(BaseEditor):
     def toolset(self) -> str:
         return "TextToolset"
     
-    def model(self) -> QTextDocument:
+    def model(self) -> TextModel:
         return self.document()
-    
-    def on_focussed(self, focussed: bool) -> None:
-        self.setProperty("focussed", focussed)
-        self.style().polish(self)
 
     def connect_signals(self) -> None:
         self.cursorPositionChanged.connect(self.on_cursor_position_changed)
@@ -188,7 +188,7 @@ class TextElement(BaseEditor):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:        
         self.last_char = e.text()
-        print("Last Character: ", repr(self.last_char))
+        # print("Last Character: ", repr(self.last_char))
 
         if self.textCursor().currentList():
             if e.key() == Qt.Key.Key_Tab:
@@ -430,12 +430,12 @@ class TextElement(BaseEditor):
                     props["size"] = int(self.last_format["size"])
                 else:
                     props["size"] = self.last_format["size"]
-            print(props["size"])
+            # print(props["size"])
             props["color"] = self.textColor()
             # props["bcolor"] = self.accurate_background_color()
 
             self.last_format = props
-            print(props)
+            # print(props)
             # print("BG_Colour accurate", props["bcolor"].name())
            
             self.elementFontChanged.emit(props)
@@ -453,6 +453,7 @@ class TextElement(BaseEditor):
     def contextMenuEvent(self, e: QContextMenuEvent):
         self.send_current_text_format()
         self.menu.open_(e.globalPos(), self.textCursor().hasSelection(), bool(QApplication.clipboard().text()), self.in_table(), self.has_hyperlink(e.pos()))
+
 
 class TextElementMenu(QMenu, TextMenu):
     fontChanged = pyqtSignal(dict)

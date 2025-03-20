@@ -7,21 +7,25 @@ from abc import abstractmethod
 class BaseModel(QObject):
 
     @abstractmethod
-    def xml(self, stream: QXmlStreamWriter, path: str) -> QXmlStreamWriter:
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        """Writes the DOM-element holding the attributes of the model"""
         return QXmlStreamWriter
        
     @classmethod
     @abstractmethod
-    def read(cls, domelement: QDomElement):
+    def read(cls, domelement: QDomElement, resobject):
+        """Creates a model from the Dom-element and the ResourceObject"""
         return BaseModel
 
     @staticmethod
     @abstractmethod
     def restype() -> ResourceType:
+        """Returns the ResourceType used for the ResourceObject"""
         return ResourceType
 
     @abstractmethod
     def delegate(self) -> QStyledItemDelegate:
+        """Required delegate for visualisation in the table"""
         return QStyledItemDelegate()
     
     @abstractmethod
@@ -30,6 +34,7 @@ class BaseModel(QObject):
     
     @abstractmethod
     def expected_height(self, width: int) -> int:
+        """Height of the element as seen in the table calculated with the cell's width"""
         return 30
     
     @abstractmethod
@@ -38,21 +43,7 @@ class BaseModel(QObject):
     
 
 class BaseElement(QFrame):
-    focussed = pyqtSignal(QWidget)
-    unfocussed = pyqtSignal()
     requestToolset = pyqtSignal()
-    _isfocussed = False
-
-    @property
-    def isFocussed(self) -> bool:
-        return self._isfocussed
-
-    def setFocussed(self, widget):
-        if widget == self:
-            self._isfocussed = True
-        else:
-            self._isfocussed = False
-        self.on_focussed(self._isfocussed)
 
     @property
     @abstractmethod
@@ -63,32 +54,11 @@ class BaseElement(QFrame):
     def model(self) -> BaseModel:
         return BaseModel
     
-    @abstractmethod
-    def on_focussed(self, focussed: bool) -> None:
-        return
     
 class BaseEditor(QTextEdit):
-    focussed = pyqtSignal(QWidget)
-    unfocussed = pyqtSignal()
     requestToolset = pyqtSignal()
-    _isfocussed = False
-
-    @property
-    def isFocussed(self) -> bool:
-        return self._isfocussed
-
-    def setFocussed(self, widget):
-        if widget == self:
-            self._isfocussed = True
-        else:
-            self._isfocussed = False
-        self.on_focussed(self._isfocussed)
 
     @property
     @abstractmethod
     def toolset(self) -> str:
         return "BaseElement"
-    
-    @abstractmethod
-    def on_focussed(self, focussed: bool) -> None:
-        return

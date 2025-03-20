@@ -23,13 +23,11 @@ def get(table: str, key=None|str):
 
 # Constants
 
-@dataclass(frozen=True)
-class TimeFormat():
+class TimeFormat:
     TF12 = "H:mm ap"
     TF24 = "HH:mm"
 
-@dataclass(frozen=True)
-class DateFormat():
+class DateFormat:
     DE = "dd.MM.yyyy"
     DMY = "dd/MM/yyyy"
     USA = "MM.dd.yyyy"

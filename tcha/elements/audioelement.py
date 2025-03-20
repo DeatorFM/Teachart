@@ -1,14 +1,16 @@
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication, QSizePolicy, QWidget
 from PyQt6.QtGui import QFocusEvent, QIcon, QPen, QCursor, QColor, QPainter, QPainterPath
-from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins, QModelIndex
+from PyQt6.QtCore import QTime, pyqtSignal, Qt, QXmlStreamWriter, QSize, QRect, QMargins, QModelIndex, QXmlStreamAttributes
 from PyQt6.QtXml import QDomElement
 from PyQt6.QtMultimedia import QMediaPlayer
 from tcha.elements.baseelement import BaseElement, BaseModel
 from ui.ui_AudioElement import AudioView
 from dataclasses import field, dataclass
-from tcha.resmanager import ResourceType
+from tcha.resmanager import ResourceType, ResourceObject
+from typing import Self
+import os.path
 
-@dataclass(frozen=True)
+@dataclass
 class AudioModel(BaseModel):
     nameChanged = pyqtSignal(str)
     repeatToggled = pyqtSignal(bool)
@@ -17,47 +19,46 @@ class AudioModel(BaseModel):
     startTimeChanged = pyqtSignal(int)
     endTimeChanged = pyqtSignal(int)
 
-    resource: str
-    name: str
+    resource: ResourceObject
     is_repeating: bool = field(default=False)
     repeats: int = field(default=1)
     pause_length: int = field(default=0) # in secs
     start_time: int = field(default=0) # in msecs from the start of the track
     end_time: int = field(default= 0) # in msecs from the end of the track
     chapters: list = field(default_factory=list)
+    current_time: int = field(default=0)
 
     def __post_init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.name = os.path.basename(self.resource.path)
         
     @staticmethod
     def restype() -> ResourceType:
         return ResourceType.AUDIO
     
-    def xml(self, stream: QXmlStreamWriter, path: str) -> QXmlStreamWriter:
-        stream.writeEmptyElement("h", "element")
-        stream.writeAttribute("h", "type", "AudioElement")
-        stream.writeAttribute("h", "resource", path)
-        stream.writeAttribute("h", "name", self.name)
-        stream.writeAttribute("h", "repeating", str(int(self.is_repeating)))
-        stream.writeAttribute("h", "repeats", str(self.repeats))
-        stream.writeAttribute("h", "pause_length", str(self.pause_length))
-        stream.writeAttribute("h", "start_time", str(self.start_time))
-        stream.writeAttribute("h", "end_time", str(self.end_time))
-        return stream
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        writer.writeEmptyElement("element")
+        writer.writeAttribute("type", "AudioElement")
+        root, suffix = os.path.splitext(self.resource.path)
+        writer.writeAttribute("file", self.resource.make_serialised_name("audio", suffix))
+        writer.writeAttribute("name", self.name)
+        writer.writeAttribute("repeating", str(int(self.is_repeating)))
+        writer.writeAttribute("repeats", str(self.repeats))
+        writer.writeAttribute("pause_length", str(self.pause_length))
+        writer.writeAttribute("start_time", str(self.start_time))
+        writer.writeAttribute("end_time", str(self.end_time))
+        return writer
     
     @classmethod
-    def read(cls, domelement: QDomElement) -> "AudioModel":
-        if domelement.attribute("type") == "AudioElement":
-            resource = domelement.attribute("resource")
-            name = domelement.attribute("name")
-            is_repeating = bool(int(domelement.attribute("repeating")))
-            repeats = int(domelement.attribute("repeats"))
-            pause_length = int(domelement.attribute("pause-length"))
-            start_time = int(domelement.attribute("start-time"))
-            end_time = int(domelement.attribute("end-time"))
-            return cls(resource, name, is_repeating, repeats, pause_length, start_time, end_time)
-        else:
-            raise TypeError("DOM-Element has not attribute type=AudioElement.")
+    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> "AudioModel":
+        model = cls(resobj, 
+                    bool(int(xml.value("repeating"))), 
+                    int(xml.value("repeats")), 
+                    int(xml.value("pause_length")),
+                    int(xml.value("start_time")),
+                    int(xml.value("end_time")))
+        model.set_name(xml.value("name"))
+        return model
 
     def set_resource(self, res: str) -> None:
         object.__setattr__(self, "resource", res)
@@ -80,6 +81,9 @@ class AudioModel(BaseModel):
     def set_end_time(self, msec: int) -> None:
         object.__setattr__(self, "end_time", msec)
 
+    def set_current_time(self, msec: int) -> None:
+        object.__setattr__(self, "current_time", msec)
+
     def delegate(self, parent) -> QStyledItemDelegate:
         return AudioDelegate(parent)
     
@@ -88,6 +92,10 @@ class AudioModel(BaseModel):
     
     def expected_size(self, width) -> QSize:
         return QSize(width, 45)
+    
+    def __del__(self) -> None:
+        print("Audio model to be deleted")
+        self.resource.delete_member()
 
 class ChapterObject:
     def __init__(self, start: QTime, end: QTime, name="") -> None:
@@ -95,6 +103,8 @@ class ChapterObject:
         self.end = end
         self.name = name
 
+def return_model() -> AudioModel:
+    return AudioModel
 
 class AudioElement(BaseElement, AudioView):
     playbackRequested = pyqtSignal(AudioModel, bool)
@@ -150,6 +160,8 @@ class AudioElement(BaseElement, AudioView):
             self.is_own_model = False
 
     def focusInEvent(self, a0: QFocusEvent) -> None:
+        print("Sending model")
+        print(self._model)
         self.playbackRequested.emit(self._model, False)
         super().focusInEvent(a0)
 

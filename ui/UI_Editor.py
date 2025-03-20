@@ -128,7 +128,7 @@ class EditorWidget(QtWidgets.QWidget):
 
         self.menu_save = QtWidgets.QMenu(self.spb_SaveButton)
         self.ac_save = self.menu_save.addAction("")
-        self.ac_saveTo = self.menu_save.addAction("")
+        self.ac_save_copy = self.menu_save.addAction("")
 
         self.spb_SaveButton.rbutton.setMaximumSize(12, 21)
         self.spb_SaveButton.rbutton.setMenu(self.menu_save)
@@ -209,7 +209,7 @@ class EditorWidget(QtWidgets.QWidget):
         self.lb_LessonTime.setText(_translate("Editor", "Duration"))
         self.sb_LessonTime.setSuffix(_translate("Editor", " min"))
         self.ac_save.setText(_translate("Editor", "Save"))
-        self.ac_saveTo.setText(_translate("Editor", "Save to"))
+        self.ac_save_copy.setText(_translate("Editor", "Save to"))
         self.pb_ReadMode.setToolTip(_translate("Editor", "Read Mode"))
         self.te_comment.setPlaceholderText(_translate("Editor", "Comment"))
 

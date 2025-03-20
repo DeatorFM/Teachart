@@ -1,5 +1,4 @@
-from PyQt6.QtCore import QDateTime, QTime, QDate, QXmlStreamWriter
-from PyQt6.QtXml import QDomElement
+from PyQt6.QtCore import QDateTime, QTime, QDate, QXmlStreamWriter, QXmlStreamReader
 from tcha.dbmodels import CourseItem
 from dataclasses import dataclass, field
 
@@ -24,7 +23,7 @@ class Lesson:
 
     def xml(self, stream: QXmlStreamWriter) -> QXmlStreamWriter:
         """Writes an element with the lesson data to an QXmlStreamWriter."""
-        stream.writeStartElement("h", "lesson")
+        stream.writeStartElement("lesson")
         stream.writeAttribute("course_name", self.course.name)
         stream.writeAttribute("course_id", str(self.course.ID))
         stream.writeAttribute("date", str(self.datetime.date().toJulianDay()))
@@ -35,12 +34,13 @@ class Lesson:
         return stream
     
     @classmethod
-    def read(cls, domelement: QDomElement) -> "Lesson":
+    def read(cls, reader: QXmlStreamReader) -> "Lesson":
         """Reads data from an XML DOM element and returns an instance of Lesson."""
+        attrs = reader.attributes()
         datetime = QDateTime()
-        datetime.setTime(QTime.fromMSecsSinceStartOfDay(int(domelement.attribute("time"))))
-        datetime.setDate(QDate.fromJulianDay(int(domelement.attribute("date"))))
-        course = CourseItem(domelement.attribute("course-name"), int(domelement.attribute("course-id")))
-        duration = int(domelement.attribute("duration"))
-        comment = domelement.nodeValue()
+        datetime.setTime(QTime().addMSecs(int(attrs.value("time"))))
+        datetime.setDate(QDate.fromJulianDay(int(attrs.value("date"))))
+        course = CourseItem(attrs.value("course_name"), int(attrs.value("course_id")))
+        duration = int(attrs.value("duration"))
+        comment = reader.readElementText()
         return cls(datetime, course, duration, comment)
