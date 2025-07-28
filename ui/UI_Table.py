@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QStyledItemDelegate, QListView, QStyleOptionViewItem, QWidget
-from PyQt6.QtCore import QModelIndex, pyqtSignal, QRect, QObject, QSize, QPoint, QEvent
+from PyQt6.QtCore import QModelIndex, pyqtSignal, QRect, QObject, QSize, QPoint
 from PyQt6.QtGui import QPainter
+from functools import cache
 
 class CellDelegate(QStyledItemDelegate):
     editorOpened = pyqtSignal(QListView)
@@ -32,7 +33,7 @@ class CellDelegate(QStyledItemDelegate):
                     # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
                 
         cell.height = y_offset + 20
-        # print("Cell offset height", y_offset, "vs. expected height", cell.expected_cell_height(option.rect.width()))
+        print("Cell offset height", y_offset, "vs. expected height", cell.expected_cell_height(option.rect.width()), "vs cell height ", cell.height)
 
         if self.extra_emit:
             self.sizeHintChanged.emit(index)
@@ -53,7 +54,7 @@ class CellDelegate(QStyledItemDelegate):
             editor.setGeometry(option.rect)
             editor.viewport().update()
 
-    def eventFilter(self, object, event):
+    def eventFilter(self, object, event) -> bool:
         if event.type() == 9:
             return True
         return super().eventFilter(object, event)
@@ -62,6 +63,7 @@ class CellDelegate(QStyledItemDelegate):
         if editor:
             editor.setModel(index.data())
             editor.model().cell_index = (index.row(), index.column())  
+            self.editorOpened.emit(editor)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         return QSize(option.rect.width(), index.data().expected_cell_height(option.rect.width()))

@@ -11,12 +11,6 @@ class PictureView:
         self.main_layout.setContentsMargins(3,3,3,3)
         self.main_layout.setSpacing(0)
 
-        # self.border_frame = QtWidgets.QFrame(agent)
-        # self.main_layout.addWidget(self.border_frame)
-
-        # self.border_layout = QtWidgets.QVBoxLayout(self.border_frame)
-        # self.border_frame.setLayout(self.border_layout)
-
         self.piclabel = PictureLabel(self)
         self.piclabel.resized.connect(self.fitToPicture)
         self.main_layout.addWidget(self.piclabel)

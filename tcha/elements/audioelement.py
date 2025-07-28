@@ -233,6 +233,7 @@ class AudioDelegate(QStyledItemDelegate):
         editor.setGeometry(sub_rect)
 
     def setModelData(self, editor, model, index):
+        model.setData(index, editor.model())
         self.destroyEditor(editor, index)
 
     def destroyEditor(self, editor: AudioElement, index: QModelIndex) -> None:

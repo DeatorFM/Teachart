@@ -1,61 +1,74 @@
-from PyQt6 import QtWidgets, QtCore, QtGui
+from PyQt6.QtWidgets import (
+    QPushButton, QFrame, QHBoxLayout, QWidget, QToolButton,
+    QMenu, QWidgetAction, QColorDialog, QLabel, QListView,
+    QLineEdit, QComboBox, QGridLayout
+)
+from PyQt6.QtCore import (
+    QSize, Qt, pyqtSignal, QEvent, QObject
+)
+from PyQt6.QtGui import (
+    QIcon, QPixmap, QCursor, QAction, QMouseEvent,
+    QColor
+)
+from tcha.dbmodels import FilteredCourseModel, FilteredStudentModel
+from ui.StyledWidget import *
 from ui.StyledWidget import *
 
-class IconButton(QtWidgets.QPushButton):
+class IconButton(QPushButton):
     def __init__(self, icon: str, parent=None, width=20, height=20):
         super().__init__(parent)
-        ic = QtGui.QIcon()
-        ic.addPixmap(QtGui.QPixmap(icon))
+        ic = QIcon()
+        ic.addPixmap(QPixmap(icon))
         self.setIcon(ic)
-        self.setIconSize(QtCore.QSize(width, height))
+        self.setIconSize(QSize(width, height))
         self.setProperty("borderless", True)
 
-class SplitButton(QtWidgets.QFrame):
+class SplitButton(QFrame):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.button_layout = QtWidgets.QHBoxLayout(self)
+        self.button_layout = QHBoxLayout(self)
         self.button_layout.setSpacing(0)
         self.button_layout.setContentsMargins(2, 0, 2, 0)
-        self.lbutton = QtWidgets.QPushButton()
+        self.lbutton = QPushButton()
         self.lbutton.setObjectName("lbutton")
         self.button_layout.addWidget(self.lbutton)
-        self.rbutton = QtWidgets.QPushButton()
+        self.rbutton = QPushButton()
         self.rbutton.setObjectName("rbutton")
         self.button_layout.addWidget(self.rbutton)
         self.setStyleSheet(fromStyle("SplitButton"))
 
-class PrettyButton(QtWidgets.QPushButton):
+class PrettyButton(QPushButton):
     def __init__(self, title, iconpath: str, iconpathhover: str, parent=None) -> None:
         super().__init__(parent)
         self.setObjectName(title)
-        self.default_icon = QtGui.QIcon()
-        self.default_icon.addPixmap(QtGui.QPixmap(f"{iconpath}"))
-        self.hover_icon = QtGui.QIcon()
-        self.hover_icon.addPixmap(QtGui.QPixmap(f"{iconpathhover}"))
+        self.default_icon = QIcon()
+        self.default_icon.addPixmap(QPixmap(f"{iconpath}"))
+        self.hover_icon = QIcon()
+        self.hover_icon.addPixmap(QPixmap(f"{iconpathhover}"))
         self.setIcon(self.default_icon)
-        self.setIconSize(QtCore.QSize(20, 20))
-        self.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.setIconSize(QSize(20, 20))
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.installEventFilter(self)
 
     def eventFilter(self, a0: 'QObject', event: 'QEvent') -> bool:
-        if event.type() == QtCore.QEvent.Type.HoverEnter:
+        if event.type() == QEvent.Type.HoverEnter:
             self.setIcon(self.hover_icon)
-            self.setIconSize(QtCore.QSize(20, 20))
-        elif event.type() == QtCore.QEvent.Type.HoverLeave:
+            self.setIconSize(QSize(20, 20))
+        elif event.type() == QEvent.Type.HoverLeave:
             self.setIcon(self.default_icon)
         super().eventFilter(a0, event)
     
-class SwitchButton(QtWidgets.QPushButton):
-    stateChanged = QtCore.pyqtSignal(int)
+class SwitchButton(QPushButton):
+    stateChanged = pyqtSignal(int)
 
     def __init__(self, icon1: str, icon2: str, parent= None) -> None:
         super().__init__(parent)
-        self.icon1 = QtGui.QIcon()
-        self.icon1.addPixmap(QtGui.QPixmap(f"{icon1}"))
-        self.icon2 = QtGui.QIcon()
-        self.icon2.addPixmap(QtGui.QPixmap(f"{icon2}"))
+        self.icon1 = QIcon()
+        self.icon1.addPixmap(QPixmap(f"{icon1}"))
+        self.icon2 = QIcon()
+        self.icon2.addPixmap(QPixmap(f"{icon2}"))
         self.setIcon(self.icon1)
-        self.setIconSize(QtCore.QSize(20, 20))
+        self.setIconSize(QSize(20, 20))
         self._state = 1
         self.clicked.connect(self.switchState)
 
@@ -83,10 +96,10 @@ class SwitchButton(QtWidgets.QPushButton):
     def state(self) -> int:
         return self._state
     
-class SwitchAction(QtGui.QAction):
-    stateChanged = QtCore.pyqtSignal(int)
+class SwitchAction(QAction):
+    stateChanged = pyqtSignal(int)
 
-    def __init__(self, icon1: QtGui.QIcon, icon2: QtGui.QIcon, parent=None) -> None:
+    def __init__(self, icon1: QIcon, icon2: QIcon, parent=None) -> None:
         super().__init__(icon1, None, parent)
         self.icon1 = icon1
         self.icon2 = icon2
@@ -113,19 +126,19 @@ class SwitchAction(QtGui.QAction):
     def state(self) -> int:
         return self._state
 
-class DoubleClickButton(QtWidgets.QPushButton):
-    doubleClicked = QtCore.pyqtSignal()
+class DoubleClickButton(QPushButton):
+    doubleClicked = pyqtSignal()
 
-    def mouseDoubleClickEvent(self, a0: QtGui.QMouseEvent) -> None:
+    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None:
         self.doubleClicked.emit()
 
-class ColorAction(QtWidgets.QWidgetAction):
-    colorSelected = QtCore.pyqtSignal(QtGui.QColor)
+class ColorAction(QWidgetAction):
+    colorSelected = pyqtSignal(QColor)
 
-    def __init__(self, colors: list[QtGui.QColor], parent=None) -> None:
+    def __init__(self, colors: list[QColor], parent=None) -> None:
         super().__init__(parent)
-        widget = QtWidgets.QWidget(parent)
-        layout = QtWidgets.QGridLayout(widget)
+        widget = QWidget(parent)
+        layout = QGridLayout(widget)
         layout.setSpacing(0)
         layout.setContentsMargins(2, 2, 2, 2)
         palette = colors
@@ -134,26 +147,26 @@ class ColorAction(QtWidgets.QWidgetAction):
         for row in range(rows):
             for column in range(count // rows):
                 color = palette.pop(0)
-                # print(color.name(QtGui.QColor.NameFormat.HexRgb))
-                button = QtWidgets.QToolButton(widget)
+                # print(color.name(QColor.NameFormat.HexRgb))
+                button = QToolButton(widget)
                 button.setAutoRaise(True)
                 button.clicked.connect(lambda state, color=color: self.handleButton(color))
-                pixmap = QtGui.QPixmap(16, 16)
+                pixmap = QPixmap(16, 16)
                 pixmap.fill(color)
-                button.setIcon(QtGui.QIcon(pixmap))
+                button.setIcon(QIcon(pixmap))
                 layout.addWidget(button, row, column)
         self.setDefaultWidget(widget)
 
-    def handleButton(self, color: QtGui.QColor):
+    def handleButton(self, color: QColor):
         self.parent().hide()
         self.colorSelected.emit(color)
-        # print(color.name(QtGui.QColor.NameFormat.HexRgb))
+        # print(color.name(QColor.NameFormat.HexRgb))
 
-class ColorMenu(QtWidgets.QMenu):
-    colorChanged = QtCore.pyqtSignal(QtGui.QColor)
+class ColorMenu(QMenu):
+    colorChanged = pyqtSignal(QColor)
 
-    def __init__(self, colors: list[QtGui.QColor], parent=None) -> None:
-        QtWidgets.QMenu.__init__(self, parent)
+    def __init__(self, colors: list[QColor], parent=None) -> None:
+        QMenu.__init__(self, parent)
         self.ac_color = ColorAction(colors, self)
         self.ac_color.colorSelected.connect(self.changeColor)
         self.addAction(self.ac_color)
@@ -161,14 +174,80 @@ class ColorMenu(QtWidgets.QMenu):
         self.ac_CustomColor = self.addAction('Custom Color')
         self.ac_CustomColor.triggered.connect(self.from_color_dialog)
 
-    def changeColor(self, color: QtGui.QColor) -> None:
+    def changeColor(self, color: QColor) -> None:
         self.colorChanged.emit(color)
 
     def from_color_dialog(self) -> None:
-        color = QtWidgets.QColorDialog.getColor()
+        color = QColorDialog.getColor()
         self.changeColor(color)
 
-class PointSpacer(QtWidgets.QLabel):
+class PointSpacer(QLabel):
     def __init__(self, spaces: int, parent=None) -> None:
         super().__init__(parent)
         self.setText(""*spaces)
+
+class ComboBoxListView(QListView):
+    keyPress = pyqtSignal(QEvent)
+    def event(self, event: QEvent) -> bool:
+        # Only handle mouse and special keys, pass other events up
+        if event.type() == QEvent.Type.KeyPress:
+            print("Key press in view")
+            key = event.key()
+            if key not in (Qt.Key.Key_Up, Qt.Key.Key_Down, 
+                         Qt.Key.Key_Enter,
+                         Qt.Key.Key_Escape):
+                self.keyPress.emit(event)
+        return super().event(event)
+    
+    def showEvent(self, a0):
+        if self.model().rowCount() > 0:
+            super().showEvent(a0)
+        
+
+
+class StrongLineEdit(QLineEdit):
+    def keyPressEvent(self, a0):
+        print("Has key press")
+        self.setFocus()
+        return super().keyPressEvent(a0)
+
+    def focusOutEvent(self, e: QEvent):
+        if e.reason() == Qt.FocusReason.PopupFocusReason:
+            self.setFocus()
+            return
+        print("Other focus out reason: ", e.reason()) 
+        return super().focusOutEvent(e)
+
+class SearchableComboBox(QComboBox):
+    def __init__(self, parent = ...):
+        """A QComboBox that also functions as a search field for its items and supports filtered dbmodels."""
+        super().__init__(parent)
+        self.setLineEdit(StrongLineEdit(self))
+        self.setView(ComboBoxListView(self))
+        self.view().keyPress.connect(self.lineEdit().keyPressEvent)
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.setCompleter(None)
+        self.lineEdit().textEdited.connect(self.filter_items)
+
+    def filter_items(self, text: str):
+        print("Text searched ", text)
+        if isinstance(self.model(), FilteredCourseModel) or isinstance(self.model(), FilteredStudentModel):
+            self.model().set_search_filter(text)
+            if self.model().rowCount() > 0:
+                self.showPopup()
+            else:
+                self.hidePopup()
+            self.setEditText(text)
+
+    def showPopup(self):
+        super().showPopup()
+        cursor_pos = self.lineEdit().cursorPosition()
+        self.lineEdit().setFocus()
+        self.lineEdit().setCursorPosition(cursor_pos)
+
+    def focusOutEvent(self, event):
+        if self.view().isVisible():
+            self.lineEdit().setFocus()
+        else:
+            super().focusOutEvent(event)

@@ -1,8 +1,9 @@
 from unittest.mock import Base
-from PyQt6.QtWidgets import QTableView, QListView, QHeaderView, QWidget, QApplication, QMenu, QSizePolicy, QStyledItemDelegate, QLineEdit
-from PyQt6.QtCore import Qt, QPoint, QAbstractItemModel, QModelIndex, pyqtSignal, pyqtSlot, QSize, QByteArray, QItemSelectionModel, QRect
-from PyQt6.QtGui import QAction, QMouseEvent, QWheelEvent, QPaintEvent, QDrag, QDragEnterEvent, QDropEvent
-from tcha.elements.baseelement import BaseElement
+from PyQt6.QtWidgets import QTableView, QListView, QHeaderView, QWidget, QApplication, QMenu, QSizePolicy, QStyledItemDelegate, QLineEdit, QInputDialog
+from PyQt6.QtCore import Qt, QPoint, QAbstractItemModel, QModelIndex, pyqtSignal, pyqtSlot, QSize, QByteArray, QItemSelectionModel, QRect, QT_TR_NOOP as tr
+from PyQt6.QtGui import QAction, QMouseEvent, QPaintEvent, QDrag, QDropEvent, QIcon
+from tcha.elements.baseelement import BaseElement, BaseModel
+from tcha.status import StatusButton, StatusLabel
 from ui.ui_table import CellDelegate
 
 TableViewStyleSheet = """
@@ -71,6 +72,7 @@ class CellEditor(QListView):
 
     def update_list_geometry(self) -> None:
         self.geometriesChanged.emit()
+        self.update()
         self.viewport().update()
 
     def wheelEvent(self, e):
@@ -83,11 +85,6 @@ class CellEditor(QListView):
     
     def remove_current_row(self, index: int) -> None:
         self.close_current_editor()
-
-    # def editorDestroyed(self, editor: QWidget | None) -> None:
-    #     super().editorDestroyed(editor)
-    #     self.geometriesChanged.emit()
-    #     self._editor_just_destroyed = True
 
     def closeEditor(self, editor, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
         print("An element editor has been closed:", editor)
@@ -115,9 +112,6 @@ class CellEditor(QListView):
         print("My mouse has clicked yeah")
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.pos()
-                # self.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-                # if index.isValid() and not self._editor:
-                #     self.edit(index)
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -169,19 +163,20 @@ class CellEditor(QListView):
             self.model().dropMimeData(event.mimeData(), event.dropAction(), drop_row, 0, QModelIndex())
 
     def itemDelegateForIndex(self, index: QModelIndex) -> QStyledItemDelegate | None:
-            model = self.model().data(index)
-            if model:
-                delegate = model.delegate(self)
-                delegate.sizeHintChanged.connect(self.update_list_geometry)
-                delegate.editorOpened.connect(self.set_editor)
-                return delegate
-            else: 
-                return None
+        model = self.model().data(index)
+        if isinstance(model, BaseModel):
+            delegate = model.delegate(self)
+            delegate.sizeHintChanged.connect(self.update_list_geometry)
+            delegate.editorOpened.connect(self.set_editor)
+            return delegate
+        else: 
+            return None
 
     def sizeHint(self) -> QSize:
         return QSize(self.width(), self.model().expected_cell_height(self.width()) + 10)
     
 class HeaderView(QHeaderView):
+    editingStarted = pyqtSignal()
 
     def __init__(self, orientation: Qt.Orientation, parent: QWidget | None = ...) -> None:
         super().__init__(orientation, parent)
@@ -212,6 +207,7 @@ class HeaderView(QHeaderView):
 
     def activate_editor(self, section: int) -> None:
         if self.orientation() == Qt.Orientation.Horizontal:
+            self.editingStarted.emit()
             text = self.model().headerData(self.visualIndex(section), self.orientation(), Qt.ItemDataRole.DisplayRole)
             self.line_edit.setText(text)
             self.line_edit.show()
@@ -220,8 +216,6 @@ class HeaderView(QHeaderView):
             pos = self.sectionPosition(section)
             self.line_edit.setGeometry(rect.x() + pos, rect.y(), self.sectionSize(section), rect.height())
 
-    def paintSection(self, painter, rect, logicalIndex):
-        super().paintSection(painter, rect, logicalIndex)
 
     def on_section_resized(self, logicalIndex: int, oldSize: int, newSize: int) -> None:
         if self.orientation() == Qt.Orientation.Horizontal:
@@ -250,6 +244,7 @@ class HeaderView(QHeaderView):
         self._state = self.saveState()
 
 class Table(QTableView):
+    changeMade = pyqtSignal()
     cellEditorOpened = pyqtSignal(CellEditor)
     cellEditorClosed = pyqtSignal()
     elementEditorClosed = pyqtSignal()
@@ -259,6 +254,11 @@ class Table(QTableView):
         super().__init__(parent)
         self._model_just_set = False
         self._editor: CellEditor | None = None
+
+        self._size_status = StatusLabel("")
+        self._current_status = StatusLabel("")
+        self._goto_status = StatusButton(tr("Go to Row"), True)
+        self._goto_status.setIcon(QIcon("resources/icons/ic_goto.svg"))
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -279,11 +279,12 @@ class Table(QTableView):
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
-        self.horizontalHeader().sectionResized.connect(self.close_current_editor)     
+        self.horizontalHeader().sectionResized.connect(self.close_current_editor)
+        self.horizontalHeader().editingStarted.connect(self.close_current_editor) 
+
+        self._goto_status.clicked.connect(self.focus_row)
 
         self.setStyleSheet(TableViewStyleSheet)
-
-        # self.pressed.connect(self.on_cell_pressed)
 
         self.itemDelegate().sizeHintChanged.connect(self.update_row_geometries)
         self.itemDelegate().editorOpened.connect(self.on_editor_opened)
@@ -295,27 +296,68 @@ class Table(QTableView):
     @property
     def editor(self) -> CellEditor:
         return self._editor 
+    
+    def status(self) -> tuple[QWidget]:
+        return self._size_status, self._current_status, self._goto_status
 
     def sizeHintForRow(self, row: int) -> int:
         if self.model():
-            return self.model().expected_row_height(row)
+            size = self.model().expected_row_height(row)
+            print("Expected row size: ", size)
+            return size
         else:
             return 30
 
     def setModel(self, model: QAbstractItemModel | None) -> None:
         super().setModel(model)
         self.horizontalHeader().setModel(model)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setModel(model)
         self._model_just_set = True
         self.model().dataChanged.connect(self.set_extra_emit)
         self.model().dataChanged.connect(self.update_row_geometries)
+        self.model().modelChanged.connect(self.on_model_changed)
         self.model().columnsMoved.connect(self.update_row_geometries)
         self.model().rowsMoved.connect(self.update_row_geometries)
+        self.selectionModel().selectionChanged.connect(self.update_status)
         for column in range(self.model().columnCount()):
             size = self.model().headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.SizeHintRole).width()    
             self.horizontalHeader().resizeSection(column, size)
         self.update_row_geometries()
+        self.update_status()
 
+    def on_model_changed(self) -> None:
+        self.changeMade.emit()
+        self.update_status()
+
+    def update_status(self) -> None:
+        self._size_status.setText(self.size_status())
+        self._current_status.setText(self.selection_status())
+
+    def size_status(self) -> str:
+        rows, columns = self.model().rowCount(), self.model().columnCount()
+        tr_rows = tr("Rows:")
+        tr_columns = tr("Columns")
+        return f"{tr_rows} {rows} | {tr_columns} {columns}"
+
+    def selection_status(self) -> str:
+        if self.selectionModel().currentIndex().isValid():
+            index = self.selectionModel().currentIndex()
+            row = index.row() + 1
+            column: str = self.model().headerData(index.column(), Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+            print("Selected index status updated", row, column)
+            tr_row = tr("Row")
+            tr_column = tr("Column")
+            return f"{tr_row} {row} in {tr_column} {column}"
+        else:
+            tr_noselect = tr("No selection")
+            return tr_noselect
+        
+    def focus_row(self) -> None:
+        row, ok = QInputDialog.getInt(self, tr("Focus on row"), tr("Enter row number"), 1, 1, self.model().rowCount())
+        if ok:
+            self.scrollTo(self.model().index(row-1, 0))
+        
     def add_element(self, element) -> None:
         if self.currentIndex().isValid():
             cell = self.currentIndex().data()
@@ -325,17 +367,21 @@ class Table(QTableView):
         self.itemDelegate().extra_emit = True
 
     def paintEvent(self, e):
+        print("Printing")
         self.verticalHeader().resizeSections()
         super().paintEvent(e)
             
     def update_row_geometries(self) -> None:
+        self.verticalHeader().resizeSections()
         self.update()
         self.viewport().update()
         print("Viewport updated")
 
     def close_current_editor(self) -> None:
         print("Trying to close current editor")
+        self.selectionModel().clearCurrentIndex()
         if self._editor:
+            self._editor.disconnect()
             self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
     
     def on_editor_opened(self, editor: CellEditor) -> None:
@@ -346,6 +392,9 @@ class Table(QTableView):
             self.cellEditorOpened.emit(self._editor)
             self._editor.editorOpened.connect(self.elementEditorOpened.emit)
             self._editor.editorClosed.connect(self.elementEditorClosed.emit)
+            if self._editor.model():
+                self._editor.model().modelChanged.connect(self.changeMade.emit)
+                self._editor.model().dataChanged.connect(self.changeMade.emit)
 
     def on_selection_changed(self, selected, deselected) -> None:
         print("Changed selection")
@@ -376,6 +425,7 @@ class Table(QTableView):
 
     def currentChanged(self, current, previous):
         print("Current index changed from", previous.row(), previous.column(), "to", current.row(), current.column())
+        self.update_status()
         super().currentChanged(current, previous)
 
     def selectionChanged(self, selected, deselected):
@@ -473,7 +523,7 @@ class Table(QTableView):
         super().closeEditor(editor, QStyledItemDelegate.EndEditHint.NoHint)
         print("An cell editor has been closed", self._can_close_editor, editor, hint)
         self.verticalHeader().resizeSections()
-        self.clearSelection()
+        self.selectionModel().clearSelection()
         self._editor = None
         self.cellEditorClosed.emit()
         self.elementEditorClosed.emit()

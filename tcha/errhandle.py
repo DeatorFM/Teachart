@@ -1,0 +1,13 @@
+from enum import Enum
+
+class FileError(Enum):
+    ...
+
+class DatabaseError(Enum):
+    ...
+
+class TableError(Enum):
+    ...
+
+class ResourceError(Enum):
+    ...

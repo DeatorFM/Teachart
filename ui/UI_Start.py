@@ -1,8 +1,9 @@
 from __future__ import annotations
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import Qt, QPoint, QDate
+from PyQt6.QtCore import Qt, QPoint, QDate, QRect
+from PyQt6.QtGui import QFont
 from ui.StyledWidget import *
-from tcha.dbmodels import Scheduler
+from tcha.dbmodels import ScheduleModel
 import typing
 
 stylesheet = """
@@ -77,6 +78,22 @@ class StartWidget(QtWidgets.QWidget):
         self.line_8.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         self.line_8.setObjectName("line_8")
         self.options_layout.addWidget(self.line_8)
+
+        self.pb_manager = QtWidgets.QPushButton(self.options_frame)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy.setHeightForWidth(self.pb_OpenLesson.sizePolicy().hasHeightForWidth())
+        self.pb_manager.setSizePolicy(sizePolicy)
+        self.pb_manager.setMinimumSize(QtCore.QSize(140, 40))
+        self.pb_manager.setMaximumSize(QtCore.QSize(200, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Variable Text Semibold")
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.pb_manager.setFont(font)
+        self.pb_manager.setFlat(False)
+        self.pb_manager.setObjectName("pb_manager")
+        self.options_layout.addWidget(self.pb_manager)
         
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.options_layout.addItem(spacerItem)
@@ -124,19 +141,16 @@ class StartWidget(QtWidgets.QWidget):
         self.lb_UpcomingLessons.setObjectName("FileLabel")
         self.sublayout1.addWidget(self.lb_UpcomingLessons)
         
-        self.tw_UpcomingLessons = QtWidgets.QTreeWidget(self)
+        self.tw_UpcomingLessons = QtWidgets.QTreeView(self)
         self.tw_UpcomingLessons.setIndentation(0)
         self.tw_UpcomingLessons.setMinimumSize(QtCore.QSize(0, 0))
         self.tw_UpcomingLessons.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.tw_UpcomingLessons.setAlternatingRowColors(False)
         self.tw_UpcomingLessons.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.tw_UpcomingLessons.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.tw_UpcomingLessons.setObjectName("TW_UpcomingLessons")
         self.tw_UpcomingLessons.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.tw_UpcomingLessons.setColumnCount(2)
-        self.tw_UpcomingLessons.setHeaderLabels(("", ""))
         header = self.tw_UpcomingLessons.header()
-        header.setStretchLastSection(False)
+        header.setStretchLastSection(True)
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.tw_UpcomingLessons.setHeader(header)
         self.tw_UpcomingLessons.resize(720, 120)
@@ -157,11 +171,11 @@ class StartWidget(QtWidgets.QWidget):
         
         self.main_layout.addLayout(self.Upcoming_Lessons)
         
-        self.line_9 = QtWidgets.QFrame(self)
-        self.line_9.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.line_9.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        self.line_9.setObjectName("line_9")
-        self.main_layout.addWidget(self.line_9)
+        line_9 = QtWidgets.QFrame(self)
+        line_9.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+        line_9.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+        line_9.setObjectName("line_9")
+        self.main_layout.addWidget(line_9)
         
         self.lb_Pinned = QtWidgets.QLabel(self)
         font = QtGui.QFont()
@@ -230,24 +244,20 @@ class StartWidget(QtWidgets.QWidget):
 
         self.sa_LastUsed.setWidget(self.luf)
         self.main_layout.addWidget(self.sa_LastUsed)
-        #spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
-        #self.main_layout.addItem(spacerItem2)
         self.central_layout.addLayout(self.main_layout)
 
         self.retranslateUi()
-        #QtCore.QMetaObject.connectSlotsByName(self)
 
-    
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
         self.pb_NewLesson.setText(_translate("StartWindow", "New Lesson"))
         self.pb_OpenLesson.setText(_translate("StartWindow", "Open Lesson"))
+        self.pb_manager.setText(_translate("StartWindow", "Manage Courses"))
         self.pb_Options.setText(_translate("StartWindow", "Settings"))
         self.lb_UpcomingLessons.setText(_translate("StartWindow", "Upcoming Lessons"))
         __sortingEnabled = self.tw_UpcomingLessons.isSortingEnabled()
         self.tw_UpcomingLessons.setSortingEnabled(False)
         self.tw_UpcomingLessons.setSortingEnabled(__sortingEnabled)
-        self.tw_UpcomingLessons.setHeaderLabels((_translate("StartWindow", "Course"), _translate("StartWindow", "Time")))
         self.lb_Pinned.setText(_translate("StartWindow", "Pinned"))
         self.lb_NoPinnedData.setText(_translate("StartWindow", "No pinned files"))
         self.lb_LastUsed.setText(_translate("StartWindow", "Recently Used"))
@@ -262,20 +272,43 @@ class HLine(QtWidgets.QFrame):
 class LessonCalendar(QtWidgets.QCalendarWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.scheduler: Scheduler
+        self.scheduler: ScheduleModel
         self.dates = []
 
-    def set_scheduler(self, scheduler: Scheduler) -> None:
+        self.currentPageChanged.connect(self.set_dates_for_month)
+
+    def set_scheduler(self, scheduler: ScheduleModel) -> None:
         self.scheduler = scheduler
-        self.dates = [item for item in self.scheduler.return_calendar_dates()]
         self.setSelectedDate(QDate.currentDate())
+        self.scheduler.dataChanged.connect(self.on_data_changed)
+
+    def set_dates_for_month(self, year: int, month: int) -> None:
+        self.dates = self.scheduler.schedules_for_month(QDate(year, month, 1))
         self.repaint()
 
-    def paintCell(self, painter: QtGui.QPainter, rect: QtCore.QRect, date: typing.Union[QtCore.QDate, datetime.date]) -> None:
+    def on_data_changed(self) -> None:
+        self.set_dates_for_month(self.selectedDate().year(), self.selectedDate().month())
+
+    def paintCell(self, painter: QtGui.QPainter, rect: QtCore.QRect, date: QtCore.QDate) -> None:
         super().paintCell(painter, rect, date)
-        if date in self.dates:
+        count = self.scheduler.date_schedule_count(date)
+        if count > 0:        
+            
+            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
             painter.setBrush(Qt.GlobalColor.red)
-            painter.drawEllipse(rect.topLeft() + QPoint(12, 7), 3, 3)
+            painter.setPen(Qt.PenStyle.NoPen)
+            
+            circle_rect = QRect(rect.right() - 15, rect.top() + 2, 12, 12)
+            painter.drawEllipse(circle_rect)
+            
+            
+            if count < 100:
+                painter.setPen(Qt.GlobalColor.white)
+                font = QFont()
+                font.setBold(True)
+                font.setPixelSize(9)  # Smaller font size
+                painter.setFont(font)
+                painter.drawText(circle_rect, Qt.AlignmentFlag.AlignCenter, str(count))
 
 
 class FileWidget(QtWidgets.QFrame):

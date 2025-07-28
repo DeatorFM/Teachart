@@ -1,12 +1,11 @@
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QVariant
 from collections import Counter
-from typing import Any, Protocol
+from typing import Protocol
 from dataclasses import dataclass
 import enum
 import tempfile
 import random
 import string
-import os.path as osp
 
 class LessonFileProtocol(Protocol):
     def read_resource(self, name: str) -> bytes: ...
@@ -165,6 +164,7 @@ class ResourceContainer(QObject):
             print("Analyse object with hash", hash(obj), "compared with hash", _hash)
             if hash(obj) == _hash:
                 print("Item with hash found")
+                obj.disconnect()
                 self._objects.discard(obj)
                 return
 

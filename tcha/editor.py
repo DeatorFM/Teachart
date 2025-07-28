@@ -1,15 +1,17 @@
-from PyQt6.QtWidgets import QInputDialog, QMessageBox, QApplication, QFileDialog
+from PyQt6.QtWidgets import QMessageBox, QApplication, QFileDialog
 from PyQt6.QtGui import QAction, QClipboard
-from PyQt6.QtCore import QModelIndex, QObject, QEvent, Qt, QRunnable, QThreadPool, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QObject, QDateTime, QRunnable, QThreadPool, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
 from ui.ui_editor import EditorWidget
 from ui.ui_toolsets import CellActions
 from tcha.lesson import Lesson
-from tcha.dbmodels import Courses, ScheduleItem
+from tcha.dbmodels import CourseModel, CourseItem, FilteredCourseModel, ScheduleModel
+from tcha.dbmanager import AddCourseDialog
 from tcha.resmanager import ResourceContainer, ResourceType, ResourceObject
 from tcha.toolset import returnToolsets
 from tcha.tablemodel import TableModel
 from tcha.lfio import LessonFile
 from tcha.elements.baseelement import BaseElement
+from tcha.status import StatusBarContainer
 from typing import Self
 from os.path import basename
 import enum
@@ -41,48 +43,59 @@ class SaveWorker(QRunnable):
         self.signals.finished.emit()
 
 class EditorTab(EditorWidget):
-    schedule = pyqtSignal(ScheduleItem)
     nameChanged = pyqtSignal(EditorWidget, str)
+    messageChanged = pyqtSignal(str)
 
-    def __init__(self, courses: Courses, rescont: ResourceContainer = ResourceContainer(), mode=EditorMode.New, parent=None) -> None:
+    def __init__(self, courses: CourseModel, schedules: ScheduleModel, rescont: ResourceContainer = ResourceContainer(), mode=EditorMode.New, parent=None) -> None:
         super().__init__(parent)
         # Models
-        self.courses = courses
-        self.lesson = Lesson(self.dt_DateTime.dateTime())
-        self.schedule_item: ScheduleItem
+        self.courses = FilteredCourseModel(courses, self)
+        self.schedules = schedules
+        self.lesson = Lesson(self.dt_DateTime.dateTime(), "", source_id=self.courses.source_id())
         self.rescont = rescont
         self.lessonfile: LessonFile | None = None
         
         self.mode = mode
+        self.changes_unsaved = True
 
         self.toolsets: dict[str, int] = self.get_toolsets()
+        size, current, goto = self.table.status()
+        self.statusbar = StatusBarContainer(size, current, goto)
 
         self.connect_signals()
         self.cb_course.setModel(self.courses)
-        self.cb_course.setCurrentIndex(0)
+        self.cb_course.setModelColumn(1)
         print("Model", self.courses, self.cb_course.count())
-        # self.cb_course.setCurrentIndex(self.cb_course.findData(self.lesson.course))
-        self.set_duration()
+        self.set_duration(self.sb_LessonTime.value())
         self.setMouseTracking(True)
         self.check_clipboard()
 
         if mode == EditorMode.New:
             self.set_table(2, 2)
+            self.cb_course.setCurrentIndex(0)
 
     def connect_signals(self) -> None:
+        self.courses.sourceModel().courseDataChanged.connect(self.on_course_data_changed)
+        self.courses.rowsRemoved.connect(self.on_course_data_changed)
+        self.courses.dataChanged.connect(self.on_course_data_changed)
+        self.schedules.rowsAboutToBeRemoved.connect(self.check_schedule)
+
         self.spb_SaveButton.lbutton.clicked.connect(self.save_lesson)
         self.ac_save.triggered.connect(self.save_lesson)
         self.ac_save_copy.triggered.connect(lambda: self.save_lesson(True))
         self.pb_AddCourse.clicked.connect(self.add_course)
         self.cb_course.activated.connect(self.set_course)
-        self.dt_DateTime.dateTimeChanged.connect(self.lesson.set_datetime)
-        self.sb_LessonTime.valueChanged.connect(self.lesson.set_duration)
+        self.cb_course.lineEdit().textEdited.connect(self.filter_courses)
+        self.dt_DateTime.dateTimeChanged.connect(self.set_datetime)
+        self.apb_schedule.clicked.connect(self.on_schedule_button_pressed)
+        self.sb_LessonTime.valueChanged.connect(self.set_duration)
         self.te_comment.textChanged.connect(self.set_comment)
 
         self.table.cellEditorOpened.connect(self.on_cell_opened)
         self.table.cellEditorClosed.connect(self.on_cell_closed)
         self.table.elementEditorClosed.connect(lambda: self.set_toolbar(None))
         self.table.elementEditorOpened.connect(self.set_toolbar)
+        self.table.changeMade.connect(self.on_change_made)
 
         self.table_toolset.ac_new_row.triggered.connect(lambda: self.tablemodel.insertRow(self.table.currentIndex().row()))
         self.table_toolset.ac_new_column.triggered.connect(lambda: self.tablemodel.insertColumn(self.table.currentIndex().column()))
@@ -93,92 +106,166 @@ class EditorTab(EditorWidget):
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 
     @classmethod
-    def from_saved_file(cls: Self, courses: Courses, lesson: Lesson, tablemodel: TableModel, rescont: ResourceContainer, lessonfile: LessonFile, parent=None) -> Self:
-        editor = cls(courses, rescont, EditorMode.Open, parent)
+    def from_saved_file(cls: Self, courses: CourseModel, schedules: ScheduleModel, lesson: Lesson, tablemodel: TableModel, rescont: ResourceContainer, lessonfile: LessonFile, parent=None) -> Self:
+        changes = False
+        if lesson.source_id != courses.source_id() and lesson.course_id != 0:
+            button = QMessageBox.question(
+                parent, 
+                tr("Course not found"), 
+                tr("This document's course has no record. Would you like to add it as a new course?"), 
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+            if button == QMessageBox.StandardButton.Yes:
+                courses.add_course(lesson.course_name, lesson.duration)
+                lesson.source_id = courses.source_id()
+                lesson.course_id = courses.data(courses.index(courses.rowCount() - 1, 0))
+                changes = True
+        editor = cls(courses, schedules, rescont, EditorMode.Open, parent)
         editor.set_lesson(lesson)
         editor.table.setModel(tablemodel)
-        editor.set_lessonfile(lessonfile)
+        editor.set_lessonfile(lessonfile, changes)
+        if schedules.has_file(lessonfile.file_id()):
+            editor.apb_schedule.check_fast()
         return editor
 
-    def set_lessonfile(self, lessonfile: LessonFile) -> None:
+    def set_lessonfile(self, lessonfile: LessonFile, changes=False) -> None:
         if self.mode == EditorMode.Open:
             self.lessonfile = lessonfile
+            self.changes_unsaved = changes
         else:
             raise EditorModeError(f"Editor is in wrong mode to set a IO to serialised document: {EditorMode.New}")
 
     def set_lesson(self, lesson: Lesson) -> None:
         self.lesson = lesson
-        # self.on_courses_changed()
+        if lesson.source_id == self.courses.source_id():
+            source_idx = self.courses.sourceModel().index_for_id(self.lesson.course_id)
+            if source_idx.isValid():
+                mapped_idx = self.courses.mapFromSource(source_idx)
+                self.cb_course.setCurrentIndex(mapped_idx.row())
+            else:
+                self.cb_course.setCurrentIndex(0)
+        else:
+            self.cb_course.setCurrentIndex(0)
         self.dt_DateTime.setDateTime(self.lesson.datetime)
         self.sb_LessonTime.setValue(self.lesson.duration)
         self.te_comment.setText(self.lesson.comment)
-        if lesson.course not in self.courses:
-            lesson.course.set_temporary(True)
-            self.courses.add(lesson.course)
-            self.cb_course.setCurrentIndex(-1)
-        else:
-            i = self.courses.index_from_id(lesson.course.ID)
-            self.cb_course.setCurrentIndex(i)
 
-    def save_lesson(self, save_copy=False) -> None:
-        def save() -> None:
-            self.spb_SaveButton.setDisabled(True)
+    def save_lesson(self, save_copy=False) -> bool:
+        def save() -> None:            
             worker = SaveWorker(self.lessonfile, self.lesson, self.rescont, self.table.model())
             worker.signals.finished.connect(self._on_saving_finished)
             QThreadPool.globalInstance().start(worker)
 
+        self.spb_SaveButton.setEnabled(False)
+        self.lesson.source_id = self.courses.source_id()
         if self.lessonfile and not save_copy:
             save()
+            return True
         else:
-            path, suffix = QFileDialog.getSaveFileName(self, tr("Save lesson chart"), "", tr("Lesson file (*.lesson)"))
+            path, _ = QFileDialog.getSaveFileName(self, tr("Save lesson chart"), "", tr("Lesson file (*.lesson)"))
             if path:
                 self.lessonfile = LessonFile("w", path)
                 save()
+                return True
+            return False
         
     def _on_saving_finished(self) -> None:
         print("Save successfull")
         self.spb_SaveButton.setEnabled(True)
         self.nameChanged.emit(self, basename(self.lessonfile.path))
+        self.changes_unsaved = False
+        self.statusbar.show_message(tr("Saving finished"), 2000)
+        self.schedule()
 
-    def schedule_lesson(self, file: str) -> None:
-        item = ScheduleItem(self.dt_DateTime.time(), self.dt_DateTime.date(), file, self.lesson.course.ID)
-        self.schedule.emit(item)
+    def on_schedule_button_pressed(self) -> None:
+        if self.apb_schedule.checked and self.lessonfile != None:
+            print("Lesson file exisiting. Schedule.")
+            self.schedule()
+        else:
+            if self.schedules.has_file(self.lessonfile.file_id()):
+                idx = self.schedules.index_for_file_id(self.lessonfile.file_id())
+                print("Index is valid ", idx.isValid())
+                if idx.isValid():
+                    self.schedules.removeRow(idx.row())
+                    self.schedules.select()
+                    print("Deleted scheule with file id: ", self.lessonfile.file_id())
 
+    def schedule(self) -> None:
+        """Creates a new schedule if not existing."""
+        if self.apb_schedule.checked and not self.schedules.has_file(self.lessonfile.file_id()):
+            course_id = self.courses.data(self.courses.index(self.cb_course.currentIndex(), 0))
+            self.schedules.add_schedule(course_id, self.dt_DateTime.dateTime(), self.lessonfile.file_id(), self.lessonfile.path)
+            self.lesson.source_id = self.courses.source_id()
+            print("New schedule created for file_id: ", self.lessonfile.file_id())
+        elif self.apb_schedule.checked and self.schedules.has_file(self.lessonfile.file_id()):
+            print("File exists. Updating schedule")
+            idx = self.schedules.index_for_file_id(self.lessonfile.file_id())
+            if idx.isValid():
+                schedule_id = self.schedules.data(idx)
+                self.schedules.update_schedule(schedule_id, self.lesson.course_id, self.lesson.datetime, self.lessonfile.path)
 
+    def check_schedule(self) -> None:
+        """Changes button when schedule removed."""
+        print("Schedule removed")
+        if self.lessonfile:
+            if self.apb_schedule.checked and self.schedules.has_file(self.lessonfile.file_id()):
+                self.apb_schedule.start_animation()
+ 
     def add_course(self) -> None:
-        cname, ok = QInputDialog.getText(None, tr("New Course"), tr("Course name"))
-
-        if len(cname) == 0 and ok:
-            dialog = QMessageBox(None)
-            dialog.setWindowTitle(tr("No name entered"))
-            dialog.setText(tr("Please enter a valid name."))
-            dialog.setIcon(QMessageBox.Icon.Information)
-            dialog.exec()
-            self.add_course()
-        elif cname not in self.courses.names() and ok:
-            self.courses.new(cname)
-        elif cname in self.courses.names() and ok:
-            dialog = QMessageBox(None)
-            dialog.setWindowTitle(tr("Existing course"))
-            dialog.setText(tr("There is already a course with the same name.\nPlease enter a different name."))
-            dialog.setIcon(QMessageBox.Icon.Information)
-            dialog.exec()
+        def isvalid() -> bool:
+            if name and duration > 0:
+                return True
+            return False
+        ok, name, duration = AddCourseDialog.get_course_info(self)
+        if ok and isvalid():
+            self.courses.sourceModel().add_course(name, duration)
+        elif ok and not isvalid():
+            QMessageBox.warning(self, None, tr("Please enter a valid course name and duration."))
             self.add_course()
         else:
             return
 
     def set_course(self) -> None:
-        if self.cb_course.currentIndex != -1:
-            self.lesson.set_course(self.cb_course.currentData())
-            self.print_lesson()
+        if self.lesson.source_id != self.courses.source_id():
+            self.lesson.source_id = self.courses.source_id()
+        item = self.courses.getRow(self.cb_course.currentIndex())
+        self.lesson.set_course(item.name, item.id)
+        if item.duration > 0:
+            self.sb_LessonTime.setValue(item.duration)
+        self.print_lesson()
+        self.changes_unsaved = True
+            
+    def filter_courses(self) -> None:
+        self.cb_course.showPopup()
+        self.courses.set_search_filter(self.cb_course.lineEdit().text())
 
-    def set_duration(self) -> None:
-        self.lesson.set_duration(self.sb_LessonTime.value())
+    def on_course_data_changed(self) -> None:
+        if self.courses.has_id(self.lesson.course_id) and self.lesson.course_id != 0:
+            idx = self.courses.index_for_id(self.lesson.course_id)
+            if idx.isValid():
+                self.cb_course.setCurrentIndex(idx.row())
+                return
+        self.cb_course.setCurrentIndex(0)
+        self.lesson.set_course("", 0)
+    
+    def set_datetime(self, datetime: QDateTime) -> None:
+        self.lesson.set_datetime(datetime)
+        self.changes_unsaved = True
+        self.print_lesson()
+
+    def set_duration(self, minutes: int) -> None:
+        self.lesson.set_duration(minutes)
+        self.changes_unsaved = True
         self.print_lesson()
 
     def set_comment(self) -> None:
         self.lesson.set_comment(self.te_comment.toPlainText())
+        self.changes_unsaved = True
         self.print_lesson()
+
+    def on_change_made(self) -> None:
+        print("Change made")
+        self.changes_unsaved = True
 
     # Table Managing Tools
 

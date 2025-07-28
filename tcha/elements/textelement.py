@@ -634,7 +634,7 @@ class TextDelegate(QStyledItemDelegate):
     def setEditorData(self, editor: TextElement | None, index: QModelIndex) -> None:
         editor.setDocument(index.data(Qt.ItemDataRole.EditRole))
 
-    def setModelData(self, editor: TextElement | None, model: TextModel | None, index: QModelIndex) -> None:
+    def setModelData(self, editor: TextElement | None, model, index: QModelIndex) -> None:
         model.setData(index, editor.document())
 
     def updateEditorGeometry(self, editor: TextElement | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:

@@ -15,6 +15,7 @@ class LessonFile:
         self._path = path
         self._tempdir: str | None = None
         self._last_saved = QDateTime()
+        self._file_id: str = self.generate_file_id()
 
         has_resources = any(name.startswith("resources/") for name in self._f.namelist())
 
@@ -29,7 +30,7 @@ class LessonFile:
         """Saves a new file or overwrites the entire file's contents if existing"""
         self.change_open_mode("w")
         rescont.prepare_for_serialisation()
-        xml_data = XmlWriter.write_xml(tablemodel, lesson)
+        xml_data = XmlWriter.write_xml(self.file_id(), tablemodel, lesson)
         with self._f.open("structure.xml", "w") as xml_f:
             xml_f.write(xml_data.data())
         
@@ -65,6 +66,15 @@ class LessonFile:
         self.change_open_mode("r")
         with self._f.open("structure.xml", "r") as f:
             return f.read()
+        
+    def generate_file_id(self) -> str:
+        return str(hash(self._path + self._last_saved.toString(Qt.DateFormat.ISODate)))
+    
+    def file_id(self) -> str:
+        return self._file_id
+    
+    def set_file_id(self, file_id: str) -> None:
+        self._file_id = file_id
 
     @property    
     def path(self) -> str:
@@ -85,7 +95,7 @@ class LessonFile:
 class XmlWriter:
 
     @staticmethod
-    def write_xml(table: TableModel, lesson: Lesson) -> QByteArray:
+    def write_xml(file_id: str, table: TableModel, lesson: Lesson) -> QByteArray:
         writer = QXmlStreamWriter()
         xml_data = QByteArray()
         buffer = QBuffer(xml_data)
@@ -93,7 +103,10 @@ class XmlWriter:
         writer.setDevice(buffer)
 
         writer.writeStartDocument()
-        writer.writeStartElement("teachart") 
+        writer.writeStartElement("teachart")
+
+        writer.writeEmptyElement("metadata")
+        writer.writeAttribute("file_id", file_id)
 
         writer = lesson.xml(writer)
         writer = table.xml(writer)
@@ -115,6 +128,9 @@ class XmlReader:
             token = reader.readNext()
 
             if token == QXmlStreamReader.TokenType.StartElement:
+                if reader.name() == "metadata":
+                    attrs = reader.attributes()
+                    lessonfile.set_file_id(attrs.value("file_id"))
                 if reader.name() == "lesson":
                     lesson = Lesson.read(reader)
                 elif reader.name() == "table":

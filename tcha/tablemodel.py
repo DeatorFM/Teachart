@@ -1,14 +1,15 @@
-from PyQt6.QtCore import QAbstractTableModel, QAbstractListModel, QObject, QModelIndex, Qt, QSize, QMimeData, QDataStream, QIODevice, QByteArray, QXmlStreamWriter, QXmlStreamReader
+from PyQt6.QtCore import QAbstractTableModel, QAbstractListModel, QObject, QModelIndex, Qt, QSize, QMimeData, QDataStream, QIODevice, QByteArray, QXmlStreamWriter, QXmlStreamReader, pyqtSignal, QVariant
 from PyQt6.QtGui import QFont
 
 from typing import Any, Protocol, Self, Sequence
 from dataclasses import dataclass, field
-from itertools import chain
 
 class BaseModel(Protocol):
     ...
 
 class CellModel(QAbstractListModel):
+    modelChanged = pyqtSignal()
+
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._data: list[BaseModel] = []
@@ -33,6 +34,7 @@ class CellModel(QAbstractListModel):
             for _ in range(count):
                 del self._data[row]
             self.endRemoveRows()
+            self.modelChanged.emit()
             return True
         except IndexError:
             return False
@@ -40,18 +42,22 @@ class CellModel(QAbstractListModel):
     def pop_model(self, row: int) -> BaseModel:
         model = self._data.pop(row)
         self.layoutChanged.emit()
+        self.modelChanged.emit()
         return model
 
     def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
         return self.createIndex(row, column)
 
     def data(self, index: QModelIndex, role: int = 1) -> BaseModel:
-        # print("Data called from row:", index.row(), self._data[index.row()], "with role", role)# Model
-        return self._data[index.row()]
+        try:
+            return self._data[index.row()]
+        except IndexError:
+            return QVariant(None)
             
     def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
         if index.isValid():
             self._data[index.row()] = value
+            self.dataChanged.emit(index, index, [role])
             return True
         else:
             print("The data could not be saved into model.")
@@ -114,6 +120,7 @@ class CellModel(QAbstractListModel):
             self.beginMoveRows(sourceParent, sourceRow, sourceRow, destinationParent, target)
             self._data.insert(destinationChild, self._data.pop(sourceRow))
             self.endMoveRows()
+            self.modelChanged.emit()
             return True
             
         except IndexError:
@@ -186,6 +193,8 @@ class TableData:
     
 
 class TableModel(QAbstractTableModel):
+    modelChanged = pyqtSignal()
+
     def __init__(self, data: TableData | None = None, parent: QObject | None = None) -> None:
         super().__init__(parent)
         print(data)
@@ -212,15 +221,13 @@ class TableModel(QAbstractTableModel):
         data = []
         header_data = {}
         for _ in range(rows):
-            column_list = []
+            row = []
             for _ in range(columns):
                 cell = CellModel()
-                # model_index = self.index(row, column)
-                # cell.dataChanged.connect(lambda: self.dataChanged.emit(model_index, model_index))
-                column_list.append(cell)
-            data.append(column_list)
-        header_data[Qt.Orientation.Horizontal] = [HeaderDataItem.horizontal() for i in range(columns)]
-        header_data[Qt.Orientation.Vertical] = [HeaderDataItem.vertical() for i in range(rows)]
+                row.append(cell)
+            data.append(row)
+        header_data[Qt.Orientation.Horizontal] = [HeaderDataItem.horizontal() for _ in range(columns)]
+        header_data[Qt.Orientation.Vertical] = [HeaderDataItem.vertical() for _ in range(rows)]
         return cls(TableData(data, header_data))
     
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
@@ -260,10 +267,12 @@ class TableModel(QAbstractTableModel):
             if role == Qt.ItemDataRole.DisplayRole and isinstance(value, str):
                 self._header_data[orientation][section].text = value
                 self.headerDataChanged.emit(orientation, section, section)
+                self.modelChanged.emit()
                 return True
             elif role == Qt.ItemDataRole.SizeHintRole and isinstance(value, QSize):
                 self._header_data[orientation][section].section_size = value.width()
                 self.headerDataChanged.emit(orientation, section, section)
+                self.modelChanged.emit()
                 return True
             else:
                 return False
@@ -272,21 +281,23 @@ class TableModel(QAbstractTableModel):
         
     def insertRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         try:
-            self.beginInsertRows(QModelIndex(), row + 1, row + 1)
+            self.beginInsertRows(QModelIndex(), row, row)
             self._data.insert(row + 1, [CellModel(self) for _ in range(self.columnCount())])
-            self._header_data[Qt.Orientation.Vertical].insert(row, HeaderDataItem.vertical())
+            self._header_data[Qt.Orientation.Vertical].insert(row + 1, HeaderDataItem.vertical())
             self.endInsertRows()
+            self.modelChanged.emit()
             return True
         except IndexError:
             return False
 
     def insertColumns(self, column: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         try:
-            self.beginInsertColumns(parent, column + 1, column + 1)
+            self.beginInsertColumns(parent, column, column)
             for row in self._data:
                 row.insert(column + 1, CellModel(self))
-            self._header_data[Qt.Orientation.Horizontal].insert(column, HeaderDataItem.horizontal())
+            self._header_data[Qt.Orientation.Horizontal].insert(column + 1, HeaderDataItem.horizontal())
             self.endInsertColumns()
+            self.modelChanged.emit()
             return True
         except IndexError:
             return False
@@ -302,6 +313,7 @@ class TableModel(QAbstractTableModel):
             del self._data[row]
         del self._header_data[Qt.Orientation.Vertical][row]
         self.endRemoveRows()
+        self.modelChanged.emit()
         return True
 
     def removeColumns(self, column: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
@@ -315,6 +327,7 @@ class TableModel(QAbstractTableModel):
                 del row[column]
         del self._header_data[Qt.Orientation.Horizontal][column]
         self.endRemoveColumns()
+        self.modelChanged.emit()
         return True
 
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int, destinationParent: QModelIndex, destinationChild: int) -> bool:
@@ -328,6 +341,7 @@ class TableModel(QAbstractTableModel):
             self._data.insert(destinationChild + adjust, self._data.pop(sourceRow))
             self._header_data[Qt.Orientation.Vertical].insert(destinationChild + adjust, self._header_data[Qt.Orientation.Vertical].pop(sourceRow))
             self.endMoveRows()
+            self.modelChanged.emit()
             print("Moved row", sourceRow, "to", destinationChild, "successfully")
             print("Table now:\n", self)
             print("Headers:", self._header_data)
@@ -347,6 +361,7 @@ class TableModel(QAbstractTableModel):
                 row.insert(destinationChild + adjust, row.pop(sourceColumn))
             self._header_data[Qt.Orientation.Horizontal].insert(destinationChild + adjust, self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn))
             self.endMoveRows()
+            self.modelChanged.emit()
             print("Moved column", sourceColumn, "to", destinationChild, "successfully")
             print("Table now:\n", self)
             print("Headers:", self._header_data)
@@ -411,9 +426,12 @@ class TableModel(QAbstractTableModel):
                 else:
                     # Move between cells
                     source_cell = self._data[source_table_row][source_table_column]
-                    model = source_cell.pop_model(source_item_row)
-                    target_cell.add_model(model)
-                    return True
+                    if source_cell.rowCount() > 0:
+                        model = source_cell.pop_model(source_item_row)
+                        target_cell.add_model(model)
+                        return True
+                    else:
+                        return False
 
         return False   
 
@@ -428,6 +446,7 @@ class TableModel(QAbstractTableModel):
 
         self.dataChanged.emit(source_index, source_index)
         self.dataChanged.emit(destination_index, destination_index)
+        self.modelChanged.emit()
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeStartElement("table")

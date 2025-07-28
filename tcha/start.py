@@ -1,52 +1,65 @@
 from PyQt6 import QtGui
-from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QTreeWidgetItem, QFileDialog
+from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy,  QFileDialog
 from PyQt6.QtCore import pyqtSignal, QT_TR_NOOP as tr
 from ui.UI_Start import StartWidget, FileWidget
-from tcha.settings import loadSettings, saveSettings
-from tcha.dbmodels import Scheduler, Courses
+from tcha.dbmodels import ScheduleModel, CourseModel, FilteredScheduleModel
+from tcha.dbmanager import DbManager
+from tcha.status import StatusBarContainer, StatusLabel
+from tcha.settings import loadSettings
 import os
 
 class Start(StartWidget):
     editorRequest = pyqtSignal()
     openFileRequest = pyqtSignal(str)
     settingsRequest = pyqtSignal()
+    messageChanged = pyqtSignal(str)
 
-    def __init__(self, scheduler: Scheduler, courses: Courses, parent=None) -> None:
+    def __init__(self, scheduler: ScheduleModel, courses: CourseModel, parent=None) -> None:
         super().__init__(parent)
         # Models
         self.settings = loadSettings()
-        self.scheduler = scheduler
+        self.scheduler = FilteredScheduleModel(scheduler, self)
         self.courses = courses
 
+        self._schedule_status = StatusLabel(tr("No upcoming lessons today"))
+        self.statusbar = StatusBarContainer(self._schedule_status)
+
         # Initial routines
-        self.cw_MyCalendar.set_scheduler(self.scheduler)
         self.connect_signals()
+        self.cw_MyCalendar.set_scheduler(self.scheduler)
+        self.tw_UpcomingLessons.setModel(self.scheduler)
         self.set_file_list(self.pinned_files_layout)
         self.set_file_list(self.luf_layout)
+        self.scheduler.set_exclusive_date(self.cw_MyCalendar.selectedDate())
+        self.tw_UpcomingLessons.hideColumn(0)
+        self.tw_UpcomingLessons.hideColumn(2)
+        self.tw_UpcomingLessons.hideColumn(4)
+        # self.open_dbmanager()
 
     def connect_signals(self) -> None:
-        self.scheduler.contentChanged.connect(self.on_scheduler_content_changed)
-        self.cw_MyCalendar.selectionChanged.connect(self.set_list)
         self.pb_NewLesson.clicked.connect(self.editorRequest.emit)
         self.pb_OpenLesson.clicked.connect(self.openFile)
-        self.tw_UpcomingLessons.itemDoubleClicked.connect(lambda: self.openFile(self.tw_UpcomingLessons.selectedItems()[0].path))
+        self.pb_manager.clicked.connect(self.open_dbmanager)
+        self.cw_MyCalendar.selectionChanged.connect(self.on_date_selected)
+        self.tw_UpcomingLessons.doubleClicked.connect(self.open_scheduled_file)
 
-    def on_scheduler_content_changed(self) -> None:
-        self.cw_MyCalendar.repaint()
-        self.set_list()
+    def check_todays_schedule(self) -> None:
+        """FUNKTION VERBESSERN SODASS AKTUELLE UHRZEIT MIT EINBEZOGEN WIRD -> ÜBERARBEITUNG DES DATENBANKSYSTEMS"""
+        if self.tw_UpcomingLessons.topLevelItemCount() > 0:
+            tr_message = tr("{0} upcoming lessons").format(self.tw_UpcomingLessons.topLevelItemCount())
+            self._schedule_status.setText(tr_message)
+        else:
+            self._schedule_status.setText(tr("No upcoming lessons today"))
 
-    def set_list(self) -> None:
-        self.tw_UpcomingLessons.clear()
-        selected_date = self.cw_MyCalendar.selectedDate()
-        for item in self.scheduler.return_items_of_date(selected_date):
-            tree_item = QTreeWidgetItem()
-            name = self.courses.get_by_id(item.course).name
-            if not name and item.course == 0:
-                name = tr("Undefined course")
-            tree_item.setText(0, self.courses.get_by_id(item.course).name)
-            tree_item.setText(1, item.time.toString("hh:mm"))
-            self.tw_UpcomingLessons.addTopLevelItem(tree_item)
-            print("Added")
+    def on_date_selected(self) -> None:
+        self.scheduler.set_exclusive_date(self.cw_MyCalendar.selectedDate())
+
+    def open_dbmanager(self) -> None:
+        dialog = DbManager(self.courses, self.scheduler, self)
+        dialog.exec()
+
+    def open_scheduled_file(self) -> None:
+        ...
 
     def openFile(self) -> None:
         path, filter = QFileDialog.getOpenFileName(self, tr("Open Lesson-File"), "/home", "Lesson (*.lesson)")
@@ -58,12 +71,10 @@ class Start(StartWidget):
         if layout == self.pinned_files_layout:
             filelist: list = self.settings["Files"]["Pinned"]
             nofile = self.lb_NoPinnedData
-            # print("PinnedFiles", filelist)
         else:
             filelist: list = self.settings["Files"]["LastUsed"]
             nofile = self.lb_NoUsedFiles
-            # print("LUF", filelist)
-        # print(filelist)
+   
 
         if len(filelist) > 0:
             for fPath in filelist:
@@ -109,7 +120,6 @@ class Start(StartWidget):
                 layout.removeItem(item)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        saveSettings(self.settings)
         return super().closeEvent(a0)
 
 class FileItem(FileWidget):

@@ -144,7 +144,8 @@ class PictureElement(BaseElement, PictureView):
 
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setStyleSheet("{background: none;}")
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setStyleSheet("background: none;")
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
     @property
@@ -223,6 +224,7 @@ class PictureDelegate(QStyledItemDelegate):
     def setModelData(self, editor: PictureElement, model, index):
         editor.model().sizeChanged.disconnect()
         editor.model().rotationChanged.disconnect()
+        model.setData(index, editor.model())
 
     def passthru(self) -> None:
         return False

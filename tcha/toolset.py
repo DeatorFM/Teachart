@@ -8,7 +8,6 @@ from tcha.elements.baseelement import BaseElement, BaseModel
 from tcha.elements.audioelement import AudioModel
 from tcha.resmanager import ResourceType, ResourceObject
 from pathlib import Path
-from os.path import basename
 import json
 import unicodedata
 import importlib

@@ -1,7 +1,9 @@
 import random
+from PyQt6.QtCore import QDateTime
 from tcha.resmanager import ResourceType, ResourceContainer
 from tcha.tablemodel import TableModel
 from tcha.elements import textelement, audioelement, pictureelement
+from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel
 
 TEXT1 = """
 <html><head><meta name="qrichtext" content="1" /><style type="text/css">
@@ -107,3 +109,32 @@ def test_model(rescont: ResourceContainer) -> TableModel:
     cell_11.add_model(text_model5)
 
     return table
+
+def test_lesson_models(db) -> CourseModel | ScheduleModel | StudentModel:
+    cmodel = CourseModel(db)
+    cmodel.add_course("A1 Business (Oct 2023)", 90)
+    cmodel.add_course("Feng", 45)
+    cmodel.add_course("A1 Intensiv Aug 2024", 150)
+    cmodel.add_course("Aoki", 60)
+
+    smodel = ScheduleModel(db)
+    smodel.add_schedule(1, QDateTime(2025, 6, 15, 14, 30, 0), "D:/Dokumente/thislesson.lesson")
+    smodel.add_schedule(2, QDateTime(2020, 1, 6, 10, 15, 0), "D:/Dokumente/thislesson.lesson") 
+    smodel.add_schedule(3, QDateTime(2022, 8, 31, 12, 0, 0), "D:/Dokumente/thislesson.lesson")
+    smodel.add_schedule(4, QDateTime(2019, 12, 20, 11, 20, 0), "D:/Dokumente/thislesson.lesson")
+
+    tmodel = StudentModel(db)
+    tmodel.add_student("Yuta Katsumata", 1)
+    tmodel.add_student("Yukiko Wada", 1)
+    tmodel.add_student("Hiroki Shinoda", 1)
+    tmodel.add_student("Hongyu Feng", 2)
+    tmodel.add_student("Chika Okura", 3)
+    tmodel.add_student("Akihisa Yamada", 3)
+    tmodel.add_student("Ayumi Oshima", 3)
+    tmodel.add_student("Aya Shinozaki", 3)
+    tmodel.add_student("Hiromi Fujisawa", 3)
+    tmodel.add_student("Amane Tomita", 3)
+    tmodel.add_student("Ayako Kimura", 3)
+    tmodel.add_student("Hisayuki Aoki", 4)
+
+    return cmodel, smodel, tmodel
