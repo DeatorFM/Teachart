@@ -1,11 +1,12 @@
+from genericpath import exists
 from PyQt6 import QtGui
-from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy,  QFileDialog
-from PyQt6.QtCore import pyqtSignal, QT_TR_NOOP as tr
+from PyQt6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy,  QFileDialog, QMessageBox
+from PyQt6.QtCore import pyqtSignal, QModelIndex, QT_TR_NOOP as tr
 from ui.UI_Start import StartWidget, FileWidget
 from tcha.dbmodels import ScheduleModel, CourseModel, FilteredScheduleModel
 from tcha.dbmanager import DbManager
 from tcha.status import StatusBarContainer, StatusLabel
-from tcha.settings import loadSettings
+from tcha.settings import Settings
 import os
 
 class Start(StartWidget):
@@ -17,7 +18,6 @@ class Start(StartWidget):
     def __init__(self, scheduler: ScheduleModel, courses: CourseModel, parent=None) -> None:
         super().__init__(parent)
         # Models
-        self.settings = loadSettings()
         self.scheduler = FilteredScheduleModel(scheduler, self)
         self.courses = courses
 
@@ -42,6 +42,7 @@ class Start(StartWidget):
         self.pb_manager.clicked.connect(self.open_dbmanager)
         self.cw_MyCalendar.selectionChanged.connect(self.on_date_selected)
         self.tw_UpcomingLessons.doubleClicked.connect(self.open_scheduled_file)
+        self.pb_Options.clicked.connect(self.settingsRequest.emit)
 
     def check_todays_schedule(self) -> None:
         """FUNKTION VERBESSERN SODASS AKTUELLE UHRZEIT MIT EINBEZOGEN WIRD -> ÜBERARBEITUNG DES DATENBANKSYSTEMS"""
@@ -58,8 +59,13 @@ class Start(StartWidget):
         dialog = DbManager(self.courses, self.scheduler, self)
         dialog.exec()
 
-    def open_scheduled_file(self) -> None:
-        ...
+    def open_scheduled_file(self, idx: QModelIndex) -> None:
+        """Open file under saved schedule item if existing."""
+        path = self.scheduler.data(self.scheduler.index(idx.row(), 5))
+        if path and exists(path):
+            self.openFileRequest.emit(path)
+        else:
+            QMessageBox.information(self, tr("Couldn't open file"), tr("File for selected schedule couldn't bne opened because it either doesn't exist or has an invalid path."))
 
     def openFile(self) -> None:
         path, filter = QFileDialog.getOpenFileName(self, tr("Open Lesson-File"), "/home", "Lesson (*.lesson)")
@@ -68,20 +74,21 @@ class Start(StartWidget):
 
     def set_file_list(self, layout: QVBoxLayout) -> None:
         self.clear_layout(layout)
+        settings = Settings.qsettings()
         if layout == self.pinned_files_layout:
-            filelist: list = self.settings["Files"]["Pinned"]
+            filelist: list[str] = settings.value("Application/pinned", defaultValue=[], type=list)
             nofile = self.lb_NoPinnedData
         else:
-            filelist: list = self.settings["Files"]["LastUsed"]
+            filelist: list[str] = settings.value("Application/recent", defaultValue=[], type=list)
             nofile = self.lb_NoUsedFiles
-   
 
         if len(filelist) > 0:
             for fPath in filelist:
-                fItem = self.create_file_item(fPath, self.is_pinned(fPath))
-                fItem.change_pin_state(self.is_pinned(fPath))
-                fItem.tb_pin.pressed.connect(lambda f=fPath: self.handle_pin(f))
-                layout.addWidget(fItem)
+                if os.path.exists(fPath) and fPath.endswith(".lesson"):
+                    fItem = self.create_file_item(fPath, self.is_pinned(fPath))
+                    fItem.change_pin_state(self.is_pinned(fPath))
+                    fItem.tb_pin.pressed.connect(lambda f=fPath: self.handle_pin(f))
+                    layout.addWidget(fItem)
             layout.addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
         else:
@@ -89,20 +96,17 @@ class Start(StartWidget):
             layout.addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
     def handle_pin(self, fPath: str) -> None:
-        if self.is_pinned(fPath):
+        settings = Settings.qsettings()
+        flist: list = settings.value("Application/pinned", defaultValue=[], type=list)
+        if fPath in flist:
             # print("Unpinned", fPath)
-            self.settings["Files"]["Pinned"].remove(fPath)
-        elif self.is_pinned(fPath) == False:
+            flist.remove(fPath)
+        else:
             # print("Pinned", fPath)
-            self.settings["Files"]["Pinned"].append(fPath)
+            flist.append(fPath)
+        settings.setValue("Application/pinned", flist)
         self.set_file_list(self.pinned_files_layout)
         self.set_file_list(self.luf_layout)
-
-    def is_pinned(self, val: str) -> bool:
-        if val in self.settings["Files"]["Pinned"]:
-            return True
-        else: 
-            return False
 
     def create_file_item(self, fPath: str, checked: bool):
         # print(fPath)

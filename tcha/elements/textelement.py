@@ -5,7 +5,7 @@ from PyQt6.QtXml import QDomElement
 from tcha.elements.baseelement import BaseEditor, BaseModel
 from tcha.resmanager import ResourceType, ResourceObject
 from ui.ui_TextElement import TextMenu
-from tcha.settings import get
+from tcha.settings import Settings
 from dataclasses import dataclass
 from typing import Protocol, Self
 import webbrowser
@@ -79,7 +79,7 @@ class TextElement(BaseEditor):
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         self.setStyleSheet("background-color: white;")
 
-        self.type_lang = get("General", "Language")
+        self.type_lang = Settings.value("language")
         self.last_char: str
         self.last_format: dict = {
             "family": ["Segoe UI"], 

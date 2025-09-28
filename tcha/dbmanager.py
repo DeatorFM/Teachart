@@ -1,10 +1,14 @@
-from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QListWidgetItem
+from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QListWidgetItem, QStyledItemDelegate
 from PyQt6.QtCore import Qt, QItemSelectionModel, QItemSelection      
 from PyQt6.QtGui import QIcon
 from ui.ui_dbmanager import DbManagerView, AssignmentView
 from tcha.dbmodels import *
 import PyQt6.uic as uic
 from enum import Enum
+
+class ScheduleDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        return super().paint(painter, option, index)
 
 class DbManager(QDialog, DbManagerView):
 

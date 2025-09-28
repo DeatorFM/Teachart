@@ -1,16 +1,20 @@
-from PyQt6.QtWidgets import QApplication, QTabBar, QMessageBox
+from PyQt6.QtWidgets import QApplication, QTabBar, QMessageBox, QInputDialog
 from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtCore import QDateTime, QSettings, QT_TR_NOOP as tr
+from PyQt6.QtCore import QDateTime, QSettings, pyqtSignal, QT_TR_NOOP as tr
 from PyQt6.QtSql import QSqlDatabase
 from ui.UI_Core import MainView
 from tcha.start import Start
 from tcha.editor import EditorTab
-from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel
+from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel, create_database, check_database
 from tcha.lfio import LessonFile, XmlReader
 from tcha.resmanager import ResourceContainer
 from tcha.status import StatusBar
+from tcha.settings import Defaults, Locale, Settings, SettingsDialog, ReturnFlags
 from os.path import basename, exists, abspath
 import typing
+import os
+import sys
+
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
     cmodel = CourseModel(db)
@@ -41,76 +45,100 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
 
     return cmodel, smodel, tmodel
 
-
 class AppCore(QApplication):
     def __init__(self, argv: typing.List[str]) -> None:
         super().__init__(argv)
         self.setStyle("windows11")
 
-        self.setOrganizationName("Florian Münstermann")
-        self.setApplicationVersion("0.1")
-        self.setApplicationName("Teachart")     
+        self.qsettings = QSettings(QSettings.Format.IniFormat, QSettings.Scope.UserScope, "Teachart", "settings")
+        self._db: QSqlDatabase | None = None
 
-        settings = QSettings(self)
-        settings.setDefaultFormat(QSettings.Format.IniFormat)
-        init = settings.value("initiated")
-        if not init:
-            self.set_default_settings()
+        if not self.qsettings.allKeys():
+            print("Empty Settings: First initialisation")
+            self._first_time()
+        else:
+            self._startup_checks()
 
-    def set_default_settings(self) -> None:
-        ...
+    def _startup_checks(self) -> None:
+        keys = self.qsettings.allKeys()
 
+        # Check keys
+        for key in Defaults.keys():
+            if key in keys:
+                continue
+            else:
+                print(f"Creating key {key}")
+                Defaults.set_default(self.qsettings, key)
+
+        # Check values
+        while True:
+            result = Settings.check_values(self.qsettings)
+            if result:
+                print(f"Invalid value for {result}. Setting default value.")
+                Defaults.set_default(self.qsettings, result)
+                continue
+            print("No invalid values found.")
+            break
+
+        # Check database
+        dbpath = self.qsettings.value("User/dbpath", type=str)
+        
+        if exists(dbpath):
+            print(f"Data base file in '{dbpath}' not found.")
+            db = QSqlDatabase.addDatabase("QSQLITE")
+            db.setDatabaseName(dbpath)
+            if db.open() and check_database(db):
+                self._db = db
+            else:
+                QMessageBox.information(None, tr("Database error"), tr("The database found is invalid. A new database will be created."))
+                self._db = create_database(Defaults.AppInfo.db_ver)
+                self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
+        else:
+            QMessageBox.information(None, tr("Database error"), tr("The database could not be found. A new database will be created."))
+            self._db = create_database(Defaults.AppInfo.db_ver)
+            self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
+   
+    def _first_time(self) -> None:
+        self.qsettings = Defaults.qsettings()
+        self.qsettings.setValue("Application/first_startup", False)
+        db = create_database()
+        print("Database at", abspath(db.databaseName()))
+        self.qsettings.setValue("User/dbpath", abspath(db.databaseName()))
+        language = self.language_dialog()
+        print("Selected language", language)
+        self.qsettings.setValue("User/language", language.name)
+        
+    def language_dialog(self) -> Locale:
+        language, result = QInputDialog.getItem(
+            None, 
+            "Language", 
+            "Select your language",
+            [value.value.name for value in list(Locale)]
+            )
+        if result:
+            for i, value in enumerate(list(Locale)):
+                if value.value.name == language:
+                    return Locale.from_int(i)
+        return getattr(Defaults, "language")
+    
+    def db(self) -> QSqlDatabase | None:
+        return self._db        
+    
+    def restart(self) -> None:
+        self.quit()
+        os.execv(sys.executable, ['python'] + sys.argv)
 
 class MainWindow(MainView):
-    __queries = {
-        "metadata" : 
-        """
-        CREATE TABLE metadata (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        )
-        """,
-        "Courses" :
-        """
-        CREATE TABLE Courses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            duration INTEGER,
-            temporary INTEGER DEFAULT 0 CHECK (temporary = 0 OR temporary = 1)
-        )
-        """,
-        "Schedules" :
-        """
-        CREATE TABLE Schedules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course_id INTEGER,
-            date INTEGER NOT NULL,
-            time INTEGER NOT NULL,
-            file_id TEXT NOT NULL,
-            path TEXT NOT NULL,
-            FOREIGN KEY (course_id) REFERENCES Courses(id) ON DELETE SET NULL
-        )
-        """,
-        "Students" :
-        """
-        CREATE TABLE Students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            course_id INTEGER,
-            email TEXT,
-            FOREIGN KEY (course_id) REFERENCES Courses(id) ON DELETE SET NULL
-        )
-        """
-    }
+    restartRequested = pyqtSignal()
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, db: QSqlDatabase, parent=None) -> None:
         super().__init__(parent)
         self.tab_counter = 0
-        database = self.open_database()
+        self.open_paths = []
         # cmodel, smodel, tmodel = test_lesson_models(database)
         # cmodel.cleanup()
-        self.schedules = ScheduleModel(database, self)
-        self.courses = CourseModel(database, self)
+        self.schedules = ScheduleModel(db, self)
+        self.courses = CourseModel(db, self)
 
         self.setStatusBar(StatusBar(self))
         self.create_start()
@@ -120,75 +148,6 @@ class MainWindow(MainView):
     def connect_signals(self) -> None:
         self.tab_widget.tabCloseRequested.connect(self.delete_tab)
         self.tab_widget.currentChanged.connect(self.set_current_status_bar)
-
-    def open_database(self) -> QSqlDatabase:
-        dbpath = QSettings().value("dbpath")
-        if dbpath:
-            if exists(dbpath):
-                db = QSqlDatabase.addDatabase("QSQLITE")
-                db.setDatabaseName(dbpath)
-                db.open()
-                if not self.check_database(db):
-                    # ERR HANDLE
-                    QMessageBox.information(self, tr("Invalid database file"), tr("The database has an invalid structure. \nA new file will be created."))
-                    db = self.create_database()
-            
-        else:
-            # ERR HANDLE
-            QMessageBox.information(self, tr("Database could not be found"), tr("The database file does not exist or could not be found. \nA new file will be created."))
-            db = self.create_database()
-
-        if not db.isOpen():
-            db.open()
-
-        return db
-
-    def create_database(self) -> QSqlDatabase:
-        db = QSqlDatabase.addDatabase("QSQLITE")
-        num = QDateTime.currentDateTime().toString("yyyyMMddHHmmss")
-        db.setDatabaseName(f"db/tcha{num}.db")
-        settings = QSettings()
-        settings.setValue("dbpath", abspath(db.databaseName()))
-        settings.sync()
-        ok = db.open()
-        print("Success", ok)
-
-        for query in self.__queries.values():
-            db.exec(query) 
-
-        db.exec("""
-            INSERT INTO metadata (key, value)
-            VALUES ('source_id', hex(randomblob(16)))
-        """)
-
-        query = db.exec("SELECT value FROM metadata WHERE key = 'db_id'")
-        if query.exec() and query.next():
-            settings.setValue("source_id", query.value("value")) 
-            settings.sync()
-
-        db.exec("""
-            INSERT OR IGNORE INTO Courses (id, name, duration, temporary) 
-            VALUES (0, '', 0, 0)
-        """)  
-
-        if not self.check_database(db):
-            #ERR HANDLE
-            self.create_database()
-        return db   
-
-    def check_database(self, db: QSqlDatabase) -> bool:
-        if not db.isOpen():
-            db.open()
-
-        query = db.exec("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-        while query.next():
-            print("Table", query.value("name"), ":", query.value("sql"))
-            name = query.value("name")
-            if self.__queries[name].strip() == query.value("sql").strip():
-                return True
-            else:
-                self.evoke_error(3)
-                return False
 
     def evoke_error(self, code: int, info: str = "") -> None:
         match code:
@@ -212,6 +171,7 @@ class MainWindow(MainView):
         startInst = Start(self.schedules, self.courses, self)
         startInst.editorRequest.connect(self.create_editor)
         startInst.openFileRequest.connect(self.load_editor)
+        startInst.settingsRequest.connect(self.open_settings)
         self.tab_widget.addTab(startInst, tr("Start"))
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(startInst))
         self.set_current_status_bar()
@@ -223,14 +183,21 @@ class MainWindow(MainView):
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
 
     def load_editor(self, path: str) -> None:
-        lessonfile = LessonFile("r", path)
-        xml_data = lessonfile.xml()
-        rescont = ResourceContainer()
-        lesson, tablemodel = XmlReader.read_xml(xml_data, rescont, lessonfile)
-        editorInst = EditorTab.from_saved_file(self.courses, self.schedules, lesson, tablemodel, rescont, lessonfile, self)
-        editorInst.nameChanged.connect(self.change_tab_name)
-        self.tab_widget.addTab(editorInst, basename(path))
-        self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
+        if not path in self.open_paths:
+            self.open_paths.append(path)
+            lessonfile = LessonFile("r", path)
+            xml_data = lessonfile.xml()
+            rescont = ResourceContainer()
+            lesson, tablemodel = XmlReader.read_xml(xml_data, rescont, lessonfile)
+            editorInst = EditorTab.from_saved_file(self.courses, self.schedules, lesson, tablemodel, rescont, lessonfile, self)
+            editorInst.nameChanged.connect(self.change_tab_name)
+            self.tab_widget.addTab(editorInst, basename(path))
+            self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
+        else:
+            QMessageBox.information(self, tr("Open lesson-file"), tr("File is already open."))
+
+    def isopen(self, path: str) -> bool:
+        self.tab_widget
 
     def delete_tab(self, i: int) :
         """Deletes a tab and in case of EditorTab checks if progess is unsaved."""
@@ -239,6 +206,8 @@ class MainWindow(MainView):
         if isinstance(widget, EditorTab):
             # Detach widget from tab first
             widget.table.close_current_editor()
+            if widget.lessonfile:
+                self.open_paths.remove(widget.lessonfile.path)
             if widget.changes_unsaved:
                 msgBox = QMessageBox(QMessageBox.Icon.Information, "Teachart", tr("The document has been modified. Do you want to save your changes?"), QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel, self)
                 rtrn = msgBox.exec()
@@ -254,6 +223,7 @@ class MainWindow(MainView):
                     return
                 else:
                     raise ValueError("Messagebox returned unreadble value")
+                
             self.tab_widget.removeTab(i)
             widget.close_streams()  # Then clean up resources
             widget.deleteLater() 
@@ -261,6 +231,27 @@ class MainWindow(MainView):
     def change_tab_name(self, tab: EditorTab, name: str) -> None:
         index = self.tab_widget.indexOf(tab)
         self.tab_widget.setTabText(index, name)
+        self.open_paths.append(tab.lessonfile.path)
+
+    def open_settings(self) -> None:
+        return_flags = SettingsDialog.get_settings(self, self.courses.database(), Settings.qsettings())
+        print("Return flags: ", return_flags)
+        if ReturnFlags.Restart in return_flags:
+            print("Restarting application")
+            self.restartRequested.emit()
+            return
+        if ReturnFlags.UpdateStyle in return_flags:
+            print("Updating application style")
+            pass
+        if ReturnFlags.UpdateLocale in return_flags:
+            print("Updating language")
+            pass
+
+    def _update_appearance(self) -> None:
+        ...
+
+    def _update_style(self) -> None:
+        ...
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         for i in range(self.tab_widget.count()):

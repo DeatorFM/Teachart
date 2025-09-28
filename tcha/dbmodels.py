@@ -1,9 +1,107 @@
-from PyQt6.QtCore import pyqtSlot, Qt, QSettings, QLocale, QDateTime, QDate, QTime, QModelIndex, QVariant, QSortFilterProxyModel, pyqtSignal, QT_TR_NOOP as tr
+from PyQt6.QtCore import pyqtSlot, Qt, QLocale, QDateTime, QDate, QTime, QModelIndex, QVariant, QSortFilterProxyModel, pyqtSignal, QT_TR_NOOP as tr
 from PyQt6.QtSql import QSqlTableModel, QSqlDatabase, QSqlError, QSqlRelationalTableModel, QSqlRelation, QSqlQuery, QSqlRecord
 
 from dataclasses import dataclass, field
 from typing import Self
+from os.path import abspath
 
+# Common methods
+
+QUERIES = {
+        "metadata" : 
+        """
+        CREATE TABLE metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """,
+        "Courses" :
+        """
+        CREATE TABLE Courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            duration INTEGER,
+            temporary INTEGER DEFAULT 0 CHECK (temporary = 0 OR temporary = 1)
+        )
+        """,
+        "Schedules" :
+        """
+        CREATE TABLE Schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            course_id INTEGER,
+            date INTEGER NOT NULL,
+            time INTEGER NOT NULL,
+            file_id TEXT NOT NULL,
+            path TEXT NOT NULL,
+            FOREIGN KEY (course_id) REFERENCES Courses(id) ON DELETE SET NULL
+        )
+        """,
+        "Students" :
+        """
+        CREATE TABLE Students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            course_id INTEGER,
+            email TEXT,
+            FOREIGN KEY (course_id) REFERENCES Courses(id) ON DELETE SET NULL
+        )
+        """
+    }
+
+def create_database(vernum: str, dir: str = "db") -> QSqlDatabase:
+    db = QSqlDatabase.addDatabase("QSQLITE")
+    num = QDateTime.currentDateTime().toString("yyyyMMddHHmmss")
+    db.setDatabaseName(f"{dir}/tcha{num}.db")
+    ok = db.open()
+    print("Success", ok)
+
+    for query in QUERIES.values():
+        db.exec(query) 
+
+    db.exec("""
+        INSERT INTO metadata (key, value)
+        VALUES ('source_id', hex(randomblob(16)))
+    """)
+
+    db.exec(f"""
+        INSERT INTO metadata (key, value)
+        VALUES ('db_ver', {vernum})
+    """)
+
+    db.exec("""
+        INSERT OR IGNORE INTO Courses (id, name, duration, temporary) 
+        VALUES (0, '', 0, 0)
+    """)  
+
+    if not check_database(db):
+        #ERR HANDLE
+        db = create_database()
+    return db  
+
+def check_database(db: QSqlDatabase) -> bool:
+    if not db.isOpen():
+        db.open()
+
+    query = db.exec("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    while query.next():
+        print("Table", query.value("name"), ":", query.value("sql"))
+        name = query.value("name")
+        if QUERIES[name].strip() == query.value("sql").strip():
+            return True
+        else:
+            # FUTURE ERROR HANDLER
+            print(f"Table '{name}' is invalid. Database needs to be rebuilt.")
+            return False
+    return False
+
+def reset_database(db: QSqlDatabase) -> bool:
+    """Deletes all informations from all user accessable tables"""
+    db.exec("DELETE FROM Courses WHERE id > 0") # To keep the 'No course" entry
+    db.exec("DELETE FROM Schedules")
+    db.exec("DELETE FROM Students")
+    ok = db.commit()
+    return ok
+    
         
 @dataclass(frozen=True)
 class CourseItem:
@@ -14,11 +112,11 @@ class CourseItem:
     source_id: str = field(default='0')
 
     @classmethod
-    def no_course(cls: Self, source_id: str) -> Self:
+    def no_course(cls, source_id: str) -> Self:
         return cls(0, tr("No course"), 0, True, source_id)
     
     @classmethod
-    def from_record(cls: Self, record: QSqlRecord) -> Self:
+    def from_record(cls, record: QSqlRecord) -> Self:
         return cls(
             record.value("id"),
             record.value("name"),
@@ -34,7 +132,7 @@ class StudentItem:
     email: str | None
 
     @classmethod
-    def from_record(cls: Self, record: QSqlRecord) -> Self:
+    def from_record(cls, record: QSqlRecord) -> Self:
         return cls(
             record.value("id"),
             record.value("name"),
@@ -276,15 +374,20 @@ class ScheduleModel(QSqlRelationalTableModel):
     
     def data(self, item: QModelIndex, role = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
+            from tcha.settings import Settings
+            qsettings = Settings.qsettings()
             if item.column() == 2:
-                locale = QLocale(QLocale.Language.English, QLocale.Country.UnitedKingdom)
+                from tcha.settings import Locale
+                locale = Locale[qsettings.value("User/language", type=str)].value
+                qlocale = QLocale(locale.language, locale.region)
                 julian_day = self.record(item.row()).value("date")
                 qdate = QDate.fromJulianDay(julian_day)
-                return locale.toString(qdate, QLocale.FormatType.ShortFormat)
+                return qlocale.toString(qdate, QLocale.FormatType.ShortFormat)
             elif item.column() == 3:
                 msecs = self.record(item.row()).value("time")
                 qtime = QTime.fromMSecsSinceStartOfDay(msecs)
-                return qtime.toString("HH:mm")
+                from tcha.settings import TimeFormat
+                return qtime.toString(TimeFormat[qsettings.value("User/time_format", type=str)].value)
         elif role == Qt.ItemDataRole.EditRole:
             if item.column() == 2:
                 julian_day = super().data(item, role)
@@ -536,6 +639,7 @@ class FilteredScheduleModel(QSortFilterProxyModel):
 
         self._exclusive_course_id: int | None = None
         self._exclusive_date: QDate | None = None
+        self._earliest_time: QTime | None = None
 
     def schedules_for_month(self, month: QDate) -> list[QDate]:
         return self.sourceModel().schedules_for_month(month)

@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>settings_dialog</class>
+ <widget class="QDialog" name="settings_dialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>360</width>
-    <height>310</height>
+    <width>500</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>360</width>
-    <height>305</height>
+    <width>500</width>
+    <height>400</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>360</width>
-    <height>310</height>
+    <width>500</width>
+    <height>400</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="vl1">
    <item>
-    <widget class="QGroupBox" name="groupBox_4">
+    <widget class="QGroupBox" name="gb_general">
      <property name="title">
       <string>General</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_6">
+     <layout class="QVBoxLayout" name="vl2">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <layout class="QHBoxLayout" name="hl1">
         <property name="bottomMargin">
          <number>0</number>
         </property>
         <item>
-         <widget class="QLabel" name="label_5">
+         <widget class="QLabel" name="lb_appearance">
           <property name="text">
            <string>Appearance</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton">
+         <widget class="QRadioButton" name="rb_light">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -53,7 +53,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Lioht</string>
+           <string>Light</string>
           </property>
           <property name="iconSize">
            <size>
@@ -64,14 +64,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton_2">
+         <widget class="QRadioButton" name="rb_dark">
           <property name="text">
            <string>Dark</string>
           </property>
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_2">
+         <spacer name="hs1">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -89,18 +89,18 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="gb_locale">
      <property name="title">
       <string>Locale</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,4">
+     <layout class="QHBoxLayout" name="hl5" stretch="0,4">
       <property name="leftMargin">
        <number>6</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <layout class="QVBoxLayout" name="vl3">
         <item>
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="lb_language">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
             <horstretch>0</horstretch>
@@ -113,7 +113,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="lb_time_format">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
             <horstretch>0</horstretch>
@@ -128,23 +128,12 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
+       <layout class="QVBoxLayout" name="vl4">
         <item>
-         <widget class="QComboBox" name="comboBox"/>
+         <widget class="QComboBox" name="cb_language"/>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox_3">
-          <item>
-           <property name="text">
-            <string>24h</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>12h</string>
-           </property>
-          </item>
-         </widget>
+         <widget class="QComboBox" name="cb_time_format"/>
         </item>
        </layout>
       </item>
@@ -152,15 +141,15 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_2">
+    <widget class="QGroupBox" name="gb_document">
      <property name="title">
       <string>Document</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="hl6">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="vl5">
         <item>
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="cb_always_schedule">
           <property name="text">
            <string>Always schedule lessons</string>
           </property>
@@ -172,29 +161,41 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_3">
+    <widget class="QGroupBox" name="gb_database">
      <property name="title">
       <string>Database</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_5">
+     <layout class="QVBoxLayout" name="vl6">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="hl3">
         <item>
-         <widget class="QLabel" name="label_4">
+         <widget class="QLabel" name="lb_location">
           <property name="text">
            <string>Location</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit">
+         <widget class="QLineEdit" name="le_path">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pb_file_dialog">
+          <property name="minimumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
             <width>20</width>
@@ -212,7 +213,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <layout class="QHBoxLayout" name="hl4">
         <property name="spacing">
          <number>4</number>
         </property>
@@ -220,21 +221,33 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pb_new_database">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="text">
            <string>Create New</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="pb_reset_database">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="text">
            <string>Reset</string>
           </property>
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer">
+         <spacer name="hs2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -252,12 +265,21 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="QDialogButtonBox" name="settings_buttonbox">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>30</height>
+      </size>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::RestoreDefaults</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -266,9 +288,9 @@
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>settings_buttonbox</sender>
    <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>settings_dialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -282,9 +304,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>settings_buttonbox</sender>
    <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>settings_dialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

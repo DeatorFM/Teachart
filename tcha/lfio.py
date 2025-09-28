@@ -106,6 +106,7 @@ class XmlWriter:
         writer.writeStartElement("teachart")
 
         writer.writeEmptyElement("metadata")
+        writer.writeAttribute("version", "1")
         writer.writeAttribute("file_id", file_id)
 
         writer = lesson.xml(writer)

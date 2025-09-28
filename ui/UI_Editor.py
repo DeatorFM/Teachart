@@ -1,10 +1,11 @@
+from sqlite3 import Time
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFrame, QSizePolicy, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QSpacerItem, QMenu, QDateTimeEdit, QSpinBox, QTextEdit,
     QStackedWidget, QGraphicsDropShadowEffect, QGridLayout, QAbstractSpinBox
 )
 from PyQt6.QtCore import (
-    Qt, QSize, QDateTime, QTimer, QRectF, pyqtSignal, pyqtSlot, QEvent, QCoreApplication
+    Qt, QSize, QDateTime, QTimer, QRectF, pyqtSignal, pyqtSlot, QEvent, QCoreApplication, QLocale
 )
 from PyQt6.QtGui import (
     QFont, QIcon, QPixmap, QPainter, QPainterPath, QPen, QColor, QMouseEvent, QEnterEvent
@@ -15,6 +16,7 @@ from ui.StyledWidget import *
 from ui.UI_Commons import SplitButton, SearchableComboBox
 from tcha.toolset import TableToolset
 from tcha.table import Table
+from tcha.settings import Locale, TimeFormat, Settings
 
 import math
 import typing
@@ -104,7 +106,12 @@ class EditorWidget(QWidget):
         self.lb_DateTime.setObjectName("LB_DateTime")
         self.topbar_layout.addWidget(self.lb_DateTime)
 
+        qsettings = Settings.qsettings()
         self.dt_DateTime = QDateTimeEdit(self.topbar)
+        locale = Locale[qsettings.value("User/language", type=str)].value
+        tformat = TimeFormat[qsettings.value("User/time_format", type=str)].value
+        qlocale = QLocale(locale.language, locale.region)
+        self.dt_DateTime.setDisplayFormat(f"{qlocale.dateFormat()} {tformat}")
         self.dt_DateTime.setMinimumSize(85, 30)
         self.dt_DateTime.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.dt_DateTime.setProperty("showGroupSeparator", False)

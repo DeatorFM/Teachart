@@ -16,6 +16,7 @@ from typing import Self
 from os.path import basename
 import enum
 
+
 class EditorModeError(Exception):
     def __init__(self, message: str):
         super().__init__(message)
