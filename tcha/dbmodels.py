@@ -149,7 +149,8 @@ class CourseModel(QSqlTableModel):
         ok = self.select()
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
 
-    def add_course(self, name: str, duration: int, temporary=False) -> None:
+    def add_course(self, name: str, duration: int, temporary=False) -> int:
+        """Adds new course with the name and duration and returns the id if successfully added else returns 0"""
         record = self.record()    
         record.setValue("name", name)
         record.setValue("duration", duration)
@@ -159,20 +160,23 @@ class CourseModel(QSqlTableModel):
             if self.submitAll(): 
                 self.select()
                 self.courseDataChanged.emit()
+                return self.data(self.index(0, 0))
             print(self.data(self.index(0, 1)))
         else:
             print("Insert Failed")
             print(f"Database Error: {self.database().lastError().text()}")
             print(f"Model Error: {self.lastError().text()}")
+        return 0
 
-    def remove_by_id(self, id: int) -> None:
+    def remove_by_id(self, id: int) -> bool:
         for row in range(self.rowCount()):
             record = self.record(row)
             if record.value("id") == id:
                 if self.removeRow(row):
                     if self.submitAll():
                         self.select()
-                    return
+                        return True
+        return False
                 
     def index_for_id(self, course_id: int) -> QModelIndex:
         """Returns the index for the record with student_id."""
@@ -258,12 +262,12 @@ class ScheduleModel(QSqlRelationalTableModel):
             relation_model.select()
         self.select()
 
-    def add_schedule(self, course_id: int, datetime: QDateTime, file_id: str, path: str) -> bool:
+    def add_schedule(self, course_id: int, datetime: QDateTime, file_id: int, path: str) -> bool:
         record = self.record()
         record.setValue(1, course_id)
         record.setValue("date", datetime.date().toJulianDay())
         record.setValue("time", datetime.time().msecsSinceStartOfDay())
-        record.setValue("file_id", file_id)
+        record.setValue("file_id", str(file_id))
         record.setValue("path", path)
 
         if self.insertRecord(0, record):
@@ -288,12 +292,12 @@ class ScheduleModel(QSqlRelationalTableModel):
                 return self.index(row, 0)
         return QModelIndex()
     
-    def index_for_file_id(self, file_id: str) -> QModelIndex:
+    def index_for_file_id(self, file_id: int) -> QModelIndex:
         """Returns the index for the first record with file id."""
         for row in range(self.rowCount()):
             record = self.record(row)
             print("Checking file id: ", record.value("file_id"), "with", file_id)
-            if record.value("file_id") == file_id:
+            if record.value("file_id") == str(file_id):
                 return self.index(row, 0)
         return QModelIndex()
     
@@ -307,10 +311,10 @@ class ScheduleModel(QSqlRelationalTableModel):
             return query.value(0)
         return 0
     
-    def has_file(self, file_id: str) -> bool:
+    def has_file(self, file_id: int) -> bool:
         query = self.database().exec()
         query.prepare("SELECT EXISTS (SELECT 1 FROM Schedules WHERE file_id = ?)")
-        query.addBindValue(file_id)
+        query.addBindValue(str(file_id))
         if query.exec() and query.next():
             return bool(query.value(0))
     
@@ -480,8 +484,7 @@ class StudentModel(QSqlRelationalTableModel):
             elif section == 3:
                 return "E-Mail"
         return super().headerData(section, orientation, role)
-
-    
+   
 class FilteredCourseModel(QSortFilterProxyModel):
     courseDataChanged = pyqtSignal()
 

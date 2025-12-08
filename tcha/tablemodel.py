@@ -4,7 +4,7 @@ from PyQt6.QtGui import QFont
 from typing import Any, Protocol, Self, Sequence
 from dataclasses import dataclass, field
 
-class BaseModel(Protocol):
+class BaseElementModel(Protocol):
     ...
 
 class CellModel(QAbstractListModel):
@@ -12,34 +12,38 @@ class CellModel(QAbstractListModel):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._data: list[BaseModel] = []
+        self._data: list[BaseElementModel] = []
         self.height: int = 30
         self.cell_index = (-1, -1)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
         
-    def add_model(self, model: BaseModel) -> None:
+    def add_model(self, model: BaseElementModel) -> None:
+        self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
-        self.dataChanged.emit(self.index(0), self.index(len(self._data) - 1))
+        self.endInsertRows()
+        print(f"Model of type {model} added.")
 
-    def clear(self) -> None:#
+    def clear(self) -> None:
         while self._data:
             model = self._data.pop()
             del model
 
-    def removeRows(self, row, count, parent = ...) -> bool:
+    def removeRows(self, row: int, count: int, parent = QModelIndex()) -> bool:
         try:
-            self.beginRemoveRows(parent, row, row + count - 1)
-            for _ in range(count):
-                del self._data[row]
-            self.endRemoveRows()
-            self.modelChanged.emit()
-            return True
+            if row > -1:
+                self.beginRemoveRows(parent, row, row + count - 1)
+                for _ in range(count):
+                    del self._data[row]
+                self.endRemoveRows()
+                self.modelChanged.emit()
+                return True
+            return False
         except IndexError:
             return False
 
-    def pop_model(self, row: int) -> BaseModel:
+    def pop_model(self, row: int) -> BaseElementModel:
         model = self._data.pop(row)
         self.layoutChanged.emit()
         self.modelChanged.emit()
@@ -48,13 +52,13 @@ class CellModel(QAbstractListModel):
     def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
         return self.createIndex(row, column)
 
-    def data(self, index: QModelIndex, role: int = 1) -> BaseModel:
+    def data(self, index: QModelIndex, role: int = 1) -> BaseElementModel:
         try:
             return self._data[index.row()]
         except IndexError:
             return QVariant(None)
             
-    def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = 1) -> bool:
         if index.isValid():
             self._data[index.row()] = value
             self.dataChanged.emit(index, index, [role])
@@ -144,11 +148,14 @@ class CellModel(QAbstractListModel):
         return writer
     
     @classmethod
-    def create_with_models(cls: Self, models: Sequence[BaseModel]) -> Self:
+    def create_with_models(cls: Self, models: Sequence[BaseElementModel]) -> Self:
         cell = cls()
         for model in models:
             cell.add_model(model)
         return cell
+    
+    def parent(self):
+        return super().parent()
 
     def __iter__(self):
         return iter(self._data)
@@ -162,6 +169,10 @@ class CellModel(QAbstractListModel):
             return height
         else:
             return 30
+        
+    def __del__(self) -> None:
+        print("CellModel deleted")
+        self.clear()
         
     def flags(self, index: QModelIndex):
         return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
@@ -205,6 +216,11 @@ class TableModel(QAbstractTableModel):
         if data:
             self._data = data.table
             self._header_data = data.headers
+        else:
+            self._data = None
+
+    def is_valid(self) -> bool:
+        return self.rowCount() >= 1 and self.columnCount() >= 1 and len(self._header_data[Qt.Orientation.Horizontal]) == self.columnCount() and len(self._header_data[Qt.Orientation.Vertical]) == self.rowCount()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -216,7 +232,7 @@ class TableModel(QAbstractTableModel):
         return Qt.DropAction.MoveAction
     
     @classmethod
-    def new(cls, rows: int, columns: int):
+    def new(cls, rows: int, columns: int) -> Self:
         """Creates empty TableModel with number of rows and column"""
         data = []
         header_data = {}
@@ -229,7 +245,7 @@ class TableModel(QAbstractTableModel):
         header_data[Qt.Orientation.Horizontal] = [HeaderDataItem.horizontal() for _ in range(columns)]
         header_data[Qt.Orientation.Vertical] = [HeaderDataItem.vertical() for _ in range(rows)]
         return cls(TableData(data, header_data))
-    
+
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         # print("Index called!")
         return self.createIndex(row, column)
@@ -304,6 +320,7 @@ class TableModel(QAbstractTableModel):
         
     def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         if row < 0 or row >= len(self._data) or self.rowCount() == 1:
+            print("Invalid row number")
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
@@ -454,10 +471,12 @@ class TableModel(QAbstractTableModel):
         writer.writeAttribute("columns", str(self.columnCount()))
 
         # Writing Header info
+        writer.writeStartElement("headers")
         for header_item in self._header_data[Qt.Orientation.Horizontal]:#
             writer.writeEmptyElement("header")
             writer.writeAttribute("size", str(header_item.section_size))
             writer.writeAttribute("text", header_item.text)
+        writer.writeEndElement()
 
         # Start writing cells
         for row in self._data:
@@ -479,10 +498,19 @@ class TableModel(QAbstractTableModel):
         return max([cell.height for cell in self._data[row]])
     
     def flags(self, index):
-        return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsDropEnabled | Qt.ItemFlag.ItemIsDragEnabled   
+        return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsDropEnabled | Qt.ItemFlag.ItemIsDragEnabled
+    
+    def clear(self) -> None:
+        self._data.clear()
+        self._header_data.clear()
+
+    def __bool__(self) -> bool:
+        return self.is_valid()
+    
+    def __del__(self) -> None:
+        print("TableModel deleted")
+        if self._data:
+            self.clear()
     
     def __str__(self):
-        l = ""
-        for row in self._data:
-            l += str(row) + "\n"
-        return l
+        return str(self._data)

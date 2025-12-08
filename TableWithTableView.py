@@ -35,7 +35,7 @@ QListView {selection-background-color: none; border: 2px solid #1967d2; backgrou
 QListView::item:selected {selection-background-color: none; border: 2px solid #3498db; background-color: white;}
 """
 
-class BaseModel:
+class BaseElementModel:
     @abstractmethod
     def delegate(self) -> QStyledItemDelegate:
         return QStyledItemDelegate()
@@ -55,7 +55,7 @@ class BaseModel:
 class CellModel(QAbstractListModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._data: list[BaseModel] = []
+        self._data: list[BaseElementModel] = []
         # self.rects: list[QRect] = []
         self.height: int = 30
         self.cell_index = (-1, -1)
@@ -63,7 +63,7 @@ class CellModel(QAbstractListModel):
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
         
-    def add_model(self, model: BaseModel) -> None:
+    def add_model(self, model: BaseElementModel) -> None:
         self._data.append(model)
         self.dataChanged.emit(self.index(0), self.index(len(self._data) - 1))
 
@@ -71,7 +71,7 @@ class CellModel(QAbstractListModel):
         self._data.pop(i)
         self.dataChanged.emit(self.index(0), self.index(len(self._data) - 1))
 
-    def pop_model(self, row: int) -> BaseModel:
+    def pop_model(self, row: int) -> BaseElementModel:
         model = self._data.pop(row)
         self.layoutChanged.emit()
         return model
@@ -79,7 +79,7 @@ class CellModel(QAbstractListModel):
     def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
         return self.createIndex(row, column)
 
-    def data(self, index: QModelIndex, role: int = 1) -> QStyledItemDelegate | BaseModel:
+    def data(self, index: QModelIndex, role: int = 1) -> QStyledItemDelegate | BaseElementModel:
         # print("Data called from row:", index.row(), self._data[index.row()], "with role", role)# Model
         return self._data[index.row()]
             
@@ -376,7 +376,7 @@ class TextDelegate(QStyledItemDelegate):
         size = index.data().expected_size(option.rect.width() - 10)
         return QSize(option.rect.width(), size.height() + 10)
     
-class TextModel(QTextDocument, BaseModel):
+class TextModel(QTextDocument, BaseElementModel):
     def __init__(self) -> None:
         super().__init__()
         self.setDocumentMargin(3.0)
@@ -399,7 +399,7 @@ class TextModel(QTextDocument, BaseModel):
     def change_on_mouse_hover(self) -> bool:
         return False
     
-class ImageModel(BaseModel):
+class ImageModel(BaseElementModel):
     def __init__(self, path: str) -> None:
         self.pixmap = QPixmap(path)
         self.rotation: int = 0

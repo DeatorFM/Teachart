@@ -3,7 +3,7 @@ from PyQt6.QtCore import QCoreApplication, Qt, QSize, QModelIndex, QT_TR_NOOP as
 from PyQt6.QtGui import QPainter
 from PyQt6.QtSql import QSqlRelationalDelegate
 from tcha.dbmodels import CourseModel
-from ui.UI_Commons import IconButton
+from ui.commons import IconButton
 
 
 class CourseDelegate(QStyledItemDelegate):

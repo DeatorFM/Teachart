@@ -1,14 +1,21 @@
+from typing import Self
 from PyQt6.QtCore import QDateTime, QTime, QDate, QXmlStreamWriter, QXmlStreamReader
 from dataclasses import dataclass, field
+from tcha.error import LFExceptions
 
 @dataclass
 class Lesson:
-    datetime: QDateTime
-    course_name: str
+    source_id: str
+    datetime: QDateTime = field(default_factory=QDateTime.currentDateTime)
+    course_name: str = field(default=None)
     course_id: int = field(default=0)
     duration: int = field(default=0)
     comment: str = field(default="")
-    source_id: str = field(default='0')
+
+    def isvalid(self) -> bool:
+        if len(self.source_id) > 1:
+            return True
+        return False
 
     def set_datetime(self, datetime: QDateTime) -> None:
         self.datetime = datetime
@@ -37,17 +44,26 @@ class Lesson:
         return stream
     
     @classmethod
-    def read(cls, reader: QXmlStreamReader) -> "Lesson":
-        """Reads data from an XML DOM element and returns an instance of Lesson."""
+    def new(cls: Self, source_id: str) -> Self:
+        return cls(source_id, QDateTime.currentDateTime())
+
+    @classmethod
+    def read(cls: Self, reader: QXmlStreamReader) -> Self:
+        """Reads data from an XML DOM element and returns an instance of Lesson.
+           If a value is invalid a ModelReadError is invoked."""
         attrs = reader.attributes()
         datetime = QDateTime()
-        time = QTime()
-        time = time.addMSecs(int(attrs.value("time")))
-        datetime.setDate(QDate.fromJulianDay(int(attrs.value("date"))))
-        datetime.setTime(time)
-        course_name = attrs.value("course_name")
-        course_id = int(attrs.value("course_id"))
-        duration = int(attrs.value("duration"))
-        comment = reader.readElementText()
-        source_id = attrs.value("source_id")
-        return cls(datetime, course_name, course_id, duration, comment, source_id)
+
+        try:
+            datetime.setDate(QDate.fromJulianDay(int(attrs.value("date"))))
+            datetime.setTime(QTime.fromMSecsSinceStartOfDay(int(attrs.value("date"))))
+            course_name = str(attrs.value("course_name"))
+            course_id = int(attrs.value("course_id"))
+            duration = int(attrs.value("duration"))
+            comment = reader.readElementText()
+            source_id = str(attrs.value("source_id"))
+            return cls(source_id, datetime, course_name, course_id, duration, comment)
+        
+        except (ValueError, TypeError):
+            print("Value could not be read.")
+            raise LFExceptions.ModelReadError(False)

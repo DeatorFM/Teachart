@@ -203,7 +203,17 @@ class ComboBoxListView(QListView):
         if self.model().rowCount() > 0:
             super().showEvent(a0)
         
+class LabeledWidget(QWidget):
+    def __init__(self, label: str, widget: QWidget, parent = None):
+        super().__init__(parent, Qt.WindowType.Widget)
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        self.label = QLabel(label)
+        layout.addWidget(self.label)
+        layout.addWidget(widget)
 
+    def set_label_text(self, text: str) -> None:
+        self.label.setText(text)
 
 class StrongLineEdit(QLineEdit):
     def keyPressEvent(self, a0):

@@ -1,0 +1,464 @@
+from PyQt6.QtWidgets import QStyleOptionViewItem, QStyle, QFileDialog
+from PyQt6.QtCore import QSize, Qt, QObject, pyqtSignal, pyqtSlot, QXmlStreamWriter, QModelIndex, QRect, QXmlStreamAttributes, QT_TR_NOOP as tr
+from PyQt6.QtGui import QPixmap, QTransform, QPainter, QPen,  QImageReader, QIcon
+from tcha.resmanager import ResourceType, ResourceObject
+from tcha.error import LFExceptions
+from nativeelements.views import PictureEditorView
+from nativeelements.baseelement import BaseElementEditor, BaseElementModel, BaseElementDelegate, BaseElementToolset, BaseElementDefinitions, QAction
+from ui.element_toolsets import ElementOptions, PictureToolsetView
+from typing import Self, Type, Protocol
+from pathlib import Path
+
+class PictureDelegate(Protocol):
+    ...
+
+
+class PictureModel(BaseElementModel):
+
+    def __init__(self, resource: ResourceObject, width: int = 1, height: int = 1, rotation: int = 0, adjusted: bool = False, parent = None):
+        super().__init__(parent)
+        self._resource = resource
+        self._resource.add_member()
+
+        self._width = width # Last width
+        self._height = height # Last height
+        self._rotation = rotation 
+        self._adjusted = adjusted # If sizes have been adjusted by the user
+        
+        reader = QImageReader()
+        reader.setDevice(self.resource.qfile())
+        size = reader.size()
+
+        self._original_aspect_ratio: float = size.height() / size.width()
+
+        if not self._adjusted:
+            self._width = size.width()
+            self._height = size.height()
+        print("Image loaded from", self._resource.path)
+
+        
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        writer.writeEmptyElement("element")
+        writer.writeAttribute("type", "PictureElement")
+        writer.writeAttribute("file", self.resource.filename())
+        writer.writeAttribute("width", str(self.width))
+        writer.writeAttribute("height", str(self.height))
+        writer.writeAttribute("rotation", str(self.rotation))
+        writer.writeAttribute("adjusted", str(int(self.adjusted)))
+        return writer
+
+    @classmethod
+    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
+        try:
+            width, height, adjusted = int(xml.value("width")), int(xml.value("height")), bool(int(xml.value("adjusted")))
+            if width + height > 1: # Width and height values must be at least 1
+                model = cls(resobj, 
+                            width, 
+                            height, 
+                            int(xml.value("rotation")), 
+                            adjusted
+                            )
+                print("Read PictureModel", model)
+                return model
+            raise LFExceptions.ModelReadError(False)
+        
+        except (ValueError, TypeError):
+            raise LFExceptions.ModelReadError(False)
+
+    # @staticmethod
+    # def restype() -> ResourceType:
+    #     return ResourceType.IMAGE
+    
+    @property
+    def name(self) -> str:
+        return "PictureElement"
+    
+    def delegate(self, toolset: BaseElementToolset, parent: QObject) -> PictureDelegate:
+        return PictureDelegate(toolset, parent)
+    
+    @property
+    def resource(self) ->ResourceObject:
+        return self._resource
+    
+    @property
+    def path(self) -> str:
+        return self.resource.path
+
+    @property
+    def width(self) -> int:
+        return self._width
+    
+    @property
+    def height(self) -> int:
+        return self._height
+    
+    @property
+    def size(self) -> QSize:
+        return QSize(self.width, self.height)
+    
+    @property
+    def rotation(self) -> int:
+        return self._rotation
+    
+    @property
+    def adjusted(self) -> bool:
+        return self._adjusted
+    
+    @property
+    def original_aspect_ratio(self) -> float:
+        """Aspect ratio of the image file."""
+        return self._original_aspect_ratio
+    
+    @property
+    def current_aspect_ratio(self) -> float:
+        """Aspect ratio based on current width and height values"""
+        return self.height / self.width
+    
+    # @property
+    # def last_size(self) -> QSize:
+    #     return self._last_size
+    
+    def editable(self) -> bool:
+        return False
+
+    def change_on_mouse_hover(self) -> bool:
+        return False
+    
+    def set_resource(self, obj: ResourceObject) -> None:
+        self._resource.delete_member()
+        self._resource = obj
+
+
+    def set_adjusted(self, user_adjusted: bool) -> None:
+        self._adjusted = user_adjusted
+    
+    def set_width(self, width: int) -> None:
+        self._width = width
+
+    def set_height(self, height: int) -> None:
+        self._height = height
+
+    def set_size(self, width: int, height: int) -> None:
+        self.set_width(width)
+        self.set_height(height)
+    
+    def set_rotation(self, rotation: int) -> None:
+        if rotation % 90 == 0:
+            self._rotation = rotation
+        else: 
+            raise ValueError("Number must be a multiple of 90.")
+
+    def rotate_by(self, incr: int) -> None:
+        if incr % 90 == 0:
+            self._rotation = self.rotation + incr
+        else:
+            raise ValueError("Number must be a multiple of 90.")
+        
+    def expected_size(self, width: int) -> QSize:
+        if self.adjusted:
+            return QSize(width, self.height)
+        return QSize(width, round(self._height * (width / self._width)))
+        
+    def __str__(self) -> str:
+        return f"Picture element: width={self._width} height={self._height} rotation={self._rotation} user_adjusted={self._adjusted}"
+        
+    def __del__(self) -> None:
+        if self._resource:
+            try:
+                self._resource.delete_member()
+            except RuntimeError:
+                pass
+        self._resource = None
+        self.disconnect() 
+
+class PictureEditor(BaseElementEditor):
+    sizeChanged = pyqtSignal(int, int)
+
+    def __init__(self, model: PictureModel, max_width: int, parent=None) -> None:
+        super().__init__(parent)
+        self.ui = PictureEditorView()
+        self.ui.setUi(self)
+
+        # Attributes
+        self._model = model
+        self._max_width = max_width
+
+        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setStyleSheet("background: none;")
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+    
+    @property
+    def model(self) -> PictureModel:
+        return self._model
+    
+    @property
+    def max_width(self) -> int:
+        return self._max_width
+    
+    def set_width(self, width: int, keep_aspect_ratio: bool = False) -> None:
+        if keep_aspect_ratio:
+            height = round(self._model.height * (width / self._model.width)) # Current height * (new width / current width)
+            self._model.set_size(width, height)
+        else:
+            self._model.set_width(width)
+        self._model.set_adjusted(True)
+        self.sizeChanged.emit(self.model.width, self.model.height)
+
+    def set_height(self, height: int, keep_aspect_ratio: bool = False) -> None:
+        if keep_aspect_ratio:
+            width = round(self._model.width * (height / self._model.height)) # Current width * (new height  / current height)
+            if width <= self._max_width:
+                self._model.set_size(width, height)
+        else:
+            self._model.set_height(height)
+        self._model.set_adjusted(True)
+        self.sizeChanged.emit(self._model.width, self._model.height)
+    
+    def set_size(self, width: int, height: int) -> None:
+        self._model.set_size(width, height)
+        self.sizeChanged.emit(self.model.width, self.model.height)
+
+    def refresh(self) -> None:
+        self.imageChanged.emit(self._model.last_size.width(), self._model.last_size.height())
+
+    def rotate_right(self) -> None:
+        self._model.rotate_by(90)
+        if self._model.height > self._max_width:
+            height = round(self._model.width / self.model._height * self._max_width)
+            self._model.set_size(self._max_width, height)
+        else:
+            self._model.set_size(self.model.height, self.model.width)
+        self.sizeChanged.emit(self.model.width, self.model.height)
+
+    def rotate_left(self) -> None:
+        self._model.rotate_by(-90)
+        if self._model.height > self._max_width:
+            height = round(self._model.width / self.model._height * self._max_width)
+            self._model.set_size(self._max_width, height)
+        else:
+            self._model.set_size(self.model.height, self.model.width)
+        self.sizeChanged.emit(self.model.width, self.model.height)
+
+    def restore_image(self) -> None:
+        """Restore picture's original aspect ratio."""
+        self._model.set_size(self.max_width, round(self._model.original_aspect_ratio * self.max_width))
+        self._model.set_rotation(0)
+        self.sizeChanged.emit(self.model.width, self.model.height)
+        
+
+class PictureDelegate(BaseElementDelegate):
+
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        painter.save()
+
+        sub_rect = option.rect.adjusted(5, 5, -5, -5)
+
+        style = option.widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
+        model: PictureModel = index.data()
+        print(model)
+        reader = QImageReader()
+        reader.setDevice(model.resource.qfile())
+        pixmap = QPixmap.fromImageReader(reader)
+
+        if model.rotation % 360 > 0:
+            pixmap = pixmap.transformed(QTransform().rotate(model.rotation))
+
+        if model.adjusted and sub_rect.width() >= model.width:
+            new_rect = QRect(sub_rect.topLeft(), model.size)
+            print(f"Painting image with user defined size: {new_rect.width()} * {new_rect.height()}")
+            painter.drawPixmap(new_rect, pixmap)
+        else:
+            model.set_size(sub_rect.width(), round(model.height * (sub_rect.width() / model.width)))
+            model.set_adjusted(False)
+            print(f"Painting image with column constraints: {sub_rect.width()} * {sub_rect.height()}")
+            painter.drawPixmap(sub_rect, pixmap)
+
+        painter.restore()
+
+        if index.row() < index.model().rowCount() - 1:
+            painter.save()
+            pen = QPen(Qt.GlobalColor.lightGray, 1)
+            painter.setPen(pen)
+            painter.drawLine(option.rect.bottomLeft().x() + 5, option.rect.bottomLeft().y(), option.rect.bottomRight().x() - 5, option.rect.bottomRight().y())
+            painter.restore()
+
+    def createEditor(self, parent, option, index) -> PictureEditor:
+        editor = PictureEditor(index.data(), option.rect.adjusted(5, 5, -5, -5).width(), parent)
+        editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
+        editor.setFocus()
+        return editor
+    
+    def setEditorData(self, editor, index):
+        self._toolset.connect_editor(editor)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect.adjusted(5, 5, -5, -5))
+
+    def setModelData(self, editor: PictureEditor, model: PictureModel, index: QModelIndex):
+        model.setData(index, editor.model)
+
+    def destroyEditor(self, editor, index):
+        self._toolset.close_()
+        return super().destroyEditor(editor, index)
+
+    def passthru(self) -> None:
+        return False
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        model: PictureModel | None = index.data()
+        if isinstance(model, PictureModel):
+            # image = image.scaledToWidth(option.rect.width() - 10)
+            if model.adjusted:
+                return QSize(option.rect.width(), model.height)
+            return QSize(option.rect.width(), round(model.height * (option.rect.width() / model.width)))
+        else:
+            print("PictureModel missing for size hint")
+            return QSize(option.rect.width(), 0)
+        
+class PictureToolset(BaseElementToolset):
+    
+    widthSet = pyqtSignal(int, bool) # Width value, keep aspect ratio (True/False)
+    heightSet = pyqtSignal(int, bool) # Height value, keep aspect ratio (True/False)
+
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.ui = PictureToolsetView()
+        self.ui.setUi(self)
+
+        self._max_height = 0
+
+        self.connect_signals()
+        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
+  
+    @property
+    def name(self) -> str:
+        return "PictureToolset"
+    
+    @property
+    def element_menu(self) -> ElementOptions:
+        return self.ui.element_options_menu
+
+    def connect_editor(self, editor: PictureEditor) -> None:
+        if editor:
+            self.widthSet.connect(editor.set_width)
+            self.heightSet.connect(editor.set_height)
+            self.ui.ac_rotate_right.triggered.connect(editor.rotate_right)
+            self.ui.ac_rotate_left.triggered.connect(editor.rotate_left)
+            self.ui.ac_reset_image.triggered.connect(editor.restore_image)
+
+            editor.sizeChanged.connect(self.on_size_changed)
+
+            self.set_max_width(editor.max_width)
+            self.set_attributes(editor.model)
+
+            self.on_keep_aspect_ratio_toggled(self.ui.ac_keep_aspect_ratio.isChecked())
+            self.setVisible(True)
+
+    def connect_signals(self) -> None:
+        self.ui.ac_close.triggered.connect(self.closed.emit)
+
+        self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
+        self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
+        self.ui.ac_keep_aspect_ratio.toggled.connect(self.on_keep_aspect_ratio_toggled)
+
+    def close_(self):
+        signals = (
+            self.widthSet,
+            self.heightSet,
+            self.ui.ac_rotate_right.triggered,
+            self.ui.ac_rotate_left,
+            self.ui.ac_reset_image.triggered
+        )
+        for signal in signals:
+            try:
+                signal.disconnect()
+            except (RuntimeError, TypeError):
+                pass
+
+        super().close_()
+
+    def set_max_width(self, width: int) -> None:
+        self.ui.sb_ImageWidth.setMaximum(width)
+
+    def set_attributes(self, model: PictureModel) -> None:
+        self.ui.sb_ImageWidth.valueChanged.disconnect()
+        self.ui.sb_ImageHeight.valueChanged.disconnect()
+        self.ui.sb_ImageWidth.setValue(model.width)
+        self.ui.sb_ImageHeight.setValue(model.height)
+        self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
+        self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
+        self._max_height = round(model.height * (self.ui.sb_ImageWidth.maximum() / model.width))
+        self.ui.sb_ImageHeight.setMaximum(self._max_height)
+
+    @pyqtSlot(int, int)
+    def on_size_changed(self, width: int, height: int) -> None:
+        self.ui.sb_ImageWidth.valueChanged.disconnect()
+        self.ui.sb_ImageHeight.valueChanged.disconnect()
+        self.ui.sb_ImageWidth.setValue(width)
+        self.ui.sb_ImageHeight.setValue(height)
+        self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
+        self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
+        if self.ui.ac_keep_aspect_ratio.isChecked():
+            self._max_height = round(height * (self.ui.sb_ImageWidth.maximum() / width))
+            self.ui.sb_ImageHeight.setMaximum(self._max_height)
+        else:
+            self.ui.sb_ImageHeight.setMaximum(999)
+
+    def on_width_set(self) -> None:
+        self.widthSet.emit(self.ui.sb_ImageWidth.value(), self.ui.ac_keep_aspect_ratio.isChecked())
+
+    def on_height_set(self) -> None:
+        self.heightSet.emit(self.ui.sb_ImageHeight.value(), self.ui.ac_keep_aspect_ratio.isChecked())
+
+    def on_keep_aspect_ratio_toggled(self, checked: bool) -> None:
+        if checked:
+            self._max_height = round(self.ui.sb_ImageHeight.value() * (self.ui.sb_ImageWidth.maximum() / self.ui.sb_ImageWidth.value()))
+            self.ui.sb_ImageHeight.setMaximum(self._max_height)
+        else:
+            self.ui.sb_ImageHeight.setMaximum(999)
+
+    def sizeHint(self) -> QSize:
+        return QSize(220, 100)
+    
+    
+class PictureElementDefinitions(BaseElementDefinitions):
+
+    @staticmethod
+    def name() -> str:
+        return "PictureElement"
+    
+    @staticmethod
+    def type() -> ResourceType:
+        return ResourceType.IMAGE
+    
+    @staticmethod
+    def create_model(resource: ResourceObject) -> PictureModel:
+        return PictureModel(resource)
+    
+    @staticmethod
+    def get_file(parent=None) -> str | None:
+        path, _ = QFileDialog.getOpenFileName(parent, directory=str(Path.home()), filter=tr("Image files *.png, *.bmp *.jpeg *.jpg"))
+        return path if path else None
+    
+    @staticmethod
+    def model() -> Type[PictureModel]:
+        return PictureModel
+    
+    @staticmethod
+    def action(parent) -> QAction:
+        action = QAction(QIcon("resources/icons/ic_newpic.svg"), tr("Picture"), parent)
+        action.setData("PictureElement")
+        return action
+    
+    @staticmethod
+    def toolset() -> PictureToolset:
+        return PictureToolset()
+    
+    @staticmethod
+    def editor(model: PictureModel):
+        return PictureEditor(model)

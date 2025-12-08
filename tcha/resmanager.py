@@ -1,22 +1,16 @@
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QVariant
-from collections import Counter
-from typing import Protocol
-from dataclasses import dataclass
+from collections.abc import KeysView, ValuesView
+from genericpath import exists
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QFile, Qt
+from typing import Callable, Any
 import enum
 import tempfile
 import random
 import string
+import os.path as osp
 
-class LessonFileProtocol(Protocol):
-    def read_resource(self, name: str) -> bytes: ...
-    def close(self) -> None: ...
-
-@dataclass(frozen=True)
-class ResourceLocation:
-    path: str
-    serialised: bool
 
 class ResourceType(enum.Enum):
+    """Defines ResourceType. Class can be inherited to create custom types or use 'OTHER'."""
     NONE = 0
     TEXT =  1
     IMAGE = 2
@@ -25,25 +19,26 @@ class ResourceType(enum.Enum):
     OTHER = 5
 
 class ResourceObject(QObject):
-    resourceExpired = pyqtSignal(QVariant)
+    resourceExpired = pyqtSignal(str, ResourceType, int) #  self.name, self.type, self._type_num
 
-    def __init__(self, type: ResourceType = ResourceType.NONE, path: str = "", serialised=False, parent = None): 
+    def __init__(self, num: int, rtype: ResourceType = ResourceType.NONE, name: str | None = None, parent = None): 
         """Creates object that holds reference to a resource and manages its lifetime by counting its users"""
         super().__init__(parent)
-        self._type = type
-        self._location: ResourceLocation = ResourceLocation(path, serialised)
+        self._type_num: int = num # Ordinal number of object with type 'type'
+        self._type = rtype
+        self._name: str | None = name if name else str(id(self))
+        self._f: QFile | None = QFile(self.path) if self.path else None
+        if self._f: self._f.open(QFile.OpenModeFlag.ReadOnly)
+        self._extension: str | None = osp.splitext(self.path)[1].strip(".") if self.path else None
         self._member_count: int = 0
-        self._id: int = 0
-        self._old_name: str = ""
-        self._serialised_name: str = ""
-        self._data: bytes | None = None
+        self._datalink: Callable | None = None
 
     def delete_member(self) -> None:
         """Decreases member count in case a model stops using this resource"""
         self._member_count -= 1
         if self._member_count == 0:
-            current_hash = self.__hash__()
-            self.resourceExpired.emit(QVariant(current_hash))
+            self.resourceExpired.emit(self._name, self._type, self._type_num)
+            if self._f: self._f.close()
             print("Object is expired")
 
     def add_member(self) -> None:
@@ -51,33 +46,38 @@ class ResourceObject(QObject):
         self._member_count += 1
 
     def get_data(self) -> bytes:
-        """Returns the data as bytes from the file set by location of the ResourceObject"""
-        print("Trying to open:", self._location.path)
-        with open(self.path, "rb") as f:
-            return f.read()
+        """Returns the data as bytes from the file set by location of the ResourceObject or the raw data if unserialised."""
+        if self.path:
+            data = self._f.readAll()
+            self._f.reset()
+            return data.data()
+        return self._datalink() if self._datalink else bytes()
+    
+    def adjust_type_num(self, num: int) -> bool:
+        """Adjusts the type number and returns True if adjusted."""
+        print(f"Comparing {num} with own {self._type_num} of original filename {self.filename()}")
+        if num < self._type_num: 
+            self._type_num -= 1
+            print(f"Filename is now {self.filename()}")
+            return True
+        print("Filename unchanged")
+        return False
+    
+    @property
+    def name(self) -> str:
+        """Returns the identifiable name of the object. This is usually the path for serialised files otherwise the id."""
+        return self._name
 
     @property
-    def path(self) -> str:
-        """Returns the original path of the resource"""
-        return self._location.path
+    def path(self) -> str | None:
+        """Returns the original path of the resource if existing."""
+        return self._name if self.name and exists(self.name) else None
     
-    def make_serialised_name(self, prefix: str, suffix: str) -> str:
-        """Creates an identifiable name for the file when serialised"""
-        self._old_name = self._serialised_name
-        self._serialised_name = f"{prefix}{self._id}{suffix}"
-        return self._serialised_name
-    
-    def set_serialised_name(self, name: str) -> None:
-        self._serialised_name = name
-    
-    @property
-    def serialised_name(self) -> str:
-        """Returns serialised name if existing"""
-        return self._serialised_name
-    
-    @property
-    def old_name(self) -> str:
-        return self._old_name
+    def qfile(self) -> QFile | None:
+        """Returns the filepath as a QFile object."""
+        if self.path:
+            self._f.reset()
+            return self._f
 
     @property
     def type(self) -> ResourceType:
@@ -85,127 +85,147 @@ class ResourceObject(QObject):
         return self._type
     
     @property
-    def id(self) -> int:
-        return self._id
+    def filetype(self) -> str:
+        "Return filetype for serialising the object."
+        return self._extension
     
-    def set_id(self, id: int) -> None:
-        self._id = id
-
+    def set_extension(self, suffix: str) -> None:
+        self._extension = suffix.strip(".")
+    
+    def filename(self) -> str | None:
+        """Returns a filename that is used for serialisation as long as the file extension is provided."""
+        return f"{self._type.name.lower()}{self._type_num}.{self._extension}"
+    
     @property
-    def data(self) -> bytes:
-        """Returns the data that the ResourceObject is holding.
-           Often used when unserialised data needs to be serialised"""
-        return self._data
+    def data(self) -> bytes | None:
+        """Returns the data by using the function set as a datalink else returns an empty bytes object."""
+        return self._datalink() if self._datalink else None
     
-    def set_data(self, data: bytes) -> None:
-        """Sets data as bytes that are expected to be written into a .lesson-file"""
-        self._data = data
+    def set_datalink(self, link: Callable) -> None:
+        """Sets a function that returns data from an element"""
+        self._datalink = link
 
     def is_serialised(self) -> bool:
-        return self._location.serialised
-
-    def __hash__(self) -> int:
-        return hash((self._type, self._location))
+        return exists(self.path) if self.path else False
+    
+    def has_references(self) -> bool:
+        return bool(self._member_count)
+    
+    def close(self) -> None:
+        """Safely close file handle"""
+        if self._f:
+            self._f.close()
         
-    def __eq__(self, value) -> bool:
+    def __eq__(self, value: Any) -> bool:
         if isinstance(value, ResourceObject):
-            return self._type == value.type and self.path == value.path
+            return self._type == value.type and self.name == value.name
         return False
         
     def __repr__(self) -> str:
-        return f"ResourceObject: {self._type} {self.path} {hash(self)} {self._member_count}"
+        return f"ResourceObject: {self.type} {self.name} {self._member_count}"
+
+    def __del__(self):
+        print("ResourceObject deleted")
+        # self.close()
+        
 
 class ResourceContainer(QObject):
-    """A container with all references of files."""
+    """A container with objects linking element model and resource."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._objects: set[ResourceObject] = set()
+        self._objects: dict[str, ResourceObject] = {}
+        self._internal_counter = 0
         self._tempdir = tempfile.TemporaryDirectory(".tmp", "RESC")
-        self._lessonfile: LessonFileProtocol | None = None
 
-    def save(self, restype: ResourceType, path: str, serialised=False, parent=None)  -> ResourceObject:
-        """Creates and saves ResourceObject in ResourceContainer and returns an identical object if existing"""
-        res_object = ResourceObject(restype, path, serialised, parent)
+    def save(self, restype: ResourceType, path: str)  -> ResourceObject:
+        """Creates and saves ResourceObject with a file in ResourceContainer and returns an identical object if existing"""
+        if not osp.exists(path) and osp.isfile(path):
+            raise FileNotFoundError
+        self._internal_counter += 1
+        res_object = ResourceObject(self.count_type(restype) + 1, restype, path, self)
         res_object.resourceExpired.connect(self.delete)
-        h = hash(res_object)    
-        self._objects.add(res_object)
-        existing_object = self.call(restype, h)   
-        return existing_object              
+        self._objects[res_object.name] = res_object
+        return self._objects[res_object.name]          
         
-    def create(self, restype: ResourceType, parent=None) -> ResourceObject:
+    def create(self, restype: ResourceType) -> ResourceObject:
         """Creates a unique ResourceObject and returns it"""
-        res_object = ResourceObject(restype, self._generate_32_char_string(), None, parent)
+        self._internal_counter += 1
+        res_object = ResourceObject(self.count_type(restype) + 1, restype, None, self)
         res_object.resourceExpired.connect(self.delete)
-        self._objects.add(res_object)
+        self._objects[res_object.name] = res_object
         return res_object
     
-    def make_path(self, suffix: str) -> str:
+    def get(self, name: str) -> ResourceObject | None:
+        """Returns ResourceObject with the corresponding name. Raises 'KeyError' if object doesn't exist"""
+        return self._objects[name]
+    
+    def make_path(self, extension: str) -> str:
         """Creates path to temporary folder and returns its random generated path as a string"""
-        suffix = suffix.strip(".")
-        return f"{self._tempdir.name}/{self._generate_32_char_string()}.{suffix}"
+        extension = extension.strip(".")
+        return f"{self._tempdir.name}/{self._generate_32_char_string()}.{extension}"
     
     def _generate_32_char_string(self) -> str:
         characters = string.ascii_letters + string.digits
-        path = ''.join(random.choice(characters) for _ in range(32))
-        return path
-
-    def call(self, type: ResourceType, _hash: int) -> ResourceObject:
-        """Returns resource object with matching hash otherwise returns an invalid ResourceObject"""
-        for obj in self._objects:
-            if type == obj.type and hash(obj) == _hash:
-                return obj
-        return ResourceObject() # Invalid ResourceObject
-
-    @pyqtSlot(QVariant)
-    def delete(self, _hash: QVariant) -> None:
-        """Removes object from container"""
-        for obj in self._objects:
-            print("Analyse object with hash", hash(obj), "compared with hash", _hash)
-            if hash(obj) == _hash:
-                print("Item with hash found")
-                obj.disconnect()
-                self._objects.discard(obj)
-                return
-
-    def contents(self) -> set[ResourceObject]:
-        """Returns list of all ResourceObjects in the temporary directory of container."""
-        return self._objects
-
-    def has_ressource(self, type: ResourceType, _hash: int) -> bool:
-        """Returns True if there is a ressource in the container that has the same type and hash as a ResourceObject in the container."""
-        for obj in self._objects:
-            if type == obj.type and hash(obj) == _hash:
-                return True
-        return False
+        name = ''.join(random.choice(characters) for _ in range(32))
+        return name
     
-    def prepare_for_serialisation(self) -> None:
-        """Gives each ResourceObject a unique number that's used in the file name for serialisation"""
-        type_counter = Counter([obj.type for obj in self._objects])
-        for obj in self._objects:
-            obj.set_id(type_counter[obj.type])
-            type_counter[obj.type] -= 1
+    def _adjust_type_nums(self, restype: ResourceType, num: int) -> str:
+        """The ordinal number of every object of one type is adjusted."""
+        for obj in self.contents_by_type(restype):
+            obj.adjust_type_num(num)
+    
+    @pyqtSlot(str, ResourceType, int)
+    def delete(self, name: str, restype: ResourceType, num: int) -> bool:
+        """Removes object from container"""
+        try:
+            print("Deleting ResourceObject")
+            del self._objects[name]
+            self._adjust_type_nums(restype, num)
+            return True
+        except KeyError:
+            return False
+        
+    def names(self) -> KeysView[str]:
+        """Returns all objects' names."""
+        return self._objects.keys()
 
-    def set_lessonfile(self, lessonfile: LessonFileProtocol) -> None:
-        "Sets LessonFile object to reference location in ResourceObjects"
-        self._lessonfile = lessonfile
-
-    def hashof(self, restype: ResourceType, path: str) -> int:
-        return hash((restype, path))
+    def contents(self) -> ValuesView[ResourceObject]:
+        """Returns list of all Resource:Objects in the temporary directory of container."""
+        return self._objects.values()
+    
+    def contents_by_type(self, restype: ResourceType) -> tuple[ResourceObject]:
+        return tuple(filter(lambda x: x.type == restype, self._objects.values()))
     
     def count_type(self, restype: ResourceType) -> int:
-        return len([obj.type for obj in self._objects if obj.type == restype])
+        return len(self.contents_by_type(restype))
     
-    def __del__(self) -> None:
-        self._tempdir = None
+    def close_file_streams(self) -> None:
+        for obj in self.contents():
+            obj.close()
     
     def __len__(self) -> int:
         return len(self._objects)
 
-    def __repr__(self) -> str:
-        return str(self._objects)
+    def __str__(self) -> str:
+        return f"ResourceContainer: key:value {self._objects}"
     
-    def __contains__(self, __x: ResourceObject) -> bool:
-        if __x in self._objects:
-            return True
+    def __bool__(self) -> bool:
+        if self._objects: return True
         return False
+    
+    def __contains__(self, __x: ResourceObject | str) -> bool:
+        if isinstance(__x, ResourceObject):
+            if __x in self._objects.values():
+                return True
+        elif isinstance(__x, str):
+            if __x in self._objects.keys():
+                return True
+        else: raise TypeError("Only types  'ResourceObject' and 'str' are accepted.")
+        return False
+    
+    def __del__(self) -> None:
+        print("ResourceContainer deleted")
+        self._objects.clear()
+        self._tempdir.cleanup()
+        self._tempdir = None

@@ -1,19 +1,23 @@
-from PyQt6.QtWidgets import QApplication, QTabBar, QMessageBox, QInputDialog
-from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtCore import QDateTime, QSettings, pyqtSignal, QT_TR_NOOP as tr
-from PyQt6.QtSql import QSqlDatabase
-from ui.UI_Core import MainView
-from tcha.start import Start
-from tcha.editor import EditorTab
-from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel, create_database, check_database
-from tcha.lfio import LessonFile, XmlReader
-from tcha.resmanager import ResourceContainer
-from tcha.status import StatusBar
-from tcha.settings import Defaults, Locale, Settings, SettingsDialog, ReturnFlags
+from zipfile import BadZipFile
 from os.path import basename, exists, abspath
 import typing
 import os
 import sys
+
+from PyQt6.QtWidgets import QApplication, QTabBar, QMessageBox, QInputDialog
+from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtCore import QDateTime, QSettings, pyqtSignal, QT_TR_NOOP as tr
+from PyQt6.QtSql import QSqlDatabase
+
+from tcha.elements import get_all_definitions
+from tcha.error import PyException
+from ui.UI_Core import MainView
+from tcha.start import Start
+from tcha.editor import EditorTab
+from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel, create_database, check_database
+from tcha.lfio import LessonFile, LFExceptions
+from tcha.status import StatusBar
+from tcha.settings import Defaults, Locale, Settings, SettingsDialog, ReturnFlags
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -133,12 +137,15 @@ class MainWindow(MainView):
 
     def __init__(self, db: QSqlDatabase, parent=None) -> None:
         super().__init__(parent)
-        self.tab_counter = 0
-        self.open_paths = []
-        # cmodel, smodel, tmodel = test_lesson_models(database)
-        # cmodel.cleanup()
+
+        # Models
         self.schedules = ScheduleModel(db, self)
         self.courses = CourseModel(db, self)
+
+        # Attributes
+        self.tab_counter = 0
+        self.open_paths = []
+        self.element_definitions = get_all_definitions()
 
         self.setStatusBar(StatusBar(self))
         self.create_start()
@@ -177,42 +184,58 @@ class MainWindow(MainView):
         self.set_current_status_bar()
 
     def create_editor(self) -> None:
-        editorInst = EditorTab(self.courses, self.schedules, parent=self)
+        editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, parent=self)
         editorInst.nameChanged.connect(self.change_tab_name)
         self.tab_widget.addTab(editorInst, tr("Unnamed"))
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
 
     def load_editor(self, path: str) -> None:
         if not path in self.open_paths:
-            self.open_paths.append(path)
             lessonfile = LessonFile("r", path)
-            xml_data = lessonfile.xml()
-            rescont = ResourceContainer()
-            lesson, tablemodel = XmlReader.read_xml(xml_data, rescont, lessonfile)
-            editorInst = EditorTab.from_saved_file(self.courses, self.schedules, lesson, tablemodel, rescont, lessonfile, self)
-            editorInst.nameChanged.connect(self.change_tab_name)
-            self.tab_widget.addTab(editorInst, basename(path))
-            self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
+            try:
+                editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, lessonfile, self)
+                editorInst.nameChanged.connect(self.change_tab_name)
+
+
+                self.tab_widget.addTab(editorInst, basename(path))
+                self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
+                self.open_paths.append(path)
+                
+            except (IOError, BadZipFile) as e:
+                e.critical = True
+                lessonfile.error_handler.log(e, "The file is corrupted and could not be opened. This can happen when a file has not been closed explicitly during a writing process.")
+
+            except LFExceptions.ReadError as e:
+                lessonfile.error_handler.log(e, f"Reading failed because one of the required components could not be loaded successfully: {e.details}")
+
+            except ValueError as e:
+                error = PyException(e, True)
+                lessonfile.error_handler.log(error, "Lesson model could not be loaded")
+
+            finally:
+                lessonfile.error_handler.show_result(tr("File reading error"), 
+                                                     tr(f"There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."), 
+                                                     tr("The file could not be read because it's either corrupted or has an invalid structure."))
+
         else:
             QMessageBox.information(self, tr("Open lesson-file"), tr("File is already open."))
 
-    def isopen(self, path: str) -> bool:
-        self.tab_widget
-
     def delete_tab(self, i: int) :
+        # TODO: Funktion gegebenfalls vereinfachen: close() von editor nutzen??
+
         """Deletes a tab and in case of EditorTab checks if progess is unsaved."""
         print("Closing tab", i)
         widget = self.tab_widget.widget(i)
         if isinstance(widget, EditorTab):
             # Detach widget from tab first
-            widget.table.close_current_editor()
-            if widget.lessonfile:
+            widget.ui.table.close_current_editor()
+            if widget.lessonfile.path:
                 self.open_paths.remove(widget.lessonfile.path)
             if widget.changes_unsaved:
                 msgBox = QMessageBox(QMessageBox.Icon.Information, "Teachart", tr("The document has been modified. Do you want to save your changes?"), QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel, self)
                 rtrn = msgBox.exec()
                 if rtrn == QMessageBox.StandardButton.Save:
-                    saved = widget.save_lesson()
+                    saved = widget.save_document()
                     if saved:
                         pass
                     else:
@@ -224,8 +247,9 @@ class MainWindow(MainView):
                 else:
                     raise ValueError("Messagebox returned unreadble value")
                 
+            
+            widget.close()  # Then clean up resources
             self.tab_widget.removeTab(i)
-            widget.close_streams()  # Then clean up resources
             widget.deleteLater() 
 
     def change_tab_name(self, tab: EditorTab, name: str) -> None:
