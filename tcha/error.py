@@ -1,3 +1,4 @@
+from genericpath import exists
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QXmlStreamReader, Qt, QFileDevice, QT_TR_NOOP as tr
 from enum import Enum
@@ -93,6 +94,19 @@ class LFExceptions:
             self.message = "File reading failed."
             self.details: str = ", ".join(args)
 
+    class UnsupportedVersion(Exception):
+        def __init__(self, version: int,  *args):
+            super().__init__(*args)
+            self.critical = True
+            self.message = "Lesson-file version not supported"
+            self.version = version
+
+    class MetadataReadError(Exception):
+        def __init__(self, critical: bool, *args):
+            super().__init__(*args)
+            self.critical = critical
+            self.message = "Metadata could not be read"
+
 class QtError(Exception):
     """Error related to Qt module."""
     def __init__(self, qterror: int, qterror_string: str, critical: bool,  *args):
@@ -114,31 +128,56 @@ class PyException(Exception):
     def __hash__(self):
         return hash(self.pyexception)
     
+class CriticalError(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.critical = False
+    
 class ErrorCode(Enum):
     NoError = 0
     NonCritical = 1
     Critical = 2
 
 class ErrorLogger:
-    """Logs errors and evaluates them."""
-    def __init__(self, logging_file: str | None):
+    """Logs errors and evaluates them. """
+    def __init__(self, logging_file: str | None, raise_critical: bool = False):
         self._errors: set[LFExceptions.LFException] = set()
+        self._logger = None
+        self._raise_critical = raise_critical
         if logging_file:
             self._file = logging_file
-            logging.basicConfig(filename=f"{logging_file}.log", level=logging.INFO)
+            self._setup_logger(f"{logging_file}.log")
         else:
             self._file = None
+
+    def _setup_logger(self, log_file: str) -> None:
+        """Create a unique logger for this ErrorLogger instance"""
+        self._logger = logging.getLogger(log_file)  # Create unique logger per file
+        self._logger.handlers.clear()  # Clear existing handlers
+        self._logger.setLevel(logging.INFO)
+        
+        handler = logging.FileHandler(log_file)
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        self._logger.addHandler(handler)
+
+
+    def set_file(self, filename: str) -> None:
+        self._file = filename.strip(".log")
+        self._setup_logger(f"{filename}.log")
 
     def log_msg(self, msg: str) -> None:
         """Logs a message in file if defined."""
         if self._file:
-            logging.info(msg)
+            self._logger.info(msg)
 
     def log(self, error: Exception, msg: str) -> None:
         """Logs the error as an exception with the message."""
         self._errors.add(error)
         if self._file:
-            logging.info(msg)
+            self._logger.info(msg)
+        if self._raise_critical and error.critical:
+            raise CriticalError
 
 
     def show_result(self, title: str, non_critical_msg: str, critical_msg: str) -> None:
@@ -163,7 +202,7 @@ class ErrorLogger:
     def logfile(self) -> str:
         return self._file
 
-    def code(self) -> bool:
+    def code(self) -> ErrorCode:
         """Evalutes all errors and returns error code."""
         if not self._errors:
             return ErrorCode.NoError

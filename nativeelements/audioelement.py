@@ -151,14 +151,13 @@ class AudioModel(BaseElementModel):
         pause_length={self._pause_length}s start_time={self._start_time}ms end_time={self._end_time} current={self._current_time}"""
     
     def __del__(self) -> None:
-        print("Audio model to be deleted")
+        # print("Audio model to be deleted")
         if self._resource:
             try:
                 self._resource.delete_member()
             except RuntimeError:
                 pass
         self._resource = None
-        self.disconnect() 
 
 class ChapterObject:
     def __init__(self, start: QTime, end: QTime, name="") -> None:

@@ -9,8 +9,9 @@ from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtCore import QDateTime, QSettings, pyqtSignal, QT_TR_NOOP as tr
 from PyQt6.QtSql import QSqlDatabase
 
+from tcha import lesson
 from tcha.elements import get_all_definitions
-from tcha.error import PyException
+from tcha.error import PyException, CriticalError
 from ui.UI_Core import MainView
 from tcha.start import Start
 from tcha.editor import EditorTab
@@ -88,7 +89,7 @@ class AppCore(QApplication):
         dbpath = self.qsettings.value("User/dbpath", type=str)
         
         if exists(dbpath):
-            print(f"Data base file in '{dbpath}' not found.")
+            print(f"Data base file in '{dbpath}' found.")
             db = QSqlDatabase.addDatabase("QSQLITE")
             db.setDatabaseName(dbpath)
             if db.open() and check_database(db):
@@ -184,15 +185,18 @@ class MainWindow(MainView):
         self.set_current_status_bar()
 
     def create_editor(self) -> None:
-        editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, parent=self)
+        lessonfile = LessonFile()
+        lessonfile.open("w")
+        editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, lessonfile, self)
         editorInst.nameChanged.connect(self.change_tab_name)
         self.tab_widget.addTab(editorInst, tr("Unnamed"))
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
 
     def load_editor(self, path: str) -> None:
         if not path in self.open_paths:
-            lessonfile = LessonFile("r", path)
             try:
+                lessonfile = LessonFile()
+                lessonfile.open("r", path)
                 editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, lessonfile, self)
                 editorInst.nameChanged.connect(self.change_tab_name)
 
@@ -200,17 +204,15 @@ class MainWindow(MainView):
                 self.tab_widget.addTab(editorInst, basename(path))
                 self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
                 self.open_paths.append(path)
-                
-            except (IOError, BadZipFile) as e:
-                e.critical = True
-                lessonfile.error_handler.log(e, "The file is corrupted and could not be opened. This can happen when a file has not been closed explicitly during a writing process.")
-
-            except LFExceptions.ReadError as e:
-                lessonfile.error_handler.log(e, f"Reading failed because one of the required components could not be loaded successfully: {e.details}")
 
             except ValueError as e:
-                error = PyException(e, True)
-                lessonfile.error_handler.log(error, "Lesson model could not be loaded")
+                wrapped_error = PyException(e, True)
+                lessonfile.error_handler.log(wrapped_error, "Lesson model could not be loaded")
+                lessonfile.close()
+
+            except CriticalError:
+                lessonfile.error_handler.log_msg("The reading operation was terminated because of a previous critical error.")
+                lessonfile.close()
 
             finally:
                 lessonfile.error_handler.show_result(tr("File reading error"), 

@@ -171,7 +171,7 @@ class CellModel(QAbstractListModel):
             return 30
         
     def __del__(self) -> None:
-        print("CellModel deleted")
+        # print("CellModel deleted")
         self.clear()
         
     def flags(self, index: QModelIndex):

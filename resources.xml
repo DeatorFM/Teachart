@@ -1,1 +1,27 @@
-<?xml version="1.0" encoding="UTF-8"?><resources><res type="TEXT" file="text2.html"/><res type="TEXT" file="text1.html"/></resources>
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <res type="TEXT" file="text1.html" />
+    <res type="TEXT" file="text2.html" />
+    <res type="TEXT" file="text3.html" />
+    <res type="TEXT" file="text4.html" />
+    <res type="TEXT" file="text5.html" />
+    <res type="TEXT" file="text6.html" />
+    <res type="TEXT" file="text7.html" />
+    <res type="TEXT" file="text8.html" />
+    <res type="TEXT" file="text9.html" />
+    <res type="TEXT" file="text10.html" />
+    <res type="TEXT" file="text11.html" />
+    <res type="TEXT" file="text12.html" />
+    <res type="AUDIO" file="audio1.mp3" />
+    <res type="AUDIO" file="audio2.mp3" />
+    <res type="AUDIO" file="audio3.mp3" />
+    <res type="AUDIO" file="audio4.mp3" />
+    <res type="AUDIO" file="audio5.mp3" />
+    <res type="IMAGE" file="image1.png" />
+    <res type="TEXT" file="text13.html" />
+    <res type="TEXT" file="text14.html" />
+    <res type="TEXT" file="text15.html" />
+    <res type="TEXT" file="text16.html" />
+    <res type="AUDIO" file="audio6.mp3" />
+    <res type="IMAGE" file="image2.png" />
+</resources>

@@ -169,7 +169,6 @@ class PictureModel(BaseElementModel):
             except RuntimeError:
                 pass
         self._resource = None
-        self.disconnect() 
 
 class PictureEditor(BaseElementEditor):
     sizeChanged = pyqtSignal(int, int)

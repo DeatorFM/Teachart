@@ -68,7 +68,7 @@ class TextModel(QTextDocument, BaseElementModel):
         return False
 
     def __del__(self) -> None:
-        print("TextModel deleted")
+        # print("TextModel deleted")
         if self._resource:
             try:
                 self._resource.delete_member()

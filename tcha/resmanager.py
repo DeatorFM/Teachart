@@ -124,9 +124,6 @@ class ResourceObject(QObject):
     def __repr__(self) -> str:
         return f"ResourceObject: {self.type} {self.name} {self._member_count}"
 
-    def __del__(self):
-        print("ResourceObject deleted")
-        # self.close()
         
 
 class ResourceContainer(QObject):
@@ -225,7 +222,7 @@ class ResourceContainer(QObject):
         return False
     
     def __del__(self) -> None:
-        print("ResourceContainer deleted")
+        # print("ResourceContainer deleted")
         self._objects.clear()
         self._tempdir.cleanup()
         self._tempdir = None

@@ -1,3 +1,4 @@
+import os
 from os.path import basename
 
 from PyQt6.QtWidgets import QWidget, QMessageBox, QApplication, QFileDialog, QMainWindow
@@ -14,7 +15,7 @@ from tcha.resmanager import ResourceContainer, ResourceType, ResourceObject
 from tcha.tablemodel import TableModel
 from tcha.lfio import LessonFile
 from tcha.status import StatusBarContainer
-from tcha.error import LFExceptions
+from tcha.error import ErrorCode, LFExceptions
 
 
 
@@ -45,7 +46,7 @@ class EditorTab(QMainWindow):
                  courses: CourseModel, 
                  schedules: ScheduleModel, 
                  edefinitions: dict[str, BaseElementDefinitions], 
-                 lessonfile: LessonFile = LessonFile("w"), 
+                 lessonfile: LessonFile, 
                  parent=None
                  ) -> None:
         super().__init__(parent, Qt.WindowType.Widget)
@@ -86,18 +87,12 @@ class EditorTab(QMainWindow):
         
         elif self.lessonfile.mode == "r":
             self.rescont = self.lessonfile.get_resource_container()
-            if self.rescont:
-                tablemodel = self.lessonfile.get_table(self.rescont)
-                if not self.lessonfile.error_handler.critical():
-                    self.ui.table.setModel(tablemodel)
-                    self.check_for_schedule(self.lessonfile.file_id)
-   
-                else:
-                    raise LFExceptions.ReadError("Table structure")
-                
-                self.set_lesson(self.lessonfile.get_lesson())
-            else:
-                raise LFExceptions.ReadError("Resources")
+            tablemodel = self.lessonfile.get_table(self.rescont)
+            self.ui.table.setModel(tablemodel)
+            self.check_for_schedule(self.lessonfile.file_id)
+            self.set_lesson(self.lessonfile.get_lesson())
+            self.lessonfile.error_handler.log_msg(f"Finished reading file '{os.path.basename(self.lessonfile.path)}' successfully.")
+            
         else:
             raise ValueError("LessonFile's mode is invalid. Must be 'w' or 'r'.")
 
@@ -243,10 +238,10 @@ class EditorTab(QMainWindow):
     def set_course(self) -> None:
         if self.lesson.source_id != self.courses.source_id():
             self.lesson.source_id = self.courses.source_id()
-        item = self.courses.getRow(self.cb_course.currentIndex())
+        item = self.courses.getRow(self.ui.cb_course.currentIndex())
         self.lesson.set_course(item.name, item.id)
         if item.duration > 0:
-            self.sb_LessonTime.setValue(item.duration)
+            self.ui.sb_LessonTime.setValue(item.duration)
         self.print_lesson()
         self.changes_unsaved = True
             
