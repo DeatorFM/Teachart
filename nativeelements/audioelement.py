@@ -146,19 +146,15 @@ class AudioModel(BaseElementModel):
     def expected_size(self, width) -> QSize:
         return QSize(width, 45)
     
+    def close(self) -> None:
+        self._resource.delete_member()
+        self._resource = None
+    
     def __str__(self):
         return f"""AudioModel: resource={self.resource} name={self._text} repeating={self._is_repeating} repeats={self._repeats} 
         pause_length={self._pause_length}s start_time={self._start_time}ms end_time={self._end_time} current={self._current_time}"""
     
-    def __del__(self) -> None:
-        # print("Audio model to be deleted")
-        if self._resource:
-            try:
-                self._resource.delete_member()
-            except RuntimeError:
-                pass
-        self._resource = None
-
+    
 class ChapterObject:
     def __init__(self, start: QTime, end: QTime, name="") -> None:
         self.start = start

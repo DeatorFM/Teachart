@@ -158,17 +158,14 @@ class PictureModel(BaseElementModel):
         if self.adjusted:
             return QSize(width, self.height)
         return QSize(width, round(self._height * (width / self._width)))
+    
+    def close(self) -> None:
+        self._resource.delete_member()
+        self._resource = None
         
     def __str__(self) -> str:
         return f"Picture element: width={self._width} height={self._height} rotation={self._rotation} user_adjusted={self._adjusted}"
-        
-    def __del__(self) -> None:
-        if self._resource:
-            try:
-                self._resource.delete_member()
-            except RuntimeError:
-                pass
-        self._resource = None
+    
 
 class PictureEditor(BaseElementEditor):
     sizeChanged = pyqtSignal(int, int)

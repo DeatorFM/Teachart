@@ -4,6 +4,7 @@ from os.path import basename
 from PyQt6.QtWidgets import QWidget, QMessageBox, QApplication, QFileDialog, QMainWindow
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QModelIndex, QObject, QDateTime, QRunnable, QThreadPool, Qt, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
+from shiboken6 import isValid
 
 from tcha.table import CellEditor, Table
 from ui.ui_editor import EditorView, BaseElementDefinitions
@@ -15,8 +16,7 @@ from tcha.resmanager import ResourceContainer, ResourceType, ResourceObject
 from tcha.tablemodel import TableModel
 from tcha.lfio import LessonFile
 from tcha.status import StatusBarContainer
-from tcha.error import ErrorCode, LFExceptions
-
+from tcha.debug import FileView, XmlView, ResourceView
 
 
 class SaveWorkerSignals(QObject):
@@ -92,6 +92,7 @@ class EditorTab(QMainWindow):
             self.check_for_schedule(self.lessonfile.file_id)
             self.set_lesson(self.lessonfile.get_lesson())
             self.lessonfile.error_handler.log_msg(f"Finished reading file '{os.path.basename(self.lessonfile.path)}' successfully.")
+            self.ui.ac_xml_view.setEnabled(True)
             
         else:
             raise ValueError("LessonFile's mode is invalid. Must be 'w' or 'r'.")
@@ -112,6 +113,10 @@ class EditorTab(QMainWindow):
         self.ui.ac_schedule.triggered.connect(self.set_unsaved)
         self.ui.sb_LessonTime.valueChanged.connect(self.set_duration)
         self.ui.te_comment.textChanged.connect(self.set_comment)
+
+        self.ui.ac_file_info.triggered.connect(self.open_file_inspector)
+        self.ui.ac_xml_view.triggered.connect(self.open_xml_inspector)
+        self.ui.ac_res_view.triggered.connect(self.open_resource_view)
 
         self.ui.table.cellEditorOpened.connect(self.on_cell_opened)
         self.ui.table.cellEditorClosed.connect(self.on_cell_closed)
@@ -187,6 +192,7 @@ class EditorTab(QMainWindow):
         self.changes_unsaved = False
         self.statusbar.show_message(tr("Saving finished"), 2000)
         self.schedule()
+        self.ui.ac_xml_view.setEnabled(True)
 
 
     def schedule(self) -> None:
@@ -389,6 +395,29 @@ class EditorTab(QMainWindow):
                 model.setPlainText(clipboard.text())
 
             self.ui.table.add_element(model)
+
+    
+    # Debug menus
+
+    def open_file_inspector(self) -> None:
+        dialog = FileView(self)
+        schedule_id = self.schedules.index_for_file_id(self.lessonfile.file_id)
+        if schedule_id.isValid():
+            dialog.setup_view(self.lessonfile, self.lesson, schedule_id.row())
+        else:
+            dialog.setup_view(self.lessonfile, self.lesson, None)
+        dialog.show()
+
+    def open_xml_inspector(self) -> None:
+        dialog = XmlView(self)
+        dialog.setup_view(self.lessonfile.xml(), self.lessonfile.xml("resources"))
+        dialog.show()
+
+    def open_resource_view(self) -> None:
+        dialog = ResourceView(self)
+        dialog.setup_view(self.rescont)
+        dialog.show()
+    
 
     def close_streams(self):
         self.rescont.close_file_streams()

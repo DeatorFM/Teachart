@@ -89,6 +89,14 @@ class ResourceObject(QObject):
         "Return filetype for serialising the object."
         return self._extension
     
+    @property
+    def member_count(self) -> int:
+        return self._member_count
+    
+    @property
+    def type_num(self) -> int:
+        return self._type_num
+    
     def set_extension(self, suffix: str) -> None:
         self._extension = suffix.strip(".")
     

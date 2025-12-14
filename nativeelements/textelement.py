@@ -67,13 +67,8 @@ class TextModel(QTextDocument, BaseElementModel):
     def change_on_mouse_hover(self) -> bool:
         return False
 
-    def __del__(self) -> None:
-        # print("TextModel deleted")
-        if self._resource:
-            try:
-                self._resource.delete_member()
-            except RuntimeError:
-                pass
+    def close(self) -> None:
+        self._resource.delete_member()
         self._resource = None
 
 class TextEditor(BaseTextElementEditor):

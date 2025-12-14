@@ -21,7 +21,6 @@ class LessonFile:
         self._f: ZipFile | None = None
         self._tempdir: tempfile.TemporaryDirectory | None = None
         self._last_saved = None
-        self._cached_xml = None
         self._metadata = {
             "version" : None,
             "file_id" : None
@@ -67,7 +66,7 @@ class LessonFile:
         else:
             self.change_open_mode("w")
 
-        self._error_handler.log_msg(f"Start writing to file {path} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}")
+        self._error_handler.log_msg(f"Start writing to file {self._f.filename} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}")
 
         # Generate and write xml for document structure
         xml_data = XmlWriter.write_xml(self.file_id, tablemodel, lesson)
@@ -102,6 +101,10 @@ class LessonFile:
 
         self.change_open_mode("r")
         self._error_handler.log_msg("Finished writing successfully.")
+
+        self._f.extract("structure.xml", self.temppath)
+        self._f.extract("resources.xml", self.temppath)
+
         return True
 
 
@@ -125,6 +128,7 @@ class LessonFile:
         
     def extracted(self, name: str) -> bool:
         return osp.exists(osp.join(self.temppath, name))
+
         
     def xml(self, name: str = "structure") -> QFile:
         """Returns IO to extracted strcuture.xml as QFile. Raises an Exception of file not found or QFile throws an error."""
@@ -265,7 +269,7 @@ class LessonFile:
         return uuid.uuid1()
     
     @property
-    def file_id(self) -> int:
+    def file_id(self) -> uuid.UUID:
         return self._metadata["file_id"]
     
     @property

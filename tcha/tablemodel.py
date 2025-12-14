@@ -32,12 +32,15 @@ class CellModel(QAbstractListModel):
 
     def removeRows(self, row: int, count: int, parent = QModelIndex()) -> bool:
         try:
-            if row > -1:
+            print(f"Row is {row} * {count}")
+            if row >= 0:
                 self.beginRemoveRows(parent, row, row + count - 1)
                 for _ in range(count):
+                    self._data[row].close()
                     del self._data[row]
                 self.endRemoveRows()
                 self.modelChanged.emit()
+                print("Successfully removed. Current data", self._data)
                 return True
             return False
         except IndexError:

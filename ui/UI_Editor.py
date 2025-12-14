@@ -79,8 +79,8 @@ class EditorView:
         locale = Locale[qsettings.value("User/language", type=str)].value
         tformat = TimeFormat[qsettings.value("User/time_format", type=str)].value
         qlocale = QLocale(locale.language, locale.region)
-        self.dt_DateTime.setDisplayFormat(f"{qlocale.dateFormat()} {tformat}")
-        self.dt_DateTime.setMinimumSize(85, 30)
+        self.dt_DateTime.setDisplayFormat(f"{qlocale.dateFormat(QLocale.FormatType.ShortFormat)} {tformat}")
+        self.dt_DateTime.setLocale(qlocale)
         self.dt_DateTime.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.dt_DateTime.setProperty("showGroupSeparator", False)
         self.dt_DateTime.setCalendarPopup(True)
@@ -137,6 +137,22 @@ class EditorView:
         icon4.addPixmap(QPixmap("resources/icons/ic_readmode.svg"), QIcon.Mode.Normal, QIcon.State.Off)
         self.ac_present_mode = self.other_options.addAction(icon4, "")
 
+        self.ac_debug = self.other_options.addAction("Debug")
+        tb_debug: QToolButton = self.other_options.widgetForAction(self.ac_debug)
+        tb_debug.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+
+        self.menu_debug = QMenu()
+        self.ac_file_info = self.menu_debug.addAction("File Inspector")
+        self.ac_xml_view = self.menu_debug.addAction("XML Inspector")
+        self.ac_xml_view.setEnabled(False)
+        self.ac_res_view = self.menu_debug.addAction("Resource View")
+        tb_debug.setMenu(self.menu_debug)
+
+        if qsettings.value("Application/debug", False, bool):
+            self.ac_debug.setVisible(True)
+        else:
+            self.ac_debug.setVisible(False)
+
         agent.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.other_options)
         agent.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         
@@ -161,20 +177,6 @@ class EditorView:
 
         agent.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.comment_bar)
         agent.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-
-        # self.toolsets_container = ToolsetContainer(self)
-        # self.toolsets_container.setObjectName("ToolsetsContainer")
-        # self.toolsets_container.setFrameShape(QFrame.Shape.StyledPanel)
-        # self.toolsets_container.setFrameShadow(QFrame.Shadow.Raised)
-        # graphics_effect = QGraphicsDropShadowEffect()
-        # graphics_effect.setBlurRadius(10)
-        # graphics_effect.setXOffset(1)
-        # graphics_effect.setYOffset(1)
-        # graphics_effect.setColor(Qt.GlobalColor.black)
-        # self.toolsets_container.setGraphicsEffect(graphics_effect)
-        # self.toolsets_container.setStyleSheet(ToolsetFrameStyleSheet)
-        # self.toolsets_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-
         
         self.table_toolset = QToolBar(agent)
         self.table_toolset.setObjectName("table_toolset")
@@ -241,6 +243,7 @@ class EditorView:
         self.ac_schedule.setToolTip(_translate("Editor", "Schedule this lesson"))
         self.lw3.set_label_text(_translate("Editor", "Duration"))
         self.sb_LessonTime.setSuffix(_translate("Editor", " min"))
+        self.ac_save.setText(_translate("Editor", "Save"))
         self.ac_save_.setText(_translate("Editor", "Save"))
         self.ac_save_copy.setText(_translate("Editor", "Save to"))
         self.ac_present_mode.setToolTip(_translate("Editor", "Presentation Mode"))

@@ -145,7 +145,7 @@ class MainWindow(MainView):
 
         # Attributes
         self.tab_counter = 0
-        self.open_paths = []
+        self.open_paths = [] # TODO: Get rid of
         self.element_definitions = get_all_definitions()
 
         self.setStatusBar(StatusBar(self))
@@ -193,6 +193,8 @@ class MainWindow(MainView):
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
 
     def load_editor(self, path: str) -> None:
+        # TODO: Check if editor with same path is open using is_open()74
+
         if not path in self.open_paths:
             try:
                 lessonfile = LessonFile()
@@ -224,6 +226,7 @@ class MainWindow(MainView):
 
     def delete_tab(self, i: int) :
         # TODO: Funktion gegebenfalls vereinfachen: close() von editor nutzen??
+        # TODO: open_paths check löschen
 
         """Deletes a tab and in case of EditorTab checks if progess is unsaved."""
         print("Closing tab", i)
@@ -232,6 +235,7 @@ class MainWindow(MainView):
             # Detach widget from tab first
             widget.ui.table.close_current_editor()
             if widget.lessonfile.path:
+                print("Deleting path")
                 self.open_paths.remove(widget.lessonfile.path)
             if widget.changes_unsaved:
                 msgBox = QMessageBox(QMessageBox.Icon.Information, "Teachart", tr("The document has been modified. Do you want to save your changes?"), QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel, self)
@@ -253,6 +257,11 @@ class MainWindow(MainView):
             widget.close()  # Then clean up resources
             self.tab_widget.removeTab(i)
             widget.deleteLater() 
+
+    def is_open(self, path: str) -> None:
+        """Checks if an editor instance with the given path is open."""
+        # TODO: Impement by iterating over editor instances and checking their LessonFile objects
+        ...
 
     def change_tab_name(self, tab: EditorTab, name: str) -> None:
         index = self.tab_widget.indexOf(tab)
