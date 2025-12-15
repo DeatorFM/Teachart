@@ -4,7 +4,6 @@ from os.path import basename
 from PyQt6.QtWidgets import QWidget, QMessageBox, QApplication, QFileDialog, QMainWindow
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QModelIndex, QObject, QDateTime, QRunnable, QThreadPool, Qt, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
-from shiboken6 import isValid
 
 from tcha.table import CellEditor, Table
 from ui.ui_editor import EditorView, BaseElementDefinitions
