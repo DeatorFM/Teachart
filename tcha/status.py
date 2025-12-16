@@ -8,11 +8,13 @@ class StatusLabel(QLabel):
         if text:
             self.setText(text)
         self.permanent = permanent
+        self.setContentsMargins(5, 0, 5, 0)
 
 class StatusButton(QPushButton):
     def __init__(self, text: str, permanent=False, parent=None) -> None:
         super().__init__(text, parent)
         self.permanent = permanent
+        self.setContentsMargins(5, 0, 5, 0)
 
 class StatusSpinBox(QSpinBox):
     def __init__(self, minimum: int, maximum: int, permanent=False, parent=None) -> None:
@@ -20,6 +22,7 @@ class StatusSpinBox(QSpinBox):
         self.setMinimum(minimum)
         self.setMaximum(maximum)
         self.permanent = permanent
+        self.setContentsMargins(5, 0, 5, 0)
 
 
 class StatusBarContainer(QObject):
@@ -43,10 +46,14 @@ class StatusBarContainer(QObject):
     def __iter__(self) -> typing.Iterator:
         return iter(self._elements)
     
+    
 class StatusBar(QStatusBar):
     def __init__(self, parent = ...):
         super().__init__(parent)
         self._container: StatusBarContainer | None = None
+
+        self.setMinimumHeight(28)
+        self.setContentsMargins(5, 2, 5, 2)
 
     def set_container(self, container: StatusBarContainer) -> None:
         self.clear_status_bar()

@@ -143,6 +143,7 @@ class EditorView:
 
         self.menu_debug = QMenu()
         self.ac_file_info = self.menu_debug.addAction("File Inspector")
+        self.ac_table_view = self.menu_debug.addAction("Table Inspector")
         self.ac_xml_view = self.menu_debug.addAction("XML Inspector")
         self.ac_xml_view.setEnabled(False)
         self.ac_res_view = self.menu_debug.addAction("Resource View")

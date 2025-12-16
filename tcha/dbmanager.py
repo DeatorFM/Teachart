@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QListWidgetItem, QStyledItemDelegate
 from PyQt6.QtCore import Qt, QItemSelectionModel, QItemSelection      
 from PyQt6.QtGui import QIcon
+from tcha.settings import Settings
 from ui.ui_dbmanager import DbManagerView, AssignmentView
 from tcha.dbmodels import *
 import PyQt6.uic as uic
@@ -16,6 +17,7 @@ class DbManager(QDialog, DbManagerView):
         super().__init__(parent, flags)
         self.setupUi(self)
         print("UI intitiated")
+        qsettings = Settings.qsettings()
 
         self._course_model = course_model
         self._filtered_course_model = FilteredCourseModel(self._course_model, self)
@@ -30,17 +32,20 @@ class DbManager(QDialog, DbManagerView):
         self._filtered_schedule_model = FilteredScheduleModel(self._schedule_model, self)
 
         self.tv_courses.setModel(self._filtered_course_model)
-        self.tv_courses.hideColumn(0)
-        self.tv_courses.hideColumn(3)
+        if not qsettings.value("Application/debug", False, bool):
+            self.tv_courses.hideColumn(0)
+            self.tv_courses.hideColumn(3)
         self.tv_courses.selectionModel().setCurrentIndex(self._filtered_course_model.index(0, 1), QItemSelectionModel.SelectionFlag.SelectCurrent)
         self.tv_courses.selectionModel().select(QItemSelection(self._course_model.index(0, 0), self._course_model.index(0, 3)), QItemSelectionModel.SelectionFlag.SelectCurrent)
 
         self.tv_students.setModel(self._filtered_student_model)
-        self.tv_students.hideColumn(0)
+        if not qsettings.value("Application/debug", False, bool):
+            self.tv_students.hideColumn(0)
 
         self.tv_schedules.setModel(self._filtered_schedule_model)
-        self.tv_schedules.hideColumn(0)
-        self.tv_schedules.hideColumn(4)
+        if not qsettings.value("Application/debug", False, bool):
+            self.tv_schedules.hideColumn(0)
+            self.tv_schedules.hideColumn(4)
 
         self.le_search.textChanged.connect(self._filtered_course_model.set_search_filter)
         self.pb_new_course.clicked.connect(self.add_course)

@@ -149,6 +149,18 @@ class AudioModel(BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+    def __dict__(self) -> dict:
+        return {
+            "resource" : self._resource,
+            "is_repeating" : self._is_repeating,
+            "repeats" : self._repeats,
+            "pause_length" : self._pause_length,
+            "start_time" : self._start_time,
+            "end_time" : self._end_time,
+            "current_time" : self._current_time,
+            "text" : self._text
+        }
     
     def __str__(self):
         return f"""AudioModel: resource={self.resource} name={self._text} repeating={self._is_repeating} repeats={self._repeats} 

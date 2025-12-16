@@ -53,7 +53,7 @@ class CellModel(QAbstractListModel):
         return model
 
     def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
-        return self.createIndex(row, column)
+        return self.createIndex(row, column, "Cell")
 
     def data(self, index: QModelIndex, role: int = 1) -> BaseElementModel:
         try:
@@ -251,9 +251,9 @@ class TableModel(QAbstractTableModel):
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         # print("Index called!")
-        return self.createIndex(row, column)
+        return self.createIndex(row, column, 0)
         
-    def data(self, index: QModelIndex, role: int = ...) -> Any:
+    def data(self, index: QModelIndex, role: int = ...) -> CellModel:
         return self._data[index.row()][index.column()] 
     
     def header_count(self, orientation: Qt.Orientation) -> int:

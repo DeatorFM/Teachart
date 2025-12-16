@@ -4,7 +4,6 @@ from os.path import basename
 from PyQt6.QtWidgets import QWidget, QMessageBox, QApplication, QFileDialog, QMainWindow
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QModelIndex, QObject, QDateTime, QRunnable, QThreadPool, Qt, QT_TR_NOOP as tr, pyqtSlot, pyqtSignal
-from shiboken6 import isValid
 
 from tcha.table import CellEditor, Table
 from ui.ui_editor import EditorView, BaseElementDefinitions
@@ -16,7 +15,7 @@ from tcha.resmanager import ResourceContainer, ResourceType, ResourceObject
 from tcha.tablemodel import TableModel
 from tcha.lfio import LessonFile
 from tcha.status import StatusBarContainer
-from tcha.debug import FileView, XmlView, ResourceView
+from tcha.debug import FileView, XmlView, ResourceView, TableTreeView
 
 
 class SaveWorkerSignals(QObject):
@@ -117,6 +116,7 @@ class EditorTab(QMainWindow):
         self.ui.ac_file_info.triggered.connect(self.open_file_inspector)
         self.ui.ac_xml_view.triggered.connect(self.open_xml_inspector)
         self.ui.ac_res_view.triggered.connect(self.open_resource_view)
+        self.ui.ac_table_view.triggered.connect(self.open_table_inspector)
 
         self.ui.table.cellEditorOpened.connect(self.on_cell_opened)
         self.ui.table.cellEditorClosed.connect(self.on_cell_closed)
@@ -225,6 +225,7 @@ class EditorTab(QMainWindow):
         else:
             self.ui.ac_schedule.changeState(1)
 
+
     # Course related methods
 
     def add_course(self) -> None:
@@ -253,7 +254,7 @@ class EditorTab(QMainWindow):
             
     def filter_courses(self) -> None:
         self.ui.cb_course.showPopup()
-        self.courses.set_search_filter(self.cb_course.lineEdit().text())
+        self.courses.set_search_filter(self.ui.cb_course.lineEdit().text())
 
     def on_course_data_changed(self) -> None:
         if self.courses.has_id(self.lesson.course_id) and self.lesson.course_id != 0:
@@ -417,7 +418,12 @@ class EditorTab(QMainWindow):
         dialog = ResourceView(self)
         dialog.setup_view(self.rescont)
         dialog.show()
-    
+
+    def open_table_inspector(self) -> None:
+        dialog = TableTreeView(self)
+        dialog.setup_view(self.tablemodel)
+        dialog.show()
+
 
     def close_streams(self):
         self.rescont.close_file_streams()

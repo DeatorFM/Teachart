@@ -1,13 +1,15 @@
-from typing import Self
+from dataclasses import dataclass, field
+from typing import Any
+
 from PyQt6 import uic
 from PyQt6.QtWidgets import QDialog, QHeaderView
-from PyQt6.QtCore import Qt, QFile, QAbstractTableModel, QModelIndex
-from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtCore import Qt, QFile, QAbstractItemModel, QAbstractTableModel, QModelIndex, QVariant
 from PyQt6.QtXml import QDomDocument
  
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
 from tcha.resmanager import ResourceContainer
+from tcha.tablemodel import TableModel
 
 class FileView(QDialog):
     def __init__(self, parent = None):
@@ -80,6 +82,7 @@ class ResourceViewModel(QAbstractTableModel):
                 case 2:
                     return resobj.path if resobj.path else "Not an external resource"
                 case 3:
+                    print(resobj.member_count)
                     return str(resobj.member_count)
         return None
             
@@ -110,3 +113,184 @@ class ResourceView(QDialog):
         model = ResourceViewModel(rescont)
         self.ui.tv_robjects.setModel(model)
         self.tv_robjects.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
+
+@dataclass(frozen=True)
+class TreeNode:
+    level: int
+    row: int
+    column: int = field(default=-1)
+    model_idx: int = field(default=-1)
+    attr_key: str | None = field(default=None)
+
+class TreeTableModel(QAbstractItemModel):
+    """Converts a TableModel to a Model with a tree structure."""
+    def __init__(self, tablemodel: TableModel, parent = ...):
+        super().__init__(parent)
+        self._model: TableModel = tablemodel
+        self._nodecache: dict[int, TreeNode] = dict()
+
+    def transpose_index(self, index: QModelIndex) -> int:
+        """Converts twodimensional table index to list index."""
+        return index.row() + self._model.columnCount() + index.column()
+    
+    def createIndex(self, row, column, obj: Any = None) -> QModelIndex:
+        self._nodecache[id(obj)] = obj
+        return super().createIndex(row, column, id(obj))
+
+    def columnCount(self, parent: QModelIndex = QModelIndex()):
+        return 2
+    
+    def rowCount(self, parent: QModelIndex = QModelIndex()):
+        if not parent.isValid():
+            return self._model.rowCount()
+        
+        node: TreeNode = self._nodecache.get(parent.internalId())
+
+        if isinstance(node, TreeNode):
+            if node.level == 0:
+                return self._model.columnCount()
+            elif node.level == 1:
+                cell = self._model.data(self._model.index(node.row, node.column))
+                return cell.rowCount()
+            elif node.level == 2:
+                cell = self._model.data(self._model.index(node.row, node.column))
+                model = cell.data(cell.index(node.model_idx))
+                return len(model.__dict__())
+
+        return 0
+        
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()):
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+        
+        if not parent.isValid():
+            return self.createIndex(row, column, TreeNode(0, row))
+        
+        node: TreeNode = self._nodecache.get(parent.internalId())
+
+        if isinstance(node, TreeNode):
+            if node.level == 0:
+                return self.createIndex(row, column, TreeNode(1, node.row, row))
+            
+            elif node.level == 1:
+                return self.createIndex(row, column, TreeNode(2, node.row, node.column, row))
+            
+            elif node.level == 2:
+                cell = self._model.data(self._model.createIndex(node.row, node.column))
+                model = cell.data(cell.index(node.model_idx))
+                attr_key = tuple(model.__dict__().keys())[row]
+                return self.createIndex(row, column, TreeNode(3, node.row, node.column, node.model_idx, attr_key))
+
+        return QModelIndex()
+
+    def parent(self, index: QModelIndex = QModelIndex()):
+        if not index.isValid():
+            return QModelIndex()
+        
+        node: TreeNode = self._nodecache.get(index.internalId())
+
+        if isinstance(node, TreeNode):
+            if node.level == 0:
+                return QModelIndex()
+            elif node.level == 1:
+                return self.createIndex(node.row, 0, TreeNode(0, node.row))
+            
+            elif node.level == 2:
+                return self.createIndex(node.column, 0, TreeNode(1, node.row, node.column))
+            
+            elif node.level == 3:
+                return self.createIndex(node.model_idx, 0, TreeNode(2, node.row, node.column, node.model_idx))
+        
+        return QModelIndex()
+        
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if not index.isValid():
+            return None
+        
+        node: TreeNode = self._nodecache.get(index.internalId())
+
+        if not isinstance(node, TreeNode):  
+            return None
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            if index.column() == 0:
+                if node.level == 0:
+                    return f"Row {node.row}"
+                elif node.level == 1:
+                    return f"Cell {node.row}|{node.column}"
+                elif node.level == 2:
+                    cell = self._model.data(self._model.index(node.row, node.column))
+                    model = cell.data(cell.index(node.model_idx))
+                    return f"{type(model).__name__}"
+                elif node.level == 3:
+                    return node.attr_key
+                
+            elif index.column() == 1:
+                if node.level == 3:
+                    cell = self._model.data(self._model.index(node.row, node.column))
+                    model = cell.data(cell.index(node.model_idx))
+                    value = getattr(model, f"_{node.attr_key}")
+                    return str(value)
+                
+        elif role == Qt.ItemDataRole.EditRole:
+            if index.column() == 1:
+                if node.level == 3:
+                    cell = self._model.data(self._model.index(node.row, node.column))
+                    model = cell.data(cell.index(node.model_idx))
+                    value = getattr(model, f"_{node.attr_key}")
+                    return value
+                
+        return None
+    
+    def setData(self, index: QModelIndex, value: Any, role = Qt.ItemDataRole.EditRole):
+        if not index.isValid():
+            return False
+        
+        node: TreeNode = self._nodecache.get(index.internalId())
+
+        if not isinstance(node, TreeNode):  
+            return False
+        
+        if index.column() == 1:
+            if node.level == 3:
+                cell = self._model.data(self._model.index(node.row, node.column))
+                model = cell.data(cell.index(node.model_idx))
+                setattr(model, f"_{node.attr_key}", value)
+                self.dataChanged.emit(index, index, [role])
+                return True
+                
+        return False
+
+    def headerData(self, section: int, orientation, role = Qt.ItemDataRole.DisplayRole) -> str | None:
+        if role == Qt.ItemDataRole.DisplayRole:
+            if section == 0:
+                return "Attribute"
+            elif section == 1:
+                return "Value"
+        return super().headerData(section, orientation, role)
+    
+    def flags(self, index: QModelIndex):
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        
+        node: TreeNode = self._nodecache.get(index.internalId())
+
+        if not isinstance(node, TreeNode):  
+            return Qt.ItemFlag.NoItemFlags
+        
+        if index.column() == 1:
+                if node.level == 3 and node.attr_key != "resource":
+                    return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+                
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+    
+class TableTreeView(QDialog):
+    def __init__(self, parent = None):
+        super().__init__(parent, Qt.WindowType.Tool)
+        self.ui = uic.loadUi("ui/debug_table.ui", self)
+
+    def setup_view(self, tablemodel: TableModel) -> None:
+        tree_model = TreeTableModel(tablemodel, None)
+        self.ui.tv_table.setModel(tree_model)
+        self.tv_table.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)

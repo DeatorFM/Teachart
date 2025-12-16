@@ -22,7 +22,11 @@ class Start(StartWidget):
         self.courses = courses
 
         self._schedule_status = StatusLabel(tr("No upcoming lessons today"))
-        self.statusbar = StatusBarContainer(self._schedule_status)
+        if Settings.qsettings().value("Application/debug", False, bool):
+            debug_label = StatusLabel(f"Loaded database's ID: {self.courses.source_id()}")
+            self.statusbar = StatusBarContainer(self._schedule_status, debug_label)
+        else:
+            self.statusbar = StatusBarContainer(self._schedule_status)
 
         # Initial routines
         self.connect_signals()

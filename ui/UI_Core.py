@@ -1,11 +1,15 @@
 from PyQt6 import QtWidgets, QtCore, QtGui
+from tcha.settings import Settings
 from ui.StyledWidget import fromStyle
 
 class MainView(QtWidgets.QMainWindow):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setUI()
-        self.setWindowTitle("Teachart Indev")
+        if Settings.qsettings().value("Application/debug", False, bool):
+            self.setWindowTitle("Teachart Indev (Debug)")
+        else:
+            self.setWindowTitle("Teachart Indev")
         self.setStyleSheet(fromStyle("Common"))
 
     def setUI(self):

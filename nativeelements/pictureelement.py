@@ -162,6 +162,14 @@ class PictureModel(BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+    def __dict__(self) -> dict:
+        return {"resource" : self._resource, 
+                "width" : self._width, 
+                "height" : self._height, 
+                "rotation" : self._rotation, 
+                "adjusted" : self._adjusted, 
+                "original_aspect_ratio" : self._original_aspect_ratio}
         
     def __str__(self) -> str:
         return f"Picture element: width={self._width} height={self._height} rotation={self._rotation} user_adjusted={self._adjusted}"

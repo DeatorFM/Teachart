@@ -43,6 +43,7 @@ class ResourceObject(QObject):
 
     def add_member(self) -> None:
         """Increases member count when a model starts using this resource"""
+        print("Added member to resource")
         self._member_count += 1
 
     def get_data(self) -> bytes:
@@ -148,10 +149,13 @@ class ResourceContainer(QObject):
         if not osp.exists(path) and osp.isfile(path):
             raise FileNotFoundError
         self._internal_counter += 1
-        res_object = ResourceObject(self.count_type(restype) + 1, restype, path, self)
-        res_object.resourceExpired.connect(self.delete)
-        self._objects[res_object.name] = res_object
-        return self._objects[res_object.name]          
+        try:
+             return self._objects[path]
+        except KeyError:
+            res_object = ResourceObject(self.count_type(restype) + 1, restype, path, self) if not self._objects.get(path) else self._objects[""]
+            res_object.resourceExpired.connect(self.delete)
+            self._objects[res_object.name] = res_object
+            return self._objects[res_object.name]          
         
     def create(self, restype: ResourceType) -> ResourceObject:
         """Creates a unique ResourceObject and returns it"""

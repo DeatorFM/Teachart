@@ -1,0 +1,3 @@
+2025-12-16 20:54:58,648 - Start reading file Test - Copy.lesson at 2025-12-16T20:54:58.644
+2025-12-16 20:54:58,702 - File ID could not be read due to invalid xml attribute or value that is not a uuid. A new ID will be generated.
+2025-12-16 20:54:58,857 - Finished reading file 'Test - Copy.lesson' successfully.

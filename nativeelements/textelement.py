@@ -66,6 +66,9 @@ class TextModel(QTextDocument, BaseElementModel):
     
     def change_on_mouse_hover(self) -> bool:
         return False
+    
+    def __dict__(self) -> dict:
+        return {"resource" : self._resource}
 
     def close(self) -> None:
         self._resource.delete_member()
