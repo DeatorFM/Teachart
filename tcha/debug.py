@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 from PyQt6 import uic
 from PyQt6.QtWidgets import QDialog, QHeaderView
@@ -117,26 +117,52 @@ class ResourceView(QDialog):
 
 @dataclass(frozen=True)
 class TreeNode:
-    level: int
-    row: int
-    column: int = field(default=-1)
-    model_idx: int = field(default=-1)
-    attr_key: str | None = field(default=None)
+    level: int # 2b 62-63
+    row: int # 18b 44-61
+    column: int = field(default=0) # 18b 26-44
+    model_idx: int = field(default=0) # 18b 8-25
+    attr_key: int = field(default=0) # 8b 0-7
+
+    def to_int(self) -> int:
+        """Converts TreeNode structure into a 64-bit integer."""
+        mask = self.level << 62
+        val = 0 | mask
+
+        mask = self.row << 44
+        val = val | mask
+
+        mask = self.column << 26
+        val = val | mask
+
+        mask = self.model_idx << 8
+        val = val | mask
+
+        val = val | self.attr_key
+
+        return val
+
+    @classmethod
+    def from_int(cls, val: int) -> Self:
+        """Reads the TreeNode values from a single 62 to 64-bit integer."""
+        level = val >> 62
+        row = val >> 44 & 262143
+        column = val >> 26 & 262143
+        model_idx = val >> 8 & 262143
+        attr_key = val & 255
+        return cls(level, row, column, model_idx, attr_key)
+ 
 
 class TreeTableModel(QAbstractItemModel):
     """Converts a TableModel to a Model with a tree structure."""
+    # TODO: Conversion of TreeNode values to integer and the other way around.
+
     def __init__(self, tablemodel: TableModel, parent = ...):
         super().__init__(parent)
         self._model: TableModel = tablemodel
-        self._nodecache: dict[int, TreeNode] = dict()
 
     def transpose_index(self, index: QModelIndex) -> int:
         """Converts twodimensional table index to list index."""
         return index.row() + self._model.columnCount() + index.column()
-    
-    def createIndex(self, row, column, obj: Any = None) -> QModelIndex:
-        self._nodecache[id(obj)] = obj
-        return super().createIndex(row, column, id(obj))
 
     def columnCount(self, parent: QModelIndex = QModelIndex()):
         return 2
@@ -145,7 +171,7 @@ class TreeTableModel(QAbstractItemModel):
         if not parent.isValid():
             return self._model.rowCount()
         
-        node: TreeNode = self._nodecache.get(parent.internalId())
+        node: TreeNode = TreeNode.from_int(parent.internalId())
 
         if isinstance(node, TreeNode):
             if node.level == 0:
@@ -156,7 +182,7 @@ class TreeTableModel(QAbstractItemModel):
             elif node.level == 2:
                 cell = self._model.data(self._model.index(node.row, node.column))
                 model = cell.data(cell.index(node.model_idx))
-                return len(model.__dict__())
+                return len(model.attrs())
 
         return 0
         
@@ -165,22 +191,19 @@ class TreeTableModel(QAbstractItemModel):
             return QModelIndex()
         
         if not parent.isValid():
-            return self.createIndex(row, column, TreeNode(0, row))
+            return self.createIndex(row, column, TreeNode(0, row).to_int())
         
-        node: TreeNode = self._nodecache.get(parent.internalId())
+        node: TreeNode = TreeNode.from_int(parent.internalId())
 
         if isinstance(node, TreeNode):
             if node.level == 0:
-                return self.createIndex(row, column, TreeNode(1, node.row, row))
+                return self.createIndex(row, column, TreeNode(1, node.row, row).to_int())
             
             elif node.level == 1:
-                return self.createIndex(row, column, TreeNode(2, node.row, node.column, row))
+                return self.createIndex(row, column, TreeNode(2, node.row, node.column, row).to_int())
             
             elif node.level == 2:
-                cell = self._model.data(self._model.createIndex(node.row, node.column))
-                model = cell.data(cell.index(node.model_idx))
-                attr_key = tuple(model.__dict__().keys())[row]
-                return self.createIndex(row, column, TreeNode(3, node.row, node.column, node.model_idx, attr_key))
+                return self.createIndex(row, column, TreeNode(3, node.row, node.column, node.model_idx, row).to_int())
 
         return QModelIndex()
 
@@ -188,19 +211,19 @@ class TreeTableModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         
-        node: TreeNode = self._nodecache.get(index.internalId())
+        node: TreeNode = TreeNode.from_int(index.internalId())
 
         if isinstance(node, TreeNode):
             if node.level == 0:
                 return QModelIndex()
             elif node.level == 1:
-                return self.createIndex(node.row, 0, TreeNode(0, node.row))
+                return self.createIndex(node.row, 0, TreeNode(0, node.row).to_int())
             
             elif node.level == 2:
-                return self.createIndex(node.column, 0, TreeNode(1, node.row, node.column))
+                return self.createIndex(node.column, 0, TreeNode(1, node.row, node.column).to_int())
             
             elif node.level == 3:
-                return self.createIndex(node.model_idx, 0, TreeNode(2, node.row, node.column, node.model_idx))
+                return self.createIndex(node.model_idx, 0, TreeNode(2, node.row, node.column, node.model_idx).to_int())
         
         return QModelIndex()
         
@@ -208,7 +231,7 @@ class TreeTableModel(QAbstractItemModel):
         if not index.isValid():
             return None
         
-        node: TreeNode = self._nodecache.get(index.internalId())
+        node: TreeNode = TreeNode.from_int(index.internalId())
 
         if not isinstance(node, TreeNode):  
             return None
@@ -224,13 +247,16 @@ class TreeTableModel(QAbstractItemModel):
                     model = cell.data(cell.index(node.model_idx))
                     return f"{type(model).__name__}"
                 elif node.level == 3:
-                    return node.attr_key
+                    cell = self._model.data(self._model.index(node.row, node.column))
+                    model = cell.data(cell.index(node.model_idx))
+                    return model.attrs()[node.attr_key]
                 
             elif index.column() == 1:
                 if node.level == 3:
                     cell = self._model.data(self._model.index(node.row, node.column))
                     model = cell.data(cell.index(node.model_idx))
-                    value = getattr(model, f"_{node.attr_key}")
+                    attr = model.attrs()[node.attr_key]
+                    value = getattr(model, f"_{attr}")
                     return str(value)
                 
         elif role == Qt.ItemDataRole.EditRole:
@@ -238,7 +264,8 @@ class TreeTableModel(QAbstractItemModel):
                 if node.level == 3:
                     cell = self._model.data(self._model.index(node.row, node.column))
                     model = cell.data(cell.index(node.model_idx))
-                    value = getattr(model, f"_{node.attr_key}")
+                    attr = model.attrs()[node.attr_key]
+                    value = getattr(model, f"_{attr}")
                     return value
                 
         return None
@@ -247,7 +274,7 @@ class TreeTableModel(QAbstractItemModel):
         if not index.isValid():
             return False
         
-        node: TreeNode = self._nodecache.get(index.internalId())
+        node: TreeNode = TreeNode.from_int(index.internalId())
 
         if not isinstance(node, TreeNode):  
             return False
@@ -256,8 +283,12 @@ class TreeTableModel(QAbstractItemModel):
             if node.level == 3:
                 cell = self._model.data(self._model.index(node.row, node.column))
                 model = cell.data(cell.index(node.model_idx))
-                setattr(model, f"_{node.attr_key}", value)
+                attr = model.attrs()[node.attr_key]
+                type_ = type(getattr(model, f"_{attr}"))
+                setattr(model, f"_{attr}", type_(value))
                 self.dataChanged.emit(index, index, [role])
+                source_idx = self._model.index(node.row, node.column)
+                self._model.dataChanged.emit(source_idx, source_idx, [role])
                 return True
                 
         return False
@@ -274,21 +305,27 @@ class TreeTableModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         
-        node: TreeNode = self._nodecache.get(index.internalId())
+        node: TreeNode = TreeNode.from_int(index.internalId())
 
         if not isinstance(node, TreeNode):  
             return Qt.ItemFlag.NoItemFlags
         
         if index.column() == 1:
-                if node.level == 3 and node.attr_key != "resource":
+                if node.level == 3 and node.attr_key != 0:
                     return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
                 
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
     
 class TableTreeView(QDialog):
+    # TODO: Editable "Value" Column (problem not editable and interactable)
+
     def __init__(self, parent = None):
         super().__init__(parent, Qt.WindowType.Tool)
         self.ui = uic.loadUi("ui/debug_table.ui", self)
+        self.ui.tv_table.doubleClicked.connect(self.index_double_clicked)
+
+    def index_double_clicked(self, index: QModelIndex) -> None:
+        print("Clicked: ", index.row(), index.column())
 
     def setup_view(self, tablemodel: TableModel) -> None:
         tree_model = TreeTableModel(tablemodel, None)

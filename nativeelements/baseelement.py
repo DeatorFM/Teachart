@@ -97,6 +97,10 @@ class BaseElementModel(QObject):
     @abstractmethod
     def toolset(self) -> str:
         return ""
+    
+    @abstractmethod
+    def attrs(self) -> tuple[str]:
+        return tuple()
 
 class BaseElementEditor(QFrame):
     __metaclass__ = ABCMeta
