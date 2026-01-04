@@ -1,5 +1,0 @@
-QToolButton {
-    border-bottom: 5px solid #000000;
-    border-bottom-left-radius: 0px;
-    border-bottom-right-radius: 0px;
-}

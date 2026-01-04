@@ -1,24 +1,29 @@
-from zipfile import BadZipFile
-from os.path import basename, exists, abspath
-import typing
 import os
 import sys
+import typing
+from os.path import abspath, basename, exists
 
-from PyQt6.QtWidgets import QApplication, QTabBar, QMessageBox, QInputDialog
+from PyQt6.QtCore import QT_TR_NOOP as tr
+from PyQt6.QtCore import QDateTime, QResource, pyqtSignal
 from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtCore import QDateTime, QSettings, pyqtSignal, QT_TR_NOOP as tr
 from PyQt6.QtSql import QSqlDatabase
+from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox, QTabBar
 
-from tcha import lesson
-from tcha.elements import get_all_definitions
-from tcha.error import PyException, CriticalError
-from ui.UI_Core import MainView
-from tcha.start import Start
+from tcha.dbmodels import (
+    CourseModel,
+    ScheduleModel,
+    StudentModel,
+    check_database,
+    create_database,
+)
 from tcha.editor import EditorTab
-from tcha.dbmodels import CourseModel, ScheduleModel, StudentModel, create_database, check_database
-from tcha.lfio import LessonFile, LFExceptions
+from tcha.elements import get_all_definitions
+from tcha.error import CriticalError, PyException
+from tcha.lfio import LessonFile
+from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
+from tcha.start import Start
 from tcha.status import StatusBar
-from tcha.settings import Defaults, Locale, Settings, SettingsDialog, ReturnFlags
+from ui.UI_Core import MainView
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -29,10 +34,30 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
     cmodel.add_course("Aoki", 60)
 
     smodel = ScheduleModel(db)
-    smodel.add_schedule(1, QDateTime(2025, 6, 15, 14, 30, 0), 1263039429114341325, "D:/Dokumente/thislesson1.lesson")
-    smodel.add_schedule(2, QDateTime(2025, 9, 6, 10, 15, 0), -232133682615210308, "D:/Dokumente/thislesson2.lesson") 
-    smodel.add_schedule(3, QDateTime(2025, 8, 31, 12, 0, 0), -4626562671928849836, "D:/Dokumente/thislesson3.lesson")
-    smodel.add_schedule(4, QDateTime(2025, 12, 20, 11, 20, 0), 3514653705253326921, "D:/Dokumente/thislesson4.lesson")
+    smodel.add_schedule(
+        1,
+        QDateTime(2025, 6, 15, 14, 30, 0),
+        1263039429114341325,
+        "D:/Dokumente/thislesson1.lesson",
+    )
+    smodel.add_schedule(
+        2,
+        QDateTime(2025, 9, 6, 10, 15, 0),
+        -232133682615210308,
+        "D:/Dokumente/thislesson2.lesson",
+    )
+    smodel.add_schedule(
+        3,
+        QDateTime(2025, 8, 31, 12, 0, 0),
+        -4626562671928849836,
+        "D:/Dokumente/thislesson3.lesson",
+    )
+    smodel.add_schedule(
+        4,
+        QDateTime(2025, 12, 20, 11, 20, 0),
+        3514653705253326921,
+        "D:/Dokumente/thislesson4.lesson",
+    )
 
     tmodel = StudentModel(db)
     tmodel.add_student("Yuta Katsumata", 1, "yuta.katsumata@toppan-europe.com")
@@ -50,12 +75,13 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
 
     return cmodel, smodel, tmodel
 
+
 class AppCore(QApplication):
     def __init__(self, argv: typing.List[str]) -> None:
         super().__init__(argv)
         self.setStyle("windows11")
 
-        self.qsettings = QSettings(QSettings.Format.IniFormat, QSettings.Scope.UserScope, "Teachart", "settings")
+        self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
 
         if not self.qsettings.allKeys():
@@ -87,7 +113,7 @@ class AppCore(QApplication):
 
         # Check database
         dbpath = self.qsettings.value("User/dbpath", type=str)
-        
+
         if exists(dbpath):
             print(f"Data base file in '{dbpath}' found.")
             db = QSqlDatabase.addDatabase("QSQLITE")
@@ -95,14 +121,24 @@ class AppCore(QApplication):
             if db.open() and check_database(db):
                 self._db = db
             else:
-                QMessageBox.information(None, tr("Database error"), tr("The database found is invalid. A new database will be created."))
+                QMessageBox.information(
+                    None,
+                    tr("Database error"),
+                    tr(
+                        "The database found is invalid. A new database will be created."
+                    ),
+                )
                 self._db = create_database(Defaults.AppInfo.db_ver)
                 self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
         else:
-            QMessageBox.information(None, tr("Database error"), tr("The database could not be found. A new database will be created."))
+            QMessageBox.information(
+                None,
+                tr("Database error"),
+                tr("The database could not be found. A new database will be created."),
+            )
             self._db = create_database(Defaults.AppInfo.db_ver)
             self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
-   
+
     def _first_time(self) -> None:
         self.qsettings = Defaults.qsettings()
         self.qsettings.setValue("Application/first_startup", False)
@@ -112,26 +148,30 @@ class AppCore(QApplication):
         language = self.language_dialog()
         print("Selected language", language)
         self.qsettings.setValue("User/language", language.name)
-        
+
+    def _load_theme(self, theme: str) -> None:
+        QResource.registerResource()
+
     def language_dialog(self) -> Locale:
         language, result = QInputDialog.getItem(
-            None, 
-            "Language", 
+            None,
+            "Language",
             "Select your language",
-            [value.value.name for value in list(Locale)]
-            )
+            [value.value.name for value in list(Locale)],
+        )
         if result:
             for i, value in enumerate(list(Locale)):
                 if value.value.name == language:
                     return Locale.from_int(i)
         return getattr(Defaults, "language")
-    
+
     def db(self) -> QSqlDatabase | None:
-        return self._db        
-    
+        return self._db
+
     def restart(self) -> None:
         self.quit()
-        os.execv(sys.executable, ['python'] + sys.argv)
+        os.execv(sys.executable, ["python"] + sys.argv)
+
 
 class MainWindow(MainView):
     restartRequested = pyqtSignal()
@@ -145,7 +185,7 @@ class MainWindow(MainView):
 
         # Attributes
         self.tab_counter = 0
-        self.open_paths = [] # TODO: Get rid of
+        self.open_paths = []  # TODO: Get rid of
         self.element_definitions = get_all_definitions()
 
         self.setStatusBar(StatusBar(self))
@@ -161,13 +201,15 @@ class MainWindow(MainView):
         match code:
             case 1:
                 print("Database not open")
-            case 2: 
+            case 2:
                 print("")
             case 3:
                 print("Structure wrong")
 
     def set_close_buttons(self) -> None:
-        self.tab_widget.tabBar().tabButton(0, QTabBar.ButtonPosition.RightSide).deleteLater()
+        self.tab_widget.tabBar().tabButton(
+            0, QTabBar.ButtonPosition.RightSide
+        ).deleteLater()
         self.tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
 
     def set_current_status_bar(self) -> None:
@@ -187,21 +229,28 @@ class MainWindow(MainView):
     def create_editor(self) -> None:
         lessonfile = LessonFile()
         lessonfile.open("w")
-        editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, lessonfile, self)
+        editorInst = EditorTab(
+            self.courses, self.schedules, self.element_definitions, lessonfile, self
+        )
         editorInst.nameChanged.connect(self.change_tab_name)
         self.tab_widget.addTab(editorInst, tr("Unnamed"))
         self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
 
     def load_editor(self, path: str) -> None:
-        # TODO: Check if editor with same path is open using is_open()74
+        # TODO: Check if editor with same path is open using is_open()
 
-        if not path in self.open_paths:
+        if path not in self.open_paths:
             try:
                 lessonfile = LessonFile()
                 lessonfile.open("r", path)
-                editorInst = EditorTab(self.courses, self.schedules, self.element_definitions, lessonfile, self)
+                editorInst = EditorTab(
+                    self.courses,
+                    self.schedules,
+                    self.element_definitions,
+                    lessonfile,
+                    self,
+                )
                 editorInst.nameChanged.connect(self.change_tab_name)
-
 
                 self.tab_widget.addTab(editorInst, basename(path))
                 self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
@@ -209,22 +258,34 @@ class MainWindow(MainView):
 
             except ValueError as e:
                 wrapped_error = PyException(e, True)
-                lessonfile.error_handler.log(wrapped_error, "Lesson model could not be loaded")
+                lessonfile.error_handler.log(
+                    wrapped_error, "Lesson model could not be loaded"
+                )
                 lessonfile.close()
 
             except CriticalError:
-                lessonfile.error_handler.log_msg("The reading operation was terminated because of a previous critical error.")
+                lessonfile.error_handler.log_msg(
+                    "The reading operation was terminated because of a previous critical error."
+                )
                 lessonfile.close()
 
             finally:
-                lessonfile.error_handler.show_result(tr("File reading error"), 
-                                                     tr(f"There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."), 
-                                                     tr("The file could not be read because it's either corrupted or has an invalid structure."))
+                lessonfile.error_handler.show_result(
+                    tr("File reading error"),
+                    tr(
+                        "There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."
+                    ),
+                    tr(
+                        "The file could not be read because it's either corrupted or has an invalid structure."
+                    ),
+                )
 
         else:
-            QMessageBox.information(self, tr("Open lesson-file"), tr("File is already open."))
+            QMessageBox.information(
+                self, tr("Open lesson-file"), tr("File is already open.")
+            )
 
-    def delete_tab(self, i: int) :
+    def delete_tab(self, i: int):
         # TODO: Funktion gegebenfalls vereinfachen: close() von editor nutzen??
         # TODO: open_paths check löschen
 
@@ -238,7 +299,17 @@ class MainWindow(MainView):
                 print("Deleting path")
                 self.open_paths.remove(widget.lessonfile.path)
             if widget.changes_unsaved:
-                msgBox = QMessageBox(QMessageBox.Icon.Information, "Teachart", tr("The document has been modified. Do you want to save your changes?"), QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel, self)
+                msgBox = QMessageBox(
+                    QMessageBox.Icon.Information,
+                    "Teachart",
+                    tr(
+                        "The document has been modified. Do you want to save your changes?"
+                    ),
+                    QMessageBox.StandardButton.Save
+                    | QMessageBox.StandardButton.Discard
+                    | QMessageBox.StandardButton.Cancel,
+                    self,
+                )
                 rtrn = msgBox.exec()
                 if rtrn == QMessageBox.StandardButton.Save:
                     saved = widget.save_document()
@@ -252,11 +323,10 @@ class MainWindow(MainView):
                     return
                 else:
                     raise ValueError("Messagebox returned unreadble value")
-                
-            
+
             widget.close()  # Then clean up resources
             self.tab_widget.removeTab(i)
-            widget.deleteLater() 
+            widget.deleteLater()
 
     def is_open(self, path: str) -> None:
         """Checks if an editor instance with the given path is open."""
@@ -269,7 +339,9 @@ class MainWindow(MainView):
         self.open_paths.append(tab.lessonfile.path)
 
     def open_settings(self) -> None:
-        return_flags = SettingsDialog.get_settings(self, self.courses.database(), Settings.qsettings())
+        return_flags = SettingsDialog.get_settings(
+            self, self.courses.database(), Settings.qsettings()
+        )
         print("Return flags: ", return_flags)
         if ReturnFlags.Restart in return_flags:
             print("Restarting application")
@@ -282,11 +354,9 @@ class MainWindow(MainView):
             print("Updating language")
             pass
 
-    def _update_appearance(self) -> None:
-        ...
+    def _update_appearance(self) -> None: ...
 
-    def _update_style(self) -> None:
-        ...
+    def _update_style(self) -> None: ...
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         for i in range(self.tab_widget.count()):

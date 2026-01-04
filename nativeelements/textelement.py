@@ -1,28 +1,75 @@
-from typing import Protocol, Self, Type
-import webbrowser
+from __future__ import annotations
+
 import json
 import unicodedata
+import webbrowser
+from typing import Protocol, Self, Type
 
-from PyQt6.QtWidgets import QSizePolicy, QInputDialog, QMessageBox, QMenu, QApplication, QWidget, QDialog, QStyleOptionViewItem, QStyle, QTableWidgetItem, QAbstractItemDelegate
-from PyQt6.QtGui import (QKeyEvent, QColor, QFont, QTextListFormat, QTextCursor,  QMouseEvent, QTextLength, QTextCharFormat, 
-                         QContextMenuEvent, QTextDocument, QPainter, QPen, QAction, QIcon, QTextTableFormat)
-from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt, QSize, QPoint, QMimeData, QXmlStreamWriter, QXmlStreamAttributes, QModelIndex, QRect, QT_TR_NOOP as tr
 from PyQt6 import uic
+from PyQt6.QtCore import QT_TR_NOOP as tr
+from PyQt6.QtCore import (
+    QMimeData,
+    QModelIndex,
+    QPoint,
+    QRect,
+    QSize,
+    Qt,
+    QXmlStreamAttributes,
+    QXmlStreamWriter,
+    pyqtSignal,
+    pyqtSlot,
+)
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QContextMenuEvent,
+    QFont,
+    QIcon,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
+    QTextLength,
+    QTextListFormat,
+    QTextTableFormat,
+)
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QInputDialog,
+    QMenu,
+    QMessageBox,
+    QSizePolicy,
+    QStyle,
+    QStyleOptionViewItem,
+    QTableWidgetItem,
+    QWidget,
+)
 
-from ui.element_toolsets import ElementOptions, TextToolsetView
-from nativeelements.baseelement import BaseElementDelegate, BaseElementToolset, BaseTextElementEditor, BaseElementModel, BaseElementDefinitions, ResourceObject, ResourceType
+from nativeelements.baseelement import (
+    BaseElementDefinitions,
+    BaseElementDelegate,
+    BaseElementModel,
+    BaseElementToolset,
+    BaseTextElementEditor,
+    ResourceObject,
+    ResourceType,
+)
 from nativeelements.views import TextEditorMenuView
-from tcha.settings import Settings, Locale
+from tcha.settings import Locale, Settings
+from ui.element_toolsets import ElementOptions, TextToolsetView
 
 
-class TextElement(Protocol):
-    ...
+class TextElement(Protocol): ...
 
-class TextDelegate(Protocol):
-    ...
+
+class TextDelegate(Protocol): ...
+
 
 class TextModel(QTextDocument, BaseElementModel):
-
     def __init__(self, resource: ResourceObject, parent=None) -> None:
         super().__init__(parent)
         self._resource = resource
@@ -36,43 +83,49 @@ class TextModel(QTextDocument, BaseElementModel):
         writer.writeAttribute("type", "TextElement")
         writer.writeAttribute("file", self._resource.filename())
         return writer
-    
+
     @classmethod
     def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
         model = cls(resobj)
         html = resobj.get_data().decode("utf-8")
         model.setHtml(html)
         return model
-    
+
     @staticmethod
     def restype() -> ResourceType:
         return ResourceType.TEXT
-    
+
     @property
     def name(self) -> str:
         return "TextElement"
-    
+
     def expected_size(self, width: int) -> QSize:
         self.setTextWidth(float(width))
         self.setDocumentMargin(3.0)
         size = self.size().toSize()
         return size
-    
+
     def editable(self) -> bool:
         return True
-    
+
     def delegate(self, toolset: BaseElementToolset, parent=None) -> TextDelegate:
         return TextDelegate(toolset, parent)
-    
+
     def change_on_mouse_hover(self) -> bool:
         return False
-    
+
     def attrs(self) -> tuple[str]:
         return tuple(["resource"])
 
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+    def __deepcopy__(self, memo: dict | None = None) -> TextModel:
+        model = TextModel(self._resource)
+        model.setHtml(self.toHtml())
+        return model
+
 
 class TextEditor(BaseTextElementEditor):
     requestTextProps = pyqtSignal()
@@ -87,14 +140,13 @@ class TextEditor(BaseTextElementEditor):
         self.type_lang = Locale[Settings.qsettings().value("User/language")]
         self.last_char: str
         self.last_format: dict = {
-            "family": ["Calibri"], 
-            "size": 10.0, 
-            "bold": False, 
-            "italic": False, 
-            "underlined": False, 
+            "family": ["Calibri"],
+            "size": 10.0,
+            "bold": False,
+            "italic": False,
+            "underlined": False,
             "color": QColor("#000000"),
-            }
-        
+        }
 
         # Initial routines
         self.set_text_format(self.last_format)
@@ -103,7 +155,9 @@ class TextEditor(BaseTextElementEditor):
         self.menu = TextEditorMenu(self)
 
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        self.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
+        )
         self.setAutoFillBackground(True)
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
         self.setMouseTracking(True)
@@ -114,7 +168,7 @@ class TextEditor(BaseTextElementEditor):
     @property
     def toolset(self) -> str:
         return "TextToolset"
-    
+
     @property
     def model(self) -> TextModel:
         return self.document()
@@ -143,7 +197,7 @@ class TextEditor(BaseTextElementEditor):
         """Sets initial cursor settings"""
         self.setTextColor(QColor().fromString("#000000"))
         self.setTextBackgroundColor(QColor("#ffffff"))
-    
+
     @pyqtSlot(dict)
     def set_text_format(self, props: dict) -> None:
         """Gets signal from the editor when the font properties are changed by the user"""
@@ -152,7 +206,7 @@ class TextEditor(BaseTextElementEditor):
         cformat = QTextCharFormat()
         for key, value in props.items():
             self.last_format[key] = value
-            
+
             match key:
                 case "family":
                     cformat.setFontFamilies(value)
@@ -184,17 +238,17 @@ class TextEditor(BaseTextElementEditor):
 
     def allowed_font_size(self, point: float) -> float:
         """Prevents that font size is larger than width"""
-        if point*(4/3) > self.width():
-            return round(self.width()*0.75 - 5, 1)
+        if point * (4 / 3) > self.width():
+            return round(self.width() * 0.75 - 5, 1)
         else:
             if self.width() >= 100:
-                self.setMinimumWidth(int(point*(4/3))+5)
+                self.setMinimumWidth(int(point * (4 / 3)) + 5)
             return point
 
     def to_toolset(self, props: dict) -> None:
         self.elementFontChanged.emit(props)
 
-    def keyPressEvent(self, e: QKeyEvent) -> None:        
+    def keyPressEvent(self, e: QKeyEvent) -> None:
         self.last_char = e.text()
         # print("Last Character: ", repr(self.last_char))
 
@@ -229,13 +283,12 @@ class TextEditor(BaseTextElementEditor):
     def on_new_block(self) -> None:
         cformat = QTextCharFormat()
         cformat.setFontFamilies(self.last_format["family"])
-        cformat.setFontPointSize(self.last_format["size"])#
+        cformat.setFontPointSize(self.last_format["size"])  #
         cformat.setFontWeight(self.bool_to_weight(self.last_format["bold"]))
         cformat.setFontItalic(self.last_format["italic"])
         cformat.setFontUnderline(self.last_format["underlined"])
         self.setCurrentCharFormat(cformat)
         self.send_current_text_format()
-
 
     def insert_list(self, lformat: QTextListFormat.Style) -> None:
         self.setFocus()
@@ -247,7 +300,7 @@ class TextEditor(BaseTextElementEditor):
             removed = 0
             for i in range(textList.count()):
                 item = textList.item(i - removed)
-                if (item.position() <= end and item.position() + item.length() > start):
+                if item.position() <= end and item.position() + item.length() > start:
                     textList.remove(item)
                     blockCursor = QTextCursor(item)
                     blockFormat = blockCursor.blockFormat()
@@ -258,7 +311,6 @@ class TextEditor(BaseTextElementEditor):
             listFormat = QTextListFormat()
             listFormat.setStyle(lformat)
             cursor.createList(listFormat)
-    
 
     def change_indentation(self, incr=1) -> None:
         self.setFocus()
@@ -273,22 +325,38 @@ class TextEditor(BaseTextElementEditor):
             cursor.mergeBlockFormat(bformat)
 
             if incr < 0:
-                block = self.document().findBlockByNumber(cursor.blockNumber() - tlist.count())
+                block = self.document().findBlockByNumber(
+                    cursor.blockNumber() - tlist.count()
+                )
                 lowerlist = block.textList()
                 if lowerlist:
-                    lowerlist.add(cursor.block()) 
+                    lowerlist.add(cursor.block())
             else:
                 # Bullet list
-                if lstyle == QTextListFormat.Style.ListDisc or lstyle == QTextListFormat.Style.ListCircle or lstyle == QTextListFormat.Style.ListSquare:
-                    if bformat.indent() == 0: lformat.setStyle(QTextListFormat.Style.ListDisc)
-                    elif bformat.indent() == 1: lformat.setStyle(QTextListFormat.Style.ListCircle)
-                    elif bformat.indent() >= 2: lformat.setStyle(QTextListFormat.Style.ListSquare)
+                if (
+                    lstyle == QTextListFormat.Style.ListDisc
+                    or lstyle == QTextListFormat.Style.ListCircle
+                    or lstyle == QTextListFormat.Style.ListSquare
+                ):
+                    if bformat.indent() == 0:
+                        lformat.setStyle(QTextListFormat.Style.ListDisc)
+                    elif bformat.indent() == 1:
+                        lformat.setStyle(QTextListFormat.Style.ListCircle)
+                    elif bformat.indent() >= 2:
+                        lformat.setStyle(QTextListFormat.Style.ListSquare)
 
                 # Numbered list
-                elif lstyle == QTextListFormat.Style.ListDecimal or lstyle == QTextListFormat.Style.ListLowerAlpha or lstyle == QTextListFormat.Style.ListLowerRoman:
-                    if bformat.indent() == 0: lformat.setStyle(QTextListFormat.Style.ListDecimal)
-                    elif bformat.indent() == 1: lformat.setStyle(QTextListFormat.Style.ListLowerAlpha)
-                    elif bformat.indent() >= 2: lformat.setStyle(QTextListFormat.Style.ListLowerRoman)
+                elif (
+                    lstyle == QTextListFormat.Style.ListDecimal
+                    or lstyle == QTextListFormat.Style.ListLowerAlpha
+                    or lstyle == QTextListFormat.Style.ListLowerRoman
+                ):
+                    if bformat.indent() == 0:
+                        lformat.setStyle(QTextListFormat.Style.ListDecimal)
+                    elif bformat.indent() == 1:
+                        lformat.setStyle(QTextListFormat.Style.ListLowerAlpha)
+                    elif bformat.indent() >= 2:
+                        lformat.setStyle(QTextListFormat.Style.ListLowerRoman)
                 cursor.createList(lformat)
 
         else:
@@ -298,7 +366,7 @@ class TextEditor(BaseTextElementEditor):
             elif bformat.indent() == 0:
                 bformat.setIndent(0)
             else:
-                bformat.setIndent(bformat.indent() - 1)   
+                bformat.setIndent(bformat.indent() - 1)
             cursor.setBlockFormat(bformat)
 
     @pyqtSlot(int, int)
@@ -325,13 +393,13 @@ class TextEditor(BaseTextElementEditor):
         cursor = self.textCursor()
         table = cursor.currentTable()
         if table:
-            table.insertRows(table.cellAt(cursor).row()+pos, 1)
+            table.insertRows(table.cellAt(cursor).row() + pos, 1)
 
     def insert_column(self, pos=0) -> None:
         cursor = self.textCursor()
         table = cursor.currentTable()
         if table:
-            table.insertColumns(table.cellAt(cursor).column()+pos, 1)
+            table.insertColumns(table.cellAt(cursor).column() + pos, 1)
 
     def delete_row(self) -> None:
         cursor = self.textCursor()
@@ -376,7 +444,12 @@ class TextEditor(BaseTextElementEditor):
                 cur = self.textCursor()
                 cur.insertText(link, fmt)
             else:
-                dialog = QMessageBox.warning(None, tr("Unvalid link"), tr("The link is not valid. Check the address and try again."), QMessageBox.StandardButton.Ok)
+                dialog = QMessageBox.warning(
+                    None,
+                    tr("Unvalid link"),
+                    tr("The link is not valid. Check the address and try again."),
+                    QMessageBox.StandardButton.Ok,
+                )
                 self.insert_hyperlink()
 
     def delete_hyperlink(self) -> None:
@@ -421,20 +494,21 @@ class TextEditor(BaseTextElementEditor):
         else:
             return self.default_format["bcolor"]
 
-
     def send_current_text_format(self) -> None:
         cursor = self.textCursor()
         cformat = cursor.charFormat()
         props = {}
 
         if cursor.hasSelection() == False and self.document().characterCount() > 1:
-            if cformat.fontWeight() == 700: 
+            if cformat.fontWeight() == 700:
                 props["bold"] = True
             else:
                 props["bold"] = False
             props["italic"] = cformat.fontItalic()
             props["underlined"] = cformat.fontUnderline()
-            props["family"] = self.has_format(cformat.fontFamilies(), self.last_format["family"])
+            props["family"] = self.has_format(
+                cformat.fontFamilies(), self.last_format["family"]
+            )
 
             props["veralign"] = cformat.verticalAlignment()
             props["alignment"] = self.alignment()
@@ -456,22 +530,29 @@ class TextEditor(BaseTextElementEditor):
             self.last_format = props
             # print(props)
             # print("BG_Colour accurate", props["bcolor"].name())
-           
+
             self.elementFontChanged.emit(props)
             self.menu.set_font_props(props)
 
     def has_format(self, fmt, default):
         if fmt:
             return fmt
-        else: 
-            return default 
+        else:
+            return default
 
     def sizeHint(self) -> QSize:
         return QSize(100, 50)
 
     def contextMenuEvent(self, e: QContextMenuEvent):
         self.send_current_text_format()
-        self.menu.open_(e.globalPos(), self.textCursor().hasSelection(), bool(QApplication.clipboard().text()), self.in_table(), self.has_hyperlink(e.pos()))
+        self.menu.open_(
+            e.globalPos(),
+            self.textCursor().hasSelection(),
+            bool(QApplication.clipboard().text()),
+            self.in_table(),
+            self.has_hyperlink(e.pos()),
+        )
+
 
 class TextEditorMenu(QMenu):
     fontChanged = pyqtSignal(dict)
@@ -488,7 +569,9 @@ class TextEditorMenu(QMenu):
         self.connect_signals()
         self.get_all()
 
-    def open_(self, globalPos: QPoint, copy: bool, paste: bool, table: bool, hyperlink: bool) -> None:
+    def open_(
+        self, globalPos: QPoint, copy: bool, paste: bool, table: bool, hyperlink: bool
+    ) -> None:
         print(f"copy: {copy}, paste: {paste}, table: {table}, hyperlink: {hyperlink}")
         self.ui.ac_Copy.setEnabled(copy)
         self.ui.ac_Cut.setEnabled(copy)
@@ -505,7 +588,9 @@ class TextEditorMenu(QMenu):
         self.ui.pb_Italic.toggled.connect(self.is_italic)
         self.ui.pb_Underline.toggled.connect(self.is_underlined)
         self.ui.align_group.buttonToggled.connect(self.alignment)
-        self.ui.csb_TextColor.lbutton.clicked.connect(lambda: self.get_font_color(self.text_color()))
+        self.ui.csb_TextColor.lbutton.clicked.connect(
+            lambda: self.get_font_color(self.text_color())
+        )
         self.ui.color_menu.colorChanged.connect(self.get_font_color)
 
     def get_all(self):
@@ -525,15 +610,17 @@ class TextEditorMenu(QMenu):
                 case "family":
                     font = QFont()
                     font.setFamilies(value)
-                    self.ui.cb_Font.setCurrentFont(font) # QFontComboBox
+                    self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.setEditText(str(value)) #QComboBox with point sizes
+                    self.ui.cb_FontSize.setEditText(
+                        str(value)
+                    )  # QComboBox with point sizes
                 case "bold":
-                    self.ui.pb_Bold.setChecked(value) # Checkable QPushButton
+                    self.ui.pb_Bold.setChecked(value)  # Checkable QPushButton
                 case "italic":
-                    self.ui.pb_Italic.setChecked(value) # Checkable QPushButton
+                    self.ui.pb_Italic.setChecked(value)  # Checkable QPushButton
                 case "underlined":
-                    self.ui.pb_Underline.setChecked(value) # Checkable QPushButton
+                    self.ui.pb_Underline.setChecked(value)  # Checkable QPushButton
                 case "alignment":
                     self.set_alignment(value)
                 case "color":
@@ -543,7 +630,10 @@ class TextEditorMenu(QMenu):
     def set_button_color(self, old: QColor, color: QColor) -> None:
         self.ui.csb_TextColor.setColor(color)
         stylesheet = self.ui.csb_TextColor.lbutton.styleSheet()
-        stylesheet = stylesheet.replace(f"border-bottom: 5px solid {old.name()};", f"border-bottom: 5px solid {color.name()};")
+        stylesheet = stylesheet.replace(
+            f"border-bottom: 5px solid {old.name()};",
+            f"border-bottom: 5px solid {color.name()};",
+        )
         self.ui.csb_TextColor.lbutton.setStyleSheet(stylesheet)
 
     def text_color(self) -> QColor:
@@ -595,7 +685,7 @@ class TextEditorMenu(QMenu):
         props["underlined"] = self.ui.pb_Underline.isChecked()
         self.send_text_properties(props)
 
-    def alignment(self, get=False) -> None|Qt.AlignmentFlag:
+    def alignment(self, get=False) -> None | Qt.AlignmentFlag:
         props = {}
         if self.ui.pb_AlignLeft.isChecked():
             props["alignment"] = Qt.AlignmentFlag.AlignLeft
@@ -611,21 +701,29 @@ class TextEditorMenu(QMenu):
     def enable_hyperlink_tools(self, enable: bool) -> None:
         self.ui.hyperlink_group.setVisible(enable)
 
-class TextDelegate(BaseElementDelegate):
- 
 
-    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+class TextDelegate(BaseElementDelegate):
+    def paint(
+        self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
         # print("Text painting started")
         data: QTextDocument = index.data()
         data.setDocumentMargin(3.0)
 
-        sub_rect = QRect(option.rect.x() + 5, option.rect.y() + 5, option.rect.width() - 10, option.rect.height() + 10)
+        sub_rect = QRect(
+            option.rect.x() + 5,
+            option.rect.y() + 5,
+            option.rect.width() - 10,
+            option.rect.height() + 10,
+        )
         data.setTextWidth(sub_rect.width())
         sub_rect.setHeight(int(data.size().height() + 10))
 
         painter.save()
         style = option.widget.style()
-        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+        style.drawControl(
+            QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget
+        )
 
         # print("Text width", sub_rect.width())
         painter.translate(sub_rect.topLeft())
@@ -637,11 +735,17 @@ class TextDelegate(BaseElementDelegate):
             painter.save()
             pen = QPen(Qt.GlobalColor.lightGray, 1)
             painter.setPen(pen)
-            painter.drawLine(option.rect.bottomLeft().x() + 5, option.rect.bottomLeft().y(), option.rect.bottomRight().x() - 5, option.rect.bottomRight().y())
+            painter.drawLine(
+                option.rect.bottomLeft().x() + 5,
+                option.rect.bottomLeft().y(),
+                option.rect.bottomRight().x() - 5,
+                option.rect.bottomRight().y(),
+            )
             painter.restore()
 
-        
-    def createEditor(self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget | None:
+    def createEditor(
+        self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> QWidget | None:
         print("Trying to create a TextEditor")
         editor = TextEditor(index.data(Qt.ItemDataRole.EditRole), parent)
         editor.setStyleSheet("background: none; border: 1px solid LightGray")
@@ -650,19 +754,26 @@ class TextDelegate(BaseElementDelegate):
         editor.textChanged.connect(lambda: self.fit_to_text(editor, option, index))
         editor.setContentsMargins(3, 3, 3, 3)
         editor.setFocus()
-        
+
         print("TextEditor created")
         return editor
-    
+
     def setEditorData(self, editor: TextEditor | None, index: QModelIndex) -> None:
         self._toolset.connect_editor(editor)
         print("Connected TextEditor")
 
-    def updateEditorGeometry(self, editor: TextEditor| None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def updateEditorGeometry(
+        self,
+        editor: TextEditor | None,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+    ) -> None:
         print("Rect width", option.rect.width())
         editor.setGeometry(option.rect.adjusted(5, 5, -5, -5))
 
-    def fit_to_text(self, editor: TextEditor, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def fit_to_text(
+        self, editor: TextEditor, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
         document = editor.document()
         docHeight = document.size().height()
         if 0 <= docHeight:
@@ -670,7 +781,9 @@ class TextDelegate(BaseElementDelegate):
         self.sizeHintChanged.emit(index)
         # index.model().dataChanged.emit(index, index)
 
-    def setModelData(self, editor: TextEditor | None, model, index: QModelIndex) -> None:
+    def setModelData(
+        self, editor: TextEditor | None, model, index: QModelIndex
+    ) -> None:
         model.setData(index, editor.document())
 
     def destroyEditor(self, editor: TextEditor, index: QModelIndex):
@@ -687,6 +800,7 @@ class TextDelegate(BaseElementDelegate):
             return QSize(option.rect.width(), size.height() + 10)
         else:
             return QSize(option.rect.width(), 0)
+
 
 class TextToolset(BaseElementToolset):
     fontChanged = pyqtSignal(dict)
@@ -713,7 +827,7 @@ class TextToolset(BaseElementToolset):
 
         # Attributes
         self._fontProperties = {}
-        
+
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
         self.connect_signals()
         self.get_all()
@@ -721,7 +835,7 @@ class TextToolset(BaseElementToolset):
     @property
     def name(self) -> str:
         return "TextElement"
-    
+
     @property
     def element_menu(self) -> ElementOptions:
         return self.ui.element_options_menu
@@ -733,7 +847,9 @@ class TextToolset(BaseElementToolset):
 
         self.fontChanged.connect(editor.set_text_format)
         self.blist.connect(lambda: editor.insert_list(QTextListFormat.Style.ListDisc))
-        self.numlist.connect(lambda: editor.insert_list(QTextListFormat.Style.ListDecimal))
+        self.numlist.connect(
+            lambda: editor.insert_list(QTextListFormat.Style.ListDecimal)
+        )
         self.indent.connect(lambda: editor.change_indentation(incr=1))
         self.dedent.connect(lambda: editor.change_indentation(incr=-1))
         self.insert_table.connect(editor.insert_table)
@@ -768,7 +884,7 @@ class TextToolset(BaseElementToolset):
             self.deleteRow,
             self.deleteColumn,
             self.deleteTable,
-            )
+        )
         for signal in signals:
             try:
                 signal.disconnect()
@@ -777,7 +893,7 @@ class TextToolset(BaseElementToolset):
                 pass
 
         super().close_()
-    
+
     def connect_signals(self):
         self.ui.ac_close.triggered.connect(self.closed.emit)
 
@@ -811,7 +927,7 @@ class TextToolset(BaseElementToolset):
     def send_text_properties(self, props: dict) -> dict:
         self.fontChanged.emit(props)
         return self._fontProperties
-    
+
     @pyqtSlot(bool)
     def set_table_tools_visible(self, visible: bool):
         self.ui.tabletools_group.setVisible(visible)
@@ -823,15 +939,17 @@ class TextToolset(BaseElementToolset):
                 case "family":
                     font = QFont()
                     font.setFamilies(value)
-                    self.ui.cb_Font.setCurrentFont(font) # QFontComboBox
+                    self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.setEditText(str(value)) #QComboBox with point sizes
+                    self.ui.cb_FontSize.setEditText(
+                        str(value)
+                    )  # QComboBox with point sizes
                 case "bold":
-                    self.ui.ac_bold.setChecked(value) # Checkable QPushButton
+                    self.ui.ac_bold.setChecked(value)  # Checkable QPushButton
                 case "italic":
-                    self.ui.ac_italic.setChecked(value) # Checkable QPushButton
+                    self.ui.ac_italic.setChecked(value)  # Checkable QPushButton
                 case "underlined":
-                    self.ui.ac_underline.setChecked(value) # Checkable QPushButton
+                    self.ui.ac_underline.setChecked(value)  # Checkable QPushButton
                 case "alignment":
                     self.set_alignment(value)
                 case "veralign":
@@ -868,20 +986,23 @@ class TextToolset(BaseElementToolset):
         props = {}
         self.set_button_color(self._fontProperties["color"], color)
         props["color"] = color
-        self.send_text_properties(props)   
+        self.send_text_properties(props)
 
     # def get_background_color(self, color: QColor) -> None:
     #     props = {}
     #     self.set_bg_button_color(self._fontProperties["bcolor"], color)
     #     props["bcolor"] = color
-    #     self.send_text_properties(props)               
+    #     self.send_text_properties(props)
 
     def set_button_color(self, old: QColor, color: QColor) -> None:
         if color != old:
             self.ui.ac_textcolor.setProperty("color", color)
             widget = self.widgetForAction(self.ui.ac_textcolor)
             stylesheet = widget.styleSheet()
-            stylesheet = stylesheet.replace(f"border-bottom: 5px solid {old.name()};", f"border-bottom: 5px solid {color.name()};")
+            stylesheet = stylesheet.replace(
+                f"border-bottom: 5px solid {old.name()};",
+                f"border-bottom: 5px solid {color.name()};",
+            )
             widget.setStyleSheet(stylesheet)
 
     # def set_bg_button_color(self, old: QColor, color: QColor) -> None:
@@ -893,7 +1014,7 @@ class TextToolset(BaseElementToolset):
 
     def textColor(self) -> QColor:
         return self.ui.ac_textcolor.property("color")
-    
+
     # def bg_color(self) -> QColor:
     #     return self.csb_BackgroundColor.color()
 
@@ -902,7 +1023,7 @@ class TextToolset(BaseElementToolset):
         props["bold"] = self.ui.ac_bold.isChecked()
         self.send_text_properties(props)
 
-    def is_italic(self) -> None: 
+    def is_italic(self) -> None:
         props = {}
         props["italic"] = self.ui.ac_italic.isChecked()
         self.send_text_properties(props)
@@ -922,7 +1043,9 @@ class TextToolset(BaseElementToolset):
         elif alignment == Qt.AlignmentFlag.AlignJustify:
             self.ui.ac_align_justify.setChecked(True)
 
-    def set_vertical_alignment(self, alignment: QTextCharFormat.VerticalAlignment) -> None:
+    def set_vertical_alignment(
+        self, alignment: QTextCharFormat.VerticalAlignment
+    ) -> None:
         if alignment == QTextCharFormat.VerticalAlignment.AlignSubScript:
             self.ui.ac_subscript.setChecked(True)
         elif alignment == QTextCharFormat.VerticalAlignment.AlignSuperScript:
@@ -992,9 +1115,13 @@ class TextToolset(BaseElementToolset):
 
     def request_delete_column(self) -> None:
         self.deleteColumn.emit()
-        
+
     def request_delete_table(self) -> None:
-        ok = QMessageBox.question(None, tr("Delete Table"), tr("Are you sure you want to delete the whole table?"))
+        ok = QMessageBox.question(
+            None,
+            tr("Delete Table"),
+            tr("Are you sure you want to delete the whole table?"),
+        )
         if ok == QMessageBox.StandardButton.Yes:
             self.deleteTable.emit()
 
@@ -1016,10 +1143,13 @@ class TextToolset(BaseElementToolset):
     def sizeHint(self) -> QSize:
         return QSize(230, 180)
 
+
 class SymbolDialog(QDialog):
     characterClicked = pyqtSignal(str)
 
-    def __init__(self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow) -> None:
+    def __init__(
+        self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow
+    ) -> None:
         super().__init__(parent, flags)
         self.ui = uic.loadUi("ui/UI_Symbols.ui", self)
         self.chars = self.load_character_set()
@@ -1037,7 +1167,7 @@ class SymbolDialog(QDialog):
     def load_character_set(self) -> dict[str, list[int]]:
         with open("tcha/unicodechart.json", "r", encoding="utf-8") as f:
             return json.load(f)
-    
+
     def import_character_sets(self) -> None:
         for key in self.chars.keys():
             self.ui.cb_category.addItem(key)
@@ -1054,7 +1184,9 @@ class SymbolDialog(QDialog):
         for irow in range(self.ui.TW_Symbols.rowCount()):
             for icolumn in range(self.ui.TW_Symbols.columnCount()):
                 try:
-                    item = QTableWidgetItem(chr(self.chars[charset][irow * 16 + icolumn]))
+                    item = QTableWidgetItem(
+                        chr(self.chars[charset][irow * 16 + icolumn])
+                    )
                     font = QFont()
                     font.setPointSize(12)
                     font.setFamily(self.fontfamily)
@@ -1078,12 +1210,12 @@ class SymbolDialog(QDialog):
             text = item.text()
             self.characterClicked.emit(text)
 
-class TextElementDefinitions(BaseElementDefinitions):
 
+class TextElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def name() -> str:
         return "TextElement"
-    
+
     @staticmethod
     def type() -> ResourceType:
         return ResourceType.TEXT
@@ -1091,15 +1223,15 @@ class TextElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def create_model(resource: ResourceObject) -> TextModel:
         return TextModel(resource)
-    
+
     @staticmethod
     def get_file() -> None:
         return None
-    
+
     @staticmethod
     def model() -> Type[TextModel]:
         return TextModel
-    
+
     @staticmethod
     def action(parent) -> QAction:
         action = QAction(QIcon("resources/icons/ic_text.svg"), tr("Text"), parent)
@@ -1109,7 +1241,7 @@ class TextElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def toolset() -> TextToolset:
         return TextToolset()
-    
+
     @staticmethod
     def editor(model: TextModel):
         return TextEditor(model)

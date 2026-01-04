@@ -1,7 +1,0 @@
-QPushButton#PB_Table:menu-indicator {
-    width: 0px;
-}
-
-QLabel#Grey {
-    color: #a9a9a9;
-}

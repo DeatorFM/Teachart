@@ -1,3 +1,0 @@
-QTabBar:close-button {
-    image: url(icons:ic_close.svg)
-}
