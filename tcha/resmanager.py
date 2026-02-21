@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
+from traitlets import ObjectName
 
 
 class ResourceType(enum.Enum):
@@ -45,9 +46,7 @@ class ResourceObject(QObject):
         self._f: QFile | None = QFile(self.path) if self.path else None
         if self._f:
             self._f.open(QFile.OpenModeFlag.ReadOnly)
-        self._extension: str | None = (
-            osp.splitext(self.path)[1].strip(".") if self.path else None
-        )
+        self._extension: str | None = Path(self.path).suffix if self.path else None
         self._member_count: int = 0
         self._datalink: Callable | None = None
 

@@ -7,7 +7,7 @@ from typing import Self, Type
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
-    QMargins,
+    QMimeData,
     QModelIndex,
     QObject,
     QRect,
@@ -19,19 +19,11 @@ from PyQt6.QtCore import (
     QXmlStreamWriter,
     pyqtSignal,
 )
-from PyQt6.QtGui import (
-    QColor,
-    QCursor,
-    QIcon,
-    QPainter,
-    QPainterPath,
-    QPen,
-)
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PyQt6.QtGui import QCursor, QPainter, QPen
+from PyQt6.QtMultimedia import QAudioOutput, QMediaFormat, QMediaPlayer
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
-    QSizePolicy,
     QStyle,
     QStyleOptionButton,
     QStyleOptionViewItem,
@@ -47,9 +39,31 @@ from nativeelements.baseelement import (
     QAction,
 )
 from nativeelements.views import AudioEditorView
+from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import ResourceObject, ResourceType
-from ui.element_toolsets import AudioToolsetView, ElementOptions
+from tcha.styling import SvgIcon
+from ui.element_toolsets import AudioToolsetView
+
+FILE_EXTENSIONS = {
+    QMediaFormat.FileFormat.WMA: ".wma",
+    QMediaFormat.FileFormat.AAC: ".aac",
+    QMediaFormat.FileFormat.MP3: ".mp3",
+    QMediaFormat.FileFormat.Wave: ".wav",
+    QMediaFormat.FileFormat.FLAC: ".flac",
+    QMediaFormat.FileFormat.Mpeg4Audio: ".m4a",
+}
+
+
+def supported_audio_extensions() -> tuple[str]:
+    supported = QMediaFormat().supportedFileFormats(QMediaFormat.ConversionMode.Decode)
+    return tuple(
+        [
+            FILE_EXTENSIONS[fformat]
+            for fformat in supported
+            if fformat in FILE_EXTENSIONS.keys()
+        ]
+    )
 
 
 class AudioModel(BaseElementModel):
@@ -208,6 +222,10 @@ class AudioModel(BaseElementModel):
             "text",
         )
 
+    def sizeHint(self, width: int) -> QSize:
+        # Account for 2px top + 2px bottom padding
+        return QSize(width, 45 + 4)
+
     def __str__(self):
         return f"""AudioModel: resource={self.resource} name={self._text} repeating={self._is_repeating} repeats={self._repeats} 
         pause_length={self._pause_length}s start_time={self._start_time}ms end_time={self._end_time} current={self._current_time}"""
@@ -255,8 +273,8 @@ class AudioEditor(BaseElementEditor):
         self.setup_player(self._model)
         self.ui.le_name.setText(self._model.text)
         self.ui.le_name.setCursorPosition(0)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
-        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        self.ui.le_name.returnPressed.connect(self.setFocus)
+        self.ui.swi_PlayPause.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
     @property
     def model(self) -> AudioModel:
@@ -383,7 +401,7 @@ class AudioEditor(BaseElementEditor):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        width = min(event.size().width(), 180)
+        width = event.size().width()
         self.ui.main_frame.setGeometry(0, 0, width, event.size().height())
         self.ui.le_name.setFixedWidth(width - 40)
         print(f"AudioElement resized to: {event.size()}")
@@ -392,46 +410,65 @@ class AudioEditor(BaseElementEditor):
 class AudioDelegate(BaseElementDelegate):
     def __init__(self, toolset: "AudioToolset", parent=None):
         super().__init__(toolset, parent)
-        self._play_icon = QIcon("resources/icons/ic_play.svg")
+        self._play_icon = QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_MediaPlay
+        )
         self._cached_editor: AudioEditor
 
-    def paint(self, painter, option, index):
-        sub_rect = option.rect.adjusted(5, 5, -5, -5)
-        button_rect = sub_rect.adjusted(3, 5, -7, -3)
-        button_rect.setWidth(23)
-        button_rect.setHeight(23)
+    def paint(
+        self,
+        painter: QPainter,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+        single_item=True,
+    ):
+        if single_item:
+            painter.save()
+            super().paint(painter, option, QModelIndex())
+            painter.restore()
+
+        # Apply 2px padding for element content
+        sub_rect = option.rect.adjusted(2, 2, -2, -2)
+        # Center button and text vertically within sub_rect (45px height - 4px padding = 41px available)
+        vertical_center = sub_rect.top() + (sub_rect.height() - 23) // 2
+        button_rect = QRect(sub_rect.left() + 5, vertical_center, 23, 23)
         text_rect = QRect(
-            sub_rect.left() + 33,
-            sub_rect.top() + 10,
-            min(sub_rect.width() - 33, 180 - 33),
+            sub_rect.left() + 35,
+            sub_rect.top() + (sub_rect.height() - 20) // 2,
+            sub_rect.width() - 40,
             20,
         )
 
         painter.save()
 
-        style = option.widget.style()
+        style = QApplication.style()
         style.drawControl(
             QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget
         )
 
         mouse_pos = option.widget.viewport().mapFromGlobal(QCursor.pos())
 
-        if button_rect.contains(mouse_pos):
-            path = QPainterPath()
-            path.addRoundedRect(button_rect.toRectF(), 4, 4)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.fillPath(path, QColor(236, 236, 236, 160))
-
         button_option = QStyleOptionButton()
         button_option.rect = button_rect
         button_option.icon = self._play_icon
         button_option.iconSize = QSize(20, 20)
         button_option.state = QStyle.StateFlag.State_Enabled
+        if button_rect.contains(mouse_pos):
+            button_option.state |= QStyle.StateFlag.State_MouseOver
+        button_option.palette = option.palette
         button_option.features = QStyleOptionButton.ButtonFeature.Flat
 
         QApplication.style().drawControl(
-            QStyle.ControlElement.CE_PushButton, button_option, painter
+            QStyle.ControlElement.CE_PushButton, button_option, painter, option.widget
         )
+
+        # txtfield_option = QStyleOptionFrame()
+        # txtfield_option.palette = option.palette
+        # txtfield_option.rect = text_rect.adjusted(-3, -3, 3, 3)
+
+        # QApplication.style().drawPrimitive(
+        #     QStyle.PrimitiveElement.PE_PanelLineEdit, txtfield_option, painter
+        # )
 
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft, index.data().text)
 
@@ -442,9 +479,9 @@ class AudioDelegate(BaseElementDelegate):
             pen = QPen(Qt.GlobalColor.lightGray, 1)
             painter.setPen(pen)
             painter.drawLine(
-                option.rect.bottomLeft().x() + 5,
+                option.rect.bottomLeft().x() + 2,
                 option.rect.bottomLeft().y(),
-                option.rect.bottomRight().x() - 5,
+                option.rect.bottomRight().x() - 2,
                 option.rect.bottomRight().y(),
             )
             painter.restore()
@@ -453,7 +490,8 @@ class AudioDelegate(BaseElementDelegate):
         editor = AudioEditor(index.data(), parent)
         self._cached_editor = editor
         editor.player.mediaStatusChanged.connect(self.on_media_status_changed)
-        editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.installEventFilter(editor)
+        editor.setFocus()
         return editor
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
@@ -465,7 +503,7 @@ class AudioDelegate(BaseElementDelegate):
             )
 
     def updateEditorGeometry(self, editor, option, index):
-        sub_rect = option.rect.marginsAdded(QMargins(-6, -8, -5, -5))
+        sub_rect = option.rect.adjusted(2, 2, -2, -2)
         print("Audio rect", sub_rect.width(), sub_rect.height())
         editor.setGeometry(sub_rect)
 
@@ -486,7 +524,8 @@ class AudioDelegate(BaseElementDelegate):
 
     def sizeHint(self, option, index):
         if index.data():
-            return QSize(option.rect.width(), 45)
+            # Account for 2px top + 2px bottom padding
+            return QSize(option.rect.width(), 49)
         else:
             return QSize(option.rect.width(), 0)
 
@@ -510,15 +549,10 @@ class AudioToolset(BaseElementToolset):
 
         # Initial routines
         self.connect_signals()
-        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
     @property
     def name(self) -> str:
         return "AudioToolset"
-
-    @property
-    def element_menu(self) -> ElementOptions:
-        return self.ui.element_options_menu
 
     def connect_editor(self, editor: AudioEditor) -> None:
         self.set_track_length(editor.duration)
@@ -538,8 +572,6 @@ class AudioToolset(BaseElementToolset):
         self.setVisible(True)
 
     def connect_signals(self) -> None:
-        self.ui.ac_close.triggered.connect(self.closed.emit)
-
         self.ui.ac_play_pause.stateChanged.connect(self.on_playpause_pressed)
         self.ui.hs_PlayTime.sliderReleased.connect(self.set_current_position)
         self.ui.hs_PlayTime.valueChanged.connect(self.on_slider_value_changed)
@@ -677,9 +709,6 @@ class AudioToolset(BaseElementToolset):
     def on_pause_length_changed(self, length: int) -> None:
         self.repeatPauseChanged.emit(length)
 
-    def sizeHint(self) -> QSize:
-        return QSize(240, 160)
-
 
 class AudioElementDefinitions(BaseElementDefinitions):
     @staticmethod
@@ -690,10 +719,11 @@ class AudioElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def get_file(parent=None) -> str | None:
+        ext = "".join(f"*{ext} " for ext in supported_audio_extensions())
         path, _ = QFileDialog.getOpenFileName(
             parent,
             directory=str(Path.home()),
-            filter=tr("Audio files (*.mp3 *.aac *.wav *.m4a *.flac *.wma)"),
+            filter=tr("{} {}".format(tr("Audio files "), ext)),
         )
         return path if path else None
 
@@ -712,15 +742,49 @@ class AudioElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def action(parent) -> QAction:
         action = QAction(
-            QIcon("resources/icons/ic_audiofile.svg"), tr("Audio File"), parent
+            SvgIcon("resources/icons/ic_fileAudio.svg"), tr("Audio File"), parent
         )
         action.setData("AudioElement")
+        action.setProperty("is_element_action", True)
         return action
 
     @staticmethod
-    def toolset() -> AudioToolset:
-        return AudioToolset()
+    def toolset(parent) -> AudioToolset:
+        return AudioToolset(parent)
 
     @staticmethod
     def editor(model: AudioModel) -> AudioEditor:
         return AudioEditor(model)
+
+    @staticmethod
+    def resource_flag():
+        return ResourceFlag.HasResource
+
+    @staticmethod
+    def mime_types() -> list[str]:
+        return []
+
+    @staticmethod
+    def supports_mime_data(mime_data: QMimeData) -> bool:
+        if mime_data.hasUrls():
+            urls = mime_data.urls()
+            filtered = tuple(
+                filter(
+                    lambda x: x.fileName().endswith(supported_audio_extensions()),
+                    urls,
+                )
+            )
+            return len(filtered) > 0
+        return False
+
+    @staticmethod
+    def model_from_mime_data(rescont, mime_data):
+        urls = mime_data.urls()
+        url = tuple(
+            filter(
+                lambda x: x.fileName().endswith(supported_audio_extensions()),
+                urls,
+            )
+        )[0].toLocalFile()
+        resobj = rescont.save(AudioElementDefinitions.type(), url)
+        return AudioModel(resobj)

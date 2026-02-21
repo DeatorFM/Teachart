@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Protocol, Self, Type
+from typing import Self, Type
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
+    QMimeData,
     QModelIndex,
     QObject,
     QRect,
@@ -16,9 +17,10 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QIcon, QImageReader, QPainter, QPen, QPixmap, QTransform
+from PyQt6.QtGui import QImage, QImageReader, QPainter, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QFileDialog, QStyle, QStyleOptionViewItem
 
+from nativeelements.audioelement import AudioElementDefinitions, AudioModel
 from nativeelements.baseelement import (
     BaseElementDefinitions,
     BaseElementDelegate,
@@ -28,12 +30,11 @@ from nativeelements.baseelement import (
     QAction,
 )
 from nativeelements.views import PictureEditorView
+from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
-from tcha.resmanager import ResourceObject, ResourceType
-from ui.element_toolsets import ElementOptions, PictureToolsetView
-
-
-class PictureDelegate(Protocol): ...
+from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
+from tcha.styling import SvgIcon
+from ui.element_toolsets import PictureToolsetView
 
 
 class PictureModel(BaseElementModel):
@@ -50,20 +51,17 @@ class PictureModel(BaseElementModel):
         self._resource = resource
         self._resource.add_member()
 
-        self._width = width  # Last width
-        self._height = height  # Last height
-        self._rotation = rotation
-        self._adjusted = adjusted  # If sizes have been adjusted by the user
-
         reader = QImageReader()
         reader.setDevice(self.resource.qfile())
         size = reader.size()
 
+        self._width = width if width > 1 else size.width()  # Last width
+        self._height = height if height > 1 else size.height()  # Last height
+        self._rotation = rotation
+        self._adjusted = adjusted  # If sizes have been adjusted by the user
+
         self._original_aspect_ratio: float = size.height() / size.width()
 
-        if not self._adjusted:
-            self._width = size.width()
-            self._height = size.height()
         print("Image loaded from", self._resource.path)
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
@@ -146,6 +144,16 @@ class PictureModel(BaseElementModel):
     # def last_size(self) -> QSize:
     #     return self._last_size
 
+    def sizeHint(self, width: int):
+        # Account for 2px padding on each side + 3px extra right spacing (4px left+top+bottom, 5px right total)
+        content_width = width - 8
+        if self._adjusted:
+            return QSize(width, self._height + 4)
+        return QSize(
+            width,
+            round(self._height * (content_width / self._width)) + 4,
+        )
+
     def editable(self) -> bool:
         return False
 
@@ -181,10 +189,11 @@ class PictureModel(BaseElementModel):
         else:
             raise ValueError("Number must be a multiple of 90.")
 
-    def expected_size(self, width: int) -> QSize:
-        if self.adjusted:
-            return QSize(width, self.height)
-        return QSize(width, round(self._height * (width / self._width)))
+        # def expected_size(self, width: int) -> QSize:
+        #     # Account for 2px left + 2px right padding
+        #     content_width = width - 4
+        #     if self.adjusted:
+        #         return QSize(width, self.height)\n        return QSize(width, round(self._height * (content_width / self._width)))
 
     def close(self) -> None:
         self._resource.delete_member()
@@ -207,7 +216,8 @@ class PictureModel(BaseElementModel):
         return PictureModel(
             deepcopy(self._resource),
             self._width,
-            self._height.self._rotation,
+            self._height,
+            self._rotation,
             self._adjusted,
         )
 
@@ -227,8 +237,6 @@ class PictureEditor(BaseElementEditor):
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
-        self.setStyleSheet("background: none;")
-        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
     @property
     def model(self) -> PictureModel:
@@ -299,11 +307,20 @@ class PictureEditor(BaseElementEditor):
 
 class PictureDelegate(BaseElementDelegate):
     def paint(
-        self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
+        self,
+        painter: QPainter | None,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+        single_item=True,
     ) -> None:
+        if single_item:
+            painter.save()
+            super().paint(painter, option, QModelIndex())
+            painter.restore()
+
         painter.save()
 
-        sub_rect = option.rect.adjusted(5, 5, -5, -5)
+        sub_rect = option.rect.adjusted(2, 2, -2, -2)
 
         style = option.widget.style()
         style.drawControl(
@@ -311,7 +328,6 @@ class PictureDelegate(BaseElementDelegate):
         )
 
         model: PictureModel = index.data()
-        print(model)
         reader = QImageReader()
         reader.setDevice(model.resource.qfile())
         pixmap = QPixmap.fromImageReader(reader)
@@ -321,18 +337,19 @@ class PictureDelegate(BaseElementDelegate):
 
         if model.adjusted and sub_rect.width() >= model.width:
             new_rect = QRect(sub_rect.topLeft(), model.size)
-            print(
-                f"Painting image with user defined size: {new_rect.width()} * {new_rect.height()}"
-            )
+            # print(
+            #     f"Painting image with user defined size: {new_rect.width()} * {new_rect.height()}"
+            # )
             painter.drawPixmap(new_rect, pixmap)
         else:
             model.set_size(
-                sub_rect.width(), round(model.height * (sub_rect.width() / model.width))
+                sub_rect.width(),
+                round(model.height * (sub_rect.width() / model.width)),
             )
             model.set_adjusted(False)
-            print(
-                f"Painting image with column constraints: {sub_rect.width()} * {sub_rect.height()}"
-            )
+            # print(
+            #     f"Painting image with column constraints: {image_rect.width()} * {image_rect.height()}"
+            # )
             painter.drawPixmap(sub_rect, pixmap)
 
         painter.restore()
@@ -342,18 +359,20 @@ class PictureDelegate(BaseElementDelegate):
             pen = QPen(Qt.GlobalColor.lightGray, 1)
             painter.setPen(pen)
             painter.drawLine(
-                option.rect.bottomLeft().x() + 5,
+                option.rect.bottomLeft().x() + 2,
                 option.rect.bottomLeft().y(),
-                option.rect.bottomRight().x() - 5,
+                option.rect.bottomRight().x() - 2,
                 option.rect.bottomRight().y(),
             )
             painter.restore()
 
     def createEditor(self, parent, option, index) -> PictureEditor:
+        # Apply 2px padding + 3px extra for element editor to match paint area
         editor = PictureEditor(
-            index.data(), option.rect.adjusted(5, 5, -5, -5).width(), parent
+            index.data(), option.rect.adjusted(2, 2, -2, -2).width(), parent
         )
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
+        self.installEventFilter(editor)
         editor.setFocus()
         return editor
 
@@ -361,7 +380,8 @@ class PictureDelegate(BaseElementDelegate):
         self._toolset.connect_editor(editor)
 
     def updateEditorGeometry(self, editor, option, index):
-        editor.setGeometry(option.rect.adjusted(5, 5, -5, -5))
+        # Apply 2px padding for element editor with extra right spacing
+        editor.setGeometry(option.rect.adjusted(2, 2, -2, -2))
 
     def setModelData(
         self, editor: PictureEditor, model: PictureModel, index: QModelIndex
@@ -378,13 +398,7 @@ class PictureDelegate(BaseElementDelegate):
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         model: PictureModel | None = index.data()
         if isinstance(model, PictureModel):
-            # image = image.scaledToWidth(option.rect.width() - 10)
-            if model.adjusted:
-                return QSize(option.rect.width(), model.height)
-            return QSize(
-                option.rect.width(),
-                round(model.height * (option.rect.width() / model.width)),
-            )
+            return model.sizeHint(option.rect.width())
         else:
             print("PictureModel missing for size hint")
             return QSize(option.rect.width(), 0)
@@ -402,15 +416,10 @@ class PictureToolset(BaseElementToolset):
         self._max_height = 0
 
         self.connect_signals()
-        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
     @property
     def name(self) -> str:
         return "PictureToolset"
-
-    @property
-    def element_menu(self) -> ElementOptions:
-        return self.ui.element_options_menu
 
     def connect_editor(self, editor: PictureEditor) -> None:
         if editor:
@@ -429,8 +438,6 @@ class PictureToolset(BaseElementToolset):
             self.setVisible(True)
 
     def connect_signals(self) -> None:
-        self.ui.ac_close.triggered.connect(self.closed.emit)
-
         self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
         self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
         self.ui.ac_keep_aspect_ratio.toggled.connect(self.on_keep_aspect_ratio_toggled)
@@ -500,9 +507,6 @@ class PictureToolset(BaseElementToolset):
         else:
             self.ui.sb_ImageHeight.setMaximum(999)
 
-    def sizeHint(self) -> QSize:
-        return QSize(220, 100)
-
 
 class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
@@ -532,14 +536,54 @@ class PictureElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(QIcon("resources/icons/ic_newpic.svg"), tr("Picture"), parent)
+        action = QAction(
+            SvgIcon("resources/icons/ic_fileImage.svg"), tr("Picture"), parent
+        )
         action.setData("PictureElement")
+        action.setProperty("is_element_action", True)
         return action
 
     @staticmethod
-    def toolset() -> PictureToolset:
-        return PictureToolset()
+    def toolset(parent) -> PictureToolset:
+        return PictureToolset(parent)
 
     @staticmethod
     def editor(model: PictureModel):
         return PictureEditor(model)
+
+    @staticmethod
+    def resource_flag():
+        return ResourceFlag.HasResource
+
+    @staticmethod
+    def mime_types():
+        return ["application/x-qt-image"]
+
+    @staticmethod
+    def supports_mime_data(mime_data: QMimeData) -> bool:
+        if "application/x-qt-image" in mime_data.formats():
+            return True
+        if "text/uri-list" in mime_data.formats():
+            urls = mime_data.urls()
+            return (
+                len(urls) == 1
+                and urls[0].isLocalFile()
+                and QImageReader(urls[0].toLocalFile()).canRead()
+            )
+        return False
+
+    @staticmethod
+    def model_from_mime_data(
+        rescont: ResourceContainer, mime_data: QMimeData
+    ) -> PictureModel | None:
+        if "application/x-qt-image" in mime_data.formats():
+            path = rescont.make_path("png")
+            image = QImage(mime_data.imageData())
+            if image.save(path):
+                resobj = rescont.save(PictureElementDefinitions.type(), path)
+                return PictureModel(resobj)
+        elif mime_data.hasUrls():
+            url = mime_data.urls()[0]
+            resobj = rescont.save(AudioElementDefinitions.type(), url.toLocalFile())
+            return PictureModel(resobj)
+        return None

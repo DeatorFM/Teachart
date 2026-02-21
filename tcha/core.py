@@ -1,14 +1,28 @@
+from __future__ import annotations
+
+import importlib.util as iu
 import os
 import sys
 import typing
-from os.path import abspath, basename, exists
+from os.path import abspath, exists
+from pathlib import Path
+from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QDateTime, QResource, pyqtSignal
-from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtCore import (
+    QDateTime,
+    pyqtSignal,
+)
 from PyQt6.QtSql import QSqlDatabase
-from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox, QTabBar
+from PyQt6.QtWidgets import (
+    QApplication,
+    QInputDialog,
+    QMessageBox,
+    QWidget,
+)
 
+from tcha.consts import AppAction
+from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
     CourseModel,
     ScheduleModel,
@@ -16,14 +30,13 @@ from tcha.dbmodels import (
     check_database,
     create_database,
 )
-from tcha.editor import EditorTab
+from tcha.editor import Editor
 from tcha.elements import get_all_definitions
 from tcha.error import CriticalError, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
-from tcha.start import Start
-from tcha.status import StatusBar
-from ui.UI_Core import MainView
+from tcha.start import OpenFileModel, StartWindow
+from tcha.styling import TchaProxyStyle, make_palette
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -76,19 +89,51 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
     return cmodel, smodel, tmodel
 
 
+RECENT = [
+    "D:/Documents/Math/algebra_basics.lesson",
+    "D:/Documents/Science/physics_101.lesson",
+    "D:/Documents/History/world_war_2.lesson",
+    "D:/Documents/Math/calculus_intro.lesson",
+    "D:/Documents/English/shakespeare.lesson",
+    "D:/Documents/Science/chemistry_lab.lesson",
+    "D:/Documents/Geography/continents.lesson",
+    "D:/Documents/Math/geometry_shapes.lesson",
+]
+
+PINNED = [
+    "D:/Documents/Math/algebra_basics.lesson",
+    "D:/Documents/Science/physics_101.lesson",
+    "D:/Documents/Art/painting_techniques.lesson",
+    "D:/Documents/Music/music_theory.lesson",
+    "D:/Documents/Math/calculus_intro.lesson",
+    "D:/Documents/Programming/python_basics.lesson",
+]
+
+
 class AppCore(QApplication):
-    def __init__(self, argv: typing.List[str]) -> None:
+    restartRequested = pyqtSignal()
+
+    def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
-        self.setStyle("windows11")
 
         self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
+        self._start_dialog: StartWindow | None = None
+        self._edefinitions = get_all_definitions()
 
         if not self.qsettings.allKeys():
             print("Empty Settings: First initialisation")
             self._first_time()
         else:
             self._startup_checks()
+        self._load_theme(self.qsettings.value("User/appearance"))
+
+        self._course_model = CourseModel(self._db)
+        self._schedule_model = ScheduleModel(self._db)
+        self._file_model = OpenFileModel(
+            self.qsettings.value("Application/recent", [], list),
+            self.qsettings.value("Application/pinned", [], list),
+        )
 
     def _startup_checks(self) -> None:
         keys = self.qsettings.allKeys()
@@ -149,8 +194,30 @@ class AppCore(QApplication):
         print("Selected language", language)
         self.qsettings.setValue("User/language", language.name)
 
-    def _load_theme(self, theme: str) -> None:
-        QResource.registerResource()
+    def _load_theme(self, theme: str, native=True) -> None:
+        if native:
+            path = Path("nativethemes") / f"{theme}.zip"
+            importer = zipimporter(str(path))
+
+            spec = importer.find_spec("theme")
+            module = iu.module_from_spec(spec)
+            sys.modules["theme"] = module
+            spec.loader.exec_module(module)
+
+            res_spec = importer.find_spec("res")
+            res_module = iu.module_from_spec(res_spec)
+            sys.modules["res"] = res_module
+            spec.loader.exec_module(res_module)
+
+            stylesheet_data = importer.get_data(module.STYLESHEET)
+            self.setStyleSheet(str(stylesheet_data, encoding="utf-8"))
+            palette = make_palette(module.PALETTE_COLORS)
+            self.setPalette(palette)
+            style = TchaProxyStyle()
+            self.setStyle(style)
+
+    def connect_signals(self) -> None:
+        self.aboutToQuit.connect(self.on_quitting)
 
     def language_dialog(self) -> Locale:
         language, result = QInputDialog.getItem(
@@ -165,6 +232,163 @@ class AppCore(QApplication):
                     return Locale.from_int(i)
         return getattr(Defaults, "language")
 
+    def on_app_action(self, action: AppAction, value: typing.Any = None) -> None:
+        match action:
+            case AppAction.NoAction:
+                return
+            case AppAction.NewFile:
+                self.create_editor()
+            case AppAction.OpenFile:
+                self.open_file(value)
+            case AppAction.Settings:
+                self.open_settings(value)
+            case AppAction.StartDialog:
+                self.open_start_dialog(True)
+            case AppAction.CourseExplorer:
+                self.open_course_exp(value)
+
+    def startup_window(self, argv=None) -> QWidget:
+        # TODO: Implement argument evaluation on application start
+        startup_window = StartWindow(self._file_model, self._schedule_model)
+        startup_window.appActionTriggered[AppAction, QWidget].connect(
+            self.on_app_action
+        )
+        startup_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
+        startup_window.appActionTriggered[AppAction].connect(self.on_app_action)
+        self._start_dialog = startup_window
+        return startup_window
+
+    def opened_editors(self) -> list[Editor]:
+        windows = QApplication.topLevelWidgets()
+        return list(filter(lambda x: isinstance(x, Editor), windows))
+
+    def opened_start_dialog(self) -> StartWindow | None:
+        return self._start_dialog
+
+    def create_editor(
+        self,
+    ) -> None:
+        """Creates an editor with a new LessonFile object."""
+        lf = LessonFile()
+        lf.open("w")
+        editor_window = Editor(
+            self._course_model, self._schedule_model, self._edefinitions, lf
+        )
+        editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
+        editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
+        editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
+        # editor_window.fileSaved.connect()
+        editor_window.show()
+        editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
+
+        if self._start_dialog:
+            self._start_dialog.close()
+            self._start_dialog = None
+
+    def open_file(self, path: Path) -> None:
+        if (
+            path
+            and path.exists()
+            and str(path) not in [editor.path for editor in self.opened_editors()]
+        ):
+            try:
+                lf = LessonFile()
+                lf.open("r", str(path))
+                editor_window = Editor(
+                    self._course_model, self._schedule_model, self._edefinitions, lf
+                )
+                editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
+                editor_window.appActionTriggered[AppAction, Path].connect(
+                    self.on_app_action
+                )
+                editor_window.appActionTriggered[AppAction, QWidget].connect(
+                    self.on_app_action
+                )
+                editor_window.show()
+                editor_window.ui.ac_recent.setMenu(
+                    self._file_model.export_recent_as_menu(6)
+                )
+
+            except ValueError as e:
+                wrapped_error = PyException(e, True)
+                lf.error_handler.log(wrapped_error, "Lesson model could not be loaded")
+                lf.close()
+
+            except CriticalError:
+                lf.error_handler.log_msg(
+                    "The reading operation was terminated because of a previous critical error."
+                )
+                lf.close()
+
+            finally:
+                lf.error_handler.show_result(
+                    tr("File reading error"),
+                    tr(
+                        "There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."
+                    ),
+                    tr(
+                        "The file could not be read because it is either corrupted or has an invalid structure."
+                    ),
+                )
+
+                if self._start_dialog:
+                    self._start_dialog.close()
+                    self._start_dialog = None
+                self._file_model.append_file(str(Path))
+                editor_window.set_recent_files(
+                    self._file_model.export_recent_as_menu(6)
+                )
+
+        else:
+            QMessageBox.information(
+                None,
+                tr("Open lesson-file"),
+                tr("File is already open or file does not exist."),
+            )
+
+    def open_course_exp(self, parent=None) -> None:
+        dialog = DbManager(self._course_model, self._schedule_model, parent)
+        dialog.exec()
+
+    def open_settings(self, parent=None) -> None:
+        print("Open Settings")
+        return_flags = SettingsDialog.get_settings(
+            parent, self._course_model.database(), Settings.qsettings()
+        )
+        print("Return flags: ", return_flags)
+        if ReturnFlags.Restart & return_flags:
+            print("Restarting application")
+            self.restartRequested.emit()
+            return
+        if ReturnFlags.UpdateStyle & return_flags:
+            print("Updating application style")
+            self._load_theme(
+                Settings.qsettings().value("User/appearance", "light", str)
+            )
+        if ReturnFlags.UpdateLocale & return_flags:
+            print("Updating language")
+            pass
+
+    def open_start_dialog(self, file_mode=False) -> None:
+        if not self.opened_start_dialog():
+            window = StartWindow(self._file_model, self._schedule_model)
+            window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
+            window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
+            window.appActionTriggered[AppAction].connect(self.on_app_action)
+            self._start_dialog = window
+            if file_mode:
+                debug_tag = (
+                    "Debug-Mode"
+                    if Settings.qsettings().value("Application/debug", False, bool)
+                    else ""
+                )
+                window.ui.ac_new.setVisible(False)
+                window.ui.ac_settings.setVisible(False)
+                window.setWindowTitle(f"{tr('Open File')} {debug_tag}")
+            window.show()
+        else:
+            self.opened_start_dialog().show()
+
     def db(self) -> QSqlDatabase | None:
         return self._db
 
@@ -172,193 +396,6 @@ class AppCore(QApplication):
         self.quit()
         os.execv(sys.executable, ["python"] + sys.argv)
 
-
-class MainWindow(MainView):
-    restartRequested = pyqtSignal()
-
-    def __init__(self, db: QSqlDatabase, parent=None) -> None:
-        super().__init__(parent)
-
-        # Models
-        self.schedules = ScheduleModel(db, self)
-        self.courses = CourseModel(db, self)
-
-        # Attributes
-        self.tab_counter = 0
-        self.open_paths = []  # TODO: Get rid of
-        self.element_definitions = get_all_definitions()
-
-        self.setStatusBar(StatusBar(self))
-        self.create_start()
-        self.connect_signals()
-        self.set_close_buttons()
-
-    def connect_signals(self) -> None:
-        self.tab_widget.tabCloseRequested.connect(self.delete_tab)
-        self.tab_widget.currentChanged.connect(self.set_current_status_bar)
-
-    def evoke_error(self, code: int, info: str = "") -> None:
-        match code:
-            case 1:
-                print("Database not open")
-            case 2:
-                print("")
-            case 3:
-                print("Structure wrong")
-
-    def set_close_buttons(self) -> None:
-        self.tab_widget.tabBar().tabButton(
-            0, QTabBar.ButtonPosition.RightSide
-        ).deleteLater()
-        self.tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
-
-    def set_current_status_bar(self) -> None:
-        print("Status bar changed")
-        self.statusBar().set_container(self.tab_widget.currentWidget().statusbar)
-        self.statusBar().reformat()
-
-    def create_start(self):
-        startInst = Start(self.schedules, self.courses, self)
-        startInst.editorRequest.connect(self.create_editor)
-        startInst.openFileRequest.connect(self.load_editor)
-        startInst.settingsRequest.connect(self.open_settings)
-        self.tab_widget.addTab(startInst, tr("Start"))
-        self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(startInst))
-        self.set_current_status_bar()
-
-    def create_editor(self) -> None:
-        lessonfile = LessonFile()
-        lessonfile.open("w")
-        editorInst = EditorTab(
-            self.courses, self.schedules, self.element_definitions, lessonfile, self
-        )
-        editorInst.nameChanged.connect(self.change_tab_name)
-        self.tab_widget.addTab(editorInst, tr("Unnamed"))
-        self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
-
-    def load_editor(self, path: str) -> None:
-        # TODO: Check if editor with same path is open using is_open()
-
-        if path not in self.open_paths:
-            try:
-                lessonfile = LessonFile()
-                lessonfile.open("r", path)
-                editorInst = EditorTab(
-                    self.courses,
-                    self.schedules,
-                    self.element_definitions,
-                    lessonfile,
-                    self,
-                )
-                editorInst.nameChanged.connect(self.change_tab_name)
-
-                self.tab_widget.addTab(editorInst, basename(path))
-                self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(editorInst))
-                self.open_paths.append(path)
-
-            except ValueError as e:
-                wrapped_error = PyException(e, True)
-                lessonfile.error_handler.log(
-                    wrapped_error, "Lesson model could not be loaded"
-                )
-                lessonfile.close()
-
-            except CriticalError:
-                lessonfile.error_handler.log_msg(
-                    "The reading operation was terminated because of a previous critical error."
-                )
-                lessonfile.close()
-
-            finally:
-                lessonfile.error_handler.show_result(
-                    tr("File reading error"),
-                    tr(
-                        "There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."
-                    ),
-                    tr(
-                        "The file could not be read because it's either corrupted or has an invalid structure."
-                    ),
-                )
-
-        else:
-            QMessageBox.information(
-                self, tr("Open lesson-file"), tr("File is already open.")
-            )
-
-    def delete_tab(self, i: int):
-        # TODO: Funktion gegebenfalls vereinfachen: close() von editor nutzen??
-        # TODO: open_paths check löschen
-
-        """Deletes a tab and in case of EditorTab checks if progess is unsaved."""
-        print("Closing tab", i)
-        widget = self.tab_widget.widget(i)
-        if isinstance(widget, EditorTab):
-            # Detach widget from tab first
-            widget.ui.table.close_current_editor()
-            if widget.lessonfile.path:
-                print("Deleting path")
-                self.open_paths.remove(widget.lessonfile.path)
-            if widget.changes_unsaved:
-                msgBox = QMessageBox(
-                    QMessageBox.Icon.Information,
-                    "Teachart",
-                    tr(
-                        "The document has been modified. Do you want to save your changes?"
-                    ),
-                    QMessageBox.StandardButton.Save
-                    | QMessageBox.StandardButton.Discard
-                    | QMessageBox.StandardButton.Cancel,
-                    self,
-                )
-                rtrn = msgBox.exec()
-                if rtrn == QMessageBox.StandardButton.Save:
-                    saved = widget.save_document()
-                    if saved:
-                        pass
-                    else:
-                        return
-                elif rtrn == QMessageBox.StandardButton.Discard:
-                    pass
-                elif rtrn == QMessageBox.StandardButton.Cancel:
-                    return
-                else:
-                    raise ValueError("Messagebox returned unreadble value")
-
-            widget.close()  # Then clean up resources
-            self.tab_widget.removeTab(i)
-            widget.deleteLater()
-
-    def is_open(self, path: str) -> None:
-        """Checks if an editor instance with the given path is open."""
-        # TODO: Impement by iterating over editor instances and checking their LessonFile objects
-        ...
-
-    def change_tab_name(self, tab: EditorTab, name: str) -> None:
-        index = self.tab_widget.indexOf(tab)
-        self.tab_widget.setTabText(index, name)
-        self.open_paths.append(tab.lessonfile.path)
-
-    def open_settings(self) -> None:
-        return_flags = SettingsDialog.get_settings(
-            self, self.courses.database(), Settings.qsettings()
-        )
-        print("Return flags: ", return_flags)
-        if ReturnFlags.Restart in return_flags:
-            print("Restarting application")
-            self.restartRequested.emit()
-            return
-        if ReturnFlags.UpdateStyle in return_flags:
-            print("Updating application style")
-            pass
-        if ReturnFlags.UpdateLocale in return_flags:
-            print("Updating language")
-            pass
-
-    def _update_appearance(self) -> None: ...
-
-    def _update_style(self) -> None: ...
-
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
-        for i in range(self.tab_widget.count()):
-            self.delete_tab(i)
-        super().closeEvent(a0)
+    def on_quitting(self) -> None:
+        self.qsettings.setValue("Application/recent", self._file_model.export_recent())
+        self.qsettings.setValue("Application/pinned", self._file_model.export_pinned())

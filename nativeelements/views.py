@@ -1,21 +1,34 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFontComboBox, QSpacerItem, QSizePolicy,
-                             QPushButton, QFrame, QWidgetAction, QButtonGroup, QLineEdit, QMenu)
-from PyQt6.QtCore import QSize, QCoreApplication, Qt
-from PyQt6.QtGui import QIcon, QPixmap, QActionGroup
-from ui.StyledWidget import fromStyle, convertColors
-from ui.element_toolsets import FontSizeBox
-from ui.element_toolsets import ColorSplitButton, ColorMenu
+from PyQt6.QtCore import QCoreApplication, QSize, Qt
+from PyQt6.QtGui import QActionGroup, QColor
+from PyQt6.QtWidgets import (
+    QButtonGroup,
+    QFontComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLineEdit,
+    QMenu,
+    QSizePolicy,
+    QSpacerItem,
+    QStyle,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    QWidgetAction,
+)
+
+from tcha.styling import SvgIcon
 from ui.commons import SwitchButton
+from ui.element_toolsets import ColorMenu, FontSizeBox
+from ui.StyledWidget import convertColors
+
 
 class TextEditorMenuView:
-    
     def setUi(self, agent: QMenu):
         agent.setObjectName("TextEditorMenu")
 
         self.wac_textTools = QWidgetAction(agent)
 
         self.tools_widget = QWidget(agent)
-        self.tools_widget.setStyleSheet(fromStyle("Toolbar"))
         self.text_tools_layout = QVBoxLayout(self.tools_widget)
         self.tools_widget.setLayout(self.text_tools_layout)
 
@@ -26,7 +39,7 @@ class TextEditorMenuView:
         self.row1.setObjectName("Row1")
 
         self.cb_Font = QFontComboBox(self.tools_widget)
-        self.cb_Font.setMaximumSize(QSize(120, 25))
+        # self.cb_Font.setMaximumSize(QSize(120, 25))
         self.cb_Font.setObjectName("CB_Font")
         self.row1.addWidget(self.cb_Font)
 
@@ -44,71 +57,137 @@ class TextEditorMenuView:
         self.row2.setSpacing(2)
         self.row2.setObjectName("Row2")
 
-        spa1 = QSpacerItem(15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spa1 = QSpacerItem(
+            15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         self.row2.addItem(spa1)
 
-        self.pb_Bold = QPushButton(self.tools_widget)
-        self.pb_Bold.setMaximumSize(QSize(22, 22))
-        self.pb_Bold.setText("")
-        icon2 = QIcon()
-        icon2.addPixmap(QPixmap("resources/icons/ic_bold.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pb_Bold.setIcon(icon2)
-        self.pb_Bold.setIconSize(QSize(20, 20))
-        self.pb_Bold.setCheckable(True)
-        self.pb_Bold.setObjectName("PB_Bold")
-        self.row2.addWidget(self.pb_Bold)
+        self.tb_Bold = QToolButton(self.tools_widget)
+        self.tb_Bold.setMaximumSize(QSize(22, 22))
+        self.tb_Bold.setText("")
+        icon2 = SvgIcon("resources/icons/ic_bold.svg")
+        self.tb_Bold.setIcon(icon2)
+        self.tb_Bold.setIconSize(QSize(20, 20))
+        self.tb_Bold.setCheckable(True)
+        self.tb_Bold.setObjectName("PB_Bold")
+        self.row2.addWidget(self.tb_Bold)
 
-        self.pb_Italic = QPushButton(self.tools_widget)
-        self.pb_Italic.setFixedSize(QSize(22, 22))
-        self.pb_Italic.setText("")
-        icon3 = QIcon()
-        icon3.addPixmap(QPixmap("resources/icons/ic_italic.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pb_Italic.setIcon(icon3)
-        self.pb_Italic.setIconSize(QSize(20, 20))
-        self.pb_Italic.setCheckable(True)
-        self.pb_Italic.setObjectName("PB_Italic")
-        self.row2.addWidget(self.pb_Italic)
+        self.tb_Italic = QToolButton(self.tools_widget)
+        self.tb_Italic.setFixedSize(QSize(22, 22))
+        self.tb_Italic.setText("")
+        icon3 = SvgIcon("resources/icons/ic_italic.svg")
+        self.tb_Italic.setIcon(icon3)
+        self.tb_Italic.setIconSize(QSize(20, 20))
+        self.tb_Italic.setCheckable(True)
+        self.tb_Italic.setObjectName("PB_Italic")
+        self.row2.addWidget(self.tb_Italic)
 
-        self.pb_Underline = QPushButton(self.tools_widget)
-        self.pb_Underline.setFixedSize(QSize(22, 22))
-        self.pb_Underline.setText("")
-        icon4 = QIcon()
-        icon4.addPixmap(QPixmap("resources/icons/ic_underline.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pb_Underline.setIcon(icon4)
-        self.pb_Underline.setIconSize(QSize(20, 20))
-        self.pb_Underline.setCheckable(True)
-        self.pb_Underline.setObjectName("PB_Underline")
-        self.row2.addWidget(self.pb_Underline)
+        self.tb_Underline = QToolButton(self.tools_widget)
+        self.tb_Underline.setFixedSize(QSize(22, 22))
+        self.tb_Underline.setText("")
+        icon4 = SvgIcon("resources/icons/ic_underline.svg")
+        self.tb_Underline.setIcon(icon4)
+        self.tb_Underline.setIconSize(QSize(20, 20))
+        self.tb_Underline.setCheckable(True)
+        self.tb_Underline.setObjectName("PB_Underline")
+        self.row2.addWidget(self.tb_Underline)
 
-        self.csb_TextColor = ColorSplitButton(agent)
-        self.csb_TextColor.lbutton.setFixedSize(QSize(22, 22))
-        icon5 = QIcon()
-        icon5.addPixmap(QPixmap("resources/icons/ic_textcolor.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.csb_TextColor.lbutton.setIcon(icon5)
-        self.csb_TextColor.lbutton.setIconSize(QSize(20, 20))
-        self.csb_TextColor.lbutton.setFlat(False)
-        self.csb_TextColor.lbutton.setStyleSheet(fromStyle("PB_textcolor"))
-        self.csb_TextColor.lbutton.setObjectName("PB_ApplyColur")
+        self.tb_TextColor = QToolButton(agent)
+        self.tb_TextColor.setFixedSize(QSize(22, 22))
+        icon5 = SvgIcon("resources/icons/ic_textColor.svg")
+        self.tb_TextColor.setIcon(icon5)
+        self.tb_TextColor.setIconSize(QSize(20, 20))
+        self.tb_TextColor.setObjectName("tb_text_color")
+        self.tb_TextColor.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.tb_TextColor.setProperty("color", QColor())
 
-        self.csb_TextColor.rbutton.setFixedSize(QSize(12, 22))
-        self.csb_TextColor.rbutton.setStyleSheet("border-radius: 4px;")
         textcolors = [
-            "#000000", "#434343", "#666666", "#999999", "#b7b7b7", "#cccccc", "#d9d9d9", "#efefef", "#f3f3f3", "#ffffff",
-            "#980000", "#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#4a86e8", "#0000ff", "#9900ff", "#ff00ff", 
-            "#e6b8af", "#f4cccc", "#fce5cd", "#fff2cc", "#d9ead3", "#d0e0e3", "#c9daf8", "#cfe2f3", "#d9d2e9", "#ead1dc", 
-            "#dd7e6b", "#ea9999", "#f9cb9c", "#ffe599", "#b6d7a8", "#a2c4c9", "#a4c2f4", "#9fc5e8", "#b4a7d6", "#d5a6bd", 
-            "#cc4125", "#e06666", "#f6b26b", "#ffd966", "#93c47d", "#76a5af", "#6d9eeb", "#6fa8dc", "#8e7cc3", "#c27ba0", 
-            "#a61c00", "#cc0000", "#e69138", "#f1c232", "#6aa84f", "#45818e", "#3c78d8", "#3d85c6", "#674ea7", "#a64d79", 
-            "#85200c", "#990000", "#b45f06", "#bf9000", "#38761d", "#134f5c", "#1155cc", "#0b5394", "#351c75", "#741b47", 
-            "#5b0f00", "#660000", "#783f04", "#7f6000", "#274e13", "#0c343d", "#1c4587", "#073763", "#20124d", "#4c1130"
-                    ]
-        self.color_menu = ColorMenu(convertColors(textcolors), self.csb_TextColor.rbutton)
-        self.csb_TextColor.rbutton.setMenu(self.color_menu)
-        self.csb_TextColor.rbutton.setObjectName("TextColor")
-        self.row2.addWidget(self.csb_TextColor)
+            "#000000",
+            "#434343",
+            "#666666",
+            "#999999",
+            "#b7b7b7",
+            "#cccccc",
+            "#d9d9d9",
+            "#efefef",
+            "#f3f3f3",
+            "#ffffff",
+            "#980000",
+            "#ff0000",
+            "#ff9900",
+            "#ffff00",
+            "#00ff00",
+            "#00ffff",
+            "#4a86e8",
+            "#0000ff",
+            "#9900ff",
+            "#ff00ff",
+            "#e6b8af",
+            "#f4cccc",
+            "#fce5cd",
+            "#fff2cc",
+            "#d9ead3",
+            "#d0e0e3",
+            "#c9daf8",
+            "#cfe2f3",
+            "#d9d2e9",
+            "#ead1dc",
+            "#dd7e6b",
+            "#ea9999",
+            "#f9cb9c",
+            "#ffe599",
+            "#b6d7a8",
+            "#a2c4c9",
+            "#a4c2f4",
+            "#9fc5e8",
+            "#b4a7d6",
+            "#d5a6bd",
+            "#cc4125",
+            "#e06666",
+            "#f6b26b",
+            "#ffd966",
+            "#93c47d",
+            "#76a5af",
+            "#6d9eeb",
+            "#6fa8dc",
+            "#8e7cc3",
+            "#c27ba0",
+            "#a61c00",
+            "#cc0000",
+            "#e69138",
+            "#f1c232",
+            "#6aa84f",
+            "#45818e",
+            "#3c78d8",
+            "#3d85c6",
+            "#674ea7",
+            "#a64d79",
+            "#85200c",
+            "#990000",
+            "#b45f06",
+            "#bf9000",
+            "#38761d",
+            "#134f5c",
+            "#1155cc",
+            "#0b5394",
+            "#351c75",
+            "#741b47",
+            "#5b0f00",
+            "#660000",
+            "#783f04",
+            "#7f6000",
+            "#274e13",
+            "#0c343d",
+            "#1c4587",
+            "#073763",
+            "#20124d",
+            "#4c1130",
+        ]
+        self.color_menu = ColorMenu(convertColors(textcolors), self.tb_TextColor)
+        self.tb_TextColor.setMenu(self.color_menu)
+        self.row2.addWidget(self.tb_TextColor)
 
         l1 = QFrame(self.tools_widget)
-        l1.setStyleSheet("background: none")
         l1.setFrameShape(QFrame.Shape.VLine)
         l1.setFrameShadow(QFrame.Shadow.Sunken)
         l1.setObjectName("l1")
@@ -117,37 +196,35 @@ class TextEditorMenuView:
         self.align_group = QButtonGroup()
         self.align_group.setExclusive(True)
 
-        self.pb_AlignLeft = QPushButton(self.tools_widget)
-        self.pb_AlignLeft.setFixedSize(QSize(22, 22))
-        self.pb_AlignLeft.setText("")
-        icon6 = QIcon()
-        icon6.addPixmap(QPixmap("resources/icons/ic_alignleft.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pb_AlignLeft.setIcon(icon6)
-        self.pb_AlignLeft.setIconSize(QSize(20, 20))
-        self.pb_AlignLeft.setCheckable(True)
-        self.pb_AlignLeft.setObjectName("PB_AlignLeft")
-        self.pb_AlignLeft.setChecked(True)
-        self.align_group.addButton(self.pb_AlignLeft)
-        self.row2.addWidget(self.pb_AlignLeft)
+        self.tb_AlignLeft = QToolButton(self.tools_widget)
+        self.tb_AlignLeft.setFixedSize(QSize(22, 22))
+        self.tb_AlignLeft.setText("")
+        icon6 = SvgIcon("resources/icons/ic_alignleft.svg")
+        self.tb_AlignLeft.setIcon(icon6)
+        self.tb_AlignLeft.setIconSize(QSize(20, 20))
+        self.tb_AlignLeft.setCheckable(True)
+        self.tb_AlignLeft.setObjectName("PB_AlignLeft")
+        self.tb_AlignLeft.setChecked(True)
+        self.align_group.addButton(self.tb_AlignLeft)
+        self.row2.addWidget(self.tb_AlignLeft)
 
-        self.pb_AlignCenter = QPushButton(self.tools_widget)
-        self.pb_AlignCenter.setFixedSize(QSize(22, 22))
-        self.pb_AlignCenter.setText("")
-        icon7 = QIcon()
-        icon7.addPixmap(QPixmap("resources/icons/ic_aligncenter.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pb_AlignCenter.setIcon(icon7)
-        self.pb_AlignCenter.setIconSize(QSize(20, 20))
-        self.pb_AlignCenter.setCheckable(True)
-        self.pb_AlignCenter.setObjectName("PB_AlignCenter")
-        self.align_group.addButton(self.pb_AlignCenter)
-        self.row2.addWidget(self.pb_AlignCenter)
+        self.tb_AlignCenter = QToolButton(self.tools_widget)
+        self.tb_AlignCenter.setFixedSize(QSize(22, 22))
+        self.tb_AlignCenter.setText("")
+        icon7 = SvgIcon("resources/icons/ic_aligncenter.svg")
+        self.tb_AlignCenter.setIcon(icon7)
+        self.tb_AlignCenter.setIconSize(QSize(20, 20))
+        self.tb_AlignCenter.setCheckable(True)
+        self.tb_AlignCenter.setObjectName("PB_AlignCenter")
+        self.align_group.addButton(self.tb_AlignCenter)
+        self.row2.addWidget(self.tb_AlignCenter)
 
         self.text_tools_layout.addLayout(self.row2)
 
         agent.addAction(self.wac_textTools)
 
         agent.addSeparator()
-        
+
         self.ac_Cut = agent.addAction("")
         self.ac_Cut.setEnabled(False)
         self.ac_Copy = agent.addAction("")
@@ -160,21 +237,33 @@ class TextEditorMenuView:
         sep2 = agent.addSeparator()
         self.table_group.addAction(sep2)
 
-        self.ac_RowBottom = agent.addAction(QIcon("resources/icons/ic_insertRowBottom.svg"), "")
+        self.ac_RowBottom = agent.addAction(
+            SvgIcon("resources/icons/ic_insertRowBottom.svg"), ""
+        )
         self.table_group.addAction(self.ac_RowBottom)
-        self.ac_RowTop = agent.addAction(QIcon("resources/icons/ic_insertRowTop.svg"), "")
+        self.ac_RowTop = agent.addAction(
+            SvgIcon("resources/icons/ic_insertRowTop.svg"), ""
+        )
         self.table_group.addAction(self.ac_RowTop)
-        self.ac_ColumnRight = agent.addAction(QIcon("resources/icons/ic_insertColumnRight.svg"), "")
+        self.ac_ColumnRight = agent.addAction(
+            SvgIcon("resources/icons/ic_insertColumnRight.svg"), ""
+        )
         self.table_group.addAction(self.ac_ColumnRight)
-        self.ac_ColumnLeft = agent.addAction(QIcon("resources/icons/ic_insertColumnLeft.svg"), "")
+        self.ac_ColumnLeft = agent.addAction(
+            SvgIcon("resources/icons/ic_insertColumnLeft.svg"), ""
+        )
         self.table_group.addAction(self.ac_ColumnLeft)
 
         sep3 = agent.addSeparator()
         self.table_group.addAction(sep3)
 
-        self.ac_DeleteRow = agent.addAction(QIcon("resources/icons/ic_deleterow.svg"), "")
+        self.ac_DeleteRow = agent.addAction(
+            SvgIcon("resources/icons/ic_deleterow.svg"), ""
+        )
         self.table_group.addAction(self.ac_DeleteRow)
-        self.ac_DeleteColumn = agent.addAction(QIcon("resources/icons/ic_deletecolumn.svg"), "")
+        self.ac_DeleteColumn = agent.addAction(
+            SvgIcon("resources/icons/ic_deletecolumn.svg"), ""
+        )
         self.table_group.addAction(self.ac_DeleteColumn)
 
         self.hyperlink_group = QActionGroup(agent)
@@ -197,21 +286,22 @@ class TextEditorMenuView:
         self.ac_ColumnLeft.setText(_translate("TextEditorMenu", "Insert column left"))
         self.ac_ColumnRight.setText(_translate("TextEditorMenu", "Insert colum right"))
         self.ac_DeleteRow.setText(_translate("TextEditorMenu", "Delete selected row"))
-        self.ac_DeleteColumn.setText(_translate("TextEditorMenu", "Delete selected column"))
-        self.ac_DeleteHyperlink.setText(_translate("TextEditorMenu", "Delete hyperlink"))
+        self.ac_DeleteColumn.setText(
+            _translate("TextEditorMenu", "Delete selected column")
+        )
+        self.ac_DeleteHyperlink.setText(
+            _translate("TextEditorMenu", "Delete hyperlink")
+        )
+
 
 class AudioEditorView:
-
     def setUi(self, agent: QWidget) -> None:
-        agent.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)        
+        # agent.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         # agent.setMinimumWidth(90)
-        agent.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        agent.setStyleSheet(fromStyle("AudioElement"))
         agent.setAutoFillBackground(True)
-        print("Audio size", agent.width(), agent.height())
 
         self.main_layout = QVBoxLayout(agent)
-        self.main_layout.setContentsMargins(0, 0, 0, -5)
+        self.main_layout.setContentsMargins(0, 0, 0, -2)
         agent.setLayout(self.main_layout)
 
         self.main_frame = QFrame(agent)
@@ -219,31 +309,39 @@ class AudioEditorView:
 
         self.frame_layout = QHBoxLayout(self.main_frame)
 
-        self.frame_layout.setContentsMargins(3, 3, 7, 3)
+        self.frame_layout.setContentsMargins(0, 0, 5, 0)
+        self.frame_layout.setSpacing(2)
 
         self.main_frame.setLayout(self.frame_layout)
 
-        self.swi_PlayPause = SwitchButton("resources/icons/ic_play.svg", "resources/icons/ic_pause.svg", self.main_frame)
+        self.swi_PlayPause = SwitchButton(
+            agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
+            agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause),
+            self.main_frame,
+        )
         self.swi_PlayPause.setMaximumSize(QSize(23, 23))
         self.swi_PlayPause.setObjectName("swi_PlayPause")
+        self.swi_PlayPause.setFlat(True)
         self.frame_layout.addWidget(self.swi_PlayPause)
 
         self.le_name = QLineEdit(self.main_frame)
         self.le_name.setObjectName("self.le_name")
         # self.le_name.setMinimumWidth(90)
-        self.le_name.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.le_name.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         # self.le_name.setMaximumWidth(300)
         self.frame_layout.addWidget(self.le_name)
 
-class PictureEditorView:
 
+class PictureEditorView:
     def setUi(self, agent: QWidget):
         agent.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         agent.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         agent.setObjectName("PictureElement")
         self.main_layout = QVBoxLayout(agent)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.main_layout.setContentsMargins(3,3,3,3)
+        self.main_layout.setContentsMargins(3, 3, 3, 3)
         self.main_layout.setSpacing(0)
 
         # self.piclabel = PictureLabel(self)
@@ -253,4 +351,4 @@ class PictureEditorView:
         agent.setLayout(self.main_layout)
 
     def fitToPicture(self) -> None:
-        self.setFixedSize(self.piclabel.width()+6, self.piclabel.height()+6)
+        self.setFixedSize(self.piclabel.width() + 6, self.piclabel.height() + 6)

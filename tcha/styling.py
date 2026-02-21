@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import os
 import os.path as osp
 import platform
@@ -21,13 +22,169 @@ from PyQt6.QtGui import (
     QPainter,
     QPalette,
     QPixmap,
+    QRgba64,
 )
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QProxyStyle, QStyleOption, QWidget
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
 
-type ColorModifier = NewType("ColorModifier", tuple[float, float, float])
+ColorModifier = NewType("ColorModifier", tuple[float, float, float])
+
+ET.register_namespace("", "http://www.w3.org/2000/svg")
+
+
+def make_palette(color_def: dict[str, QRgba64]) -> QPalette:
+    palette = QPalette()
+    # palette.setColor(
+    #     QPalette.ColorRole.WindowText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Button,
+    #     QColor.fromRgba64(color_def.get('<c k="treeSectionHeader.background"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.ButtonText,
+    #     QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Base,
+    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Window,
+    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Highlight,
+    #     QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.HighlightedText,
+    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.AlternateBase,
+    #     QColor.fromRgba64(color_def.get('<c k="list.alternateBackground"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.ToolTipBase,
+    #     QColor.fromRgba64(color_def.get('<c k="background:base" state="popup"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.ToolTipText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
+    # )
+    # if hasattr(QPalette.ColorRole, "Foreground"):
+    #     palette.setColor(
+    #         QPalette.ColorRole.Foreground,  # type: ignore
+    #         QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
+    #     )
+
+    # palette.setColor(
+    #     QPalette.ColorRole.Light,
+    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Midlight,
+    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Dark,
+    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Mid, QColor.fromRgba64(color_def.get('<c k="border:base"/>'))
+    # )
+    # palette.setColor(
+    #     QPalette.ColorRole.Shadow,
+    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
+    # )
+
+    # # disabled
+    # palette.setColor(
+    #     QPalette.ColorGroup.Disabled,
+    #     QPalette.ColorRole.WindowText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorGroup.Disabled,
+    #     QPalette.ColorRole.ButtonText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorGroup.Disabled,
+    #     QPalette.ColorRole.Highlight,
+    #     QColor.fromRgba64(
+    #         color_def.get(
+    #             '<c k="foreground:base" state="disabledSelectionBackground"/>'
+    #         )
+    #     ),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorGroup.Disabled,
+    #     QPalette.ColorRole.HighlightedText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
+    # )
+
+    # # inactive
+    # palette.setColor(
+    #     QPalette.ColorGroup.Inactive,
+    #     QPalette.ColorRole.Highlight,
+    #     QColor.fromRgba64(
+    #         color_def.get(
+    #             '<c k="primary:base" state="list.inactiveSelectionBackground"/>'
+    #         )
+    #     ),
+    # )
+    # palette.setColor(
+    #     QPalette.ColorGroup.Inactive,
+    #     QPalette.ColorRole.HighlightedText,
+    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
+    # )
+
+    palette.setColor(
+        QPalette.ColorRole.Text,
+        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="icon"/>')),
+    )
+    palette.setColor(
+        QPalette.ColorGroup.Disabled,
+        QPalette.ColorRole.Text,
+        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
+    )
+    palette.setColor(
+        QPalette.ColorRole.Link,
+        QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
+    )
+    palette.setColor(
+        QPalette.ColorRole.LinkVisited,
+        QColor.fromRgba64(color_def.get('<c k="linkVisited"/>')),
+    )
+    if hasattr(QPalette.ColorRole, "PlaceholderText"):
+        palette.setColor(
+            QPalette.ColorRole.PlaceholderText,
+            QColor.fromRgba64(
+                color_def.get('<c k="foreground:base" state="input.placeholder"/>')
+            ),
+        )
+
+    palette.setColor(
+        QPalette.ColorGroup.Disabled,
+        QPalette.ColorRole.Link,
+        QColor.fromRgba64(
+            color_def.get(
+                '<c k="foreground:base" state="disabledSelectionBackground"/>'
+            )
+        ),
+    )
+    palette.setColor(
+        QPalette.ColorGroup.Disabled,
+        QPalette.ColorRole.LinkVisited,
+        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
+    )
+
+    return palette
 
 
 def transform_color(color: QColor, alteration: tuple[int, int, int]) -> QColor:
@@ -63,8 +220,8 @@ class Color(QColor):
         if len(clean_str) > 6:
             color = f"#{clean_str[:5]}"
             alpha = int(f"0x{clean_str[-2:]}", base=16)
-            print("Color:", color)
-            print("Alpha:", alpha)
+            # print("Color:", color)
+            # print("Alpha:", alpha)
             color_obj = cls(color)
             color_obj.setAlpha(alpha)
             return color_obj
@@ -197,7 +354,6 @@ class QssTemplate:
         writer = QXmlStreamWriter(f)
         writer.writeStartElement("RCC")
         writer.writeStartElement("qresource")
-        writer.writeAttribute("prefix", "/")
         for filename in os.listdir(self._icon_cache):
             print(f"Write {filename}")
             writer.writeStartElement("file")
@@ -226,9 +382,15 @@ class TchaProxyStyle(QProxyStyle):
             return super().standardIcon(standardIcon, option, widget)
 
         rotate = icon_info.get("rotate", 0)
-        svg = Svg(STANDARD_ICON_MAP["id"]).rotated(rotate)
+        svg = Svg(SVG_RESOURCES[icon_info["id"]]).rotated(rotate)
         icon_engine = SvgIconEngine(svg)
         return QIcon(icon_engine)
+
+
+class SvgIcon(QIcon):
+    def __init__(self, path: str) -> None:
+        engine = SvgIconEngine(Svg.from_file(path))
+        super().__init__(engine)
 
 
 class SvgIconEngine(QIconEngine):
@@ -242,7 +404,12 @@ class SvgIconEngine(QIconEngine):
     def paint(
         self, painter: QPainter, rect: QRect, mode: QIcon.Mode, state: QIcon.State
     ):
-        # TODO: Implement functionality to colour specific paths.
+        # Work with a deep copy to avoid mutating the original SVG
+        svg = Svg(copy.deepcopy(self._svg._tree))
+
+        if self._paths:
+            for path in self._paths.keys():
+                svg = svg.path_colored(path, self._paths[path])
 
         """Paint the icon int ``rect`` using ``painter``."""
         palette = QGuiApplication.palette()
@@ -251,10 +418,13 @@ class SvgIconEngine(QIconEngine):
             color = palette.color(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text)
         else:
             color = palette.text().color()
-        self._svg = self._svg.colored(color)
+        # print("Color", color.name(), color.alpha())
+        svg = svg.colored(color)
 
-        svg_byte = self._svg.to_string()
+        svg_byte = svg.to_string()
+        # print(svg_byte)
         renderer = QSvgRenderer(svg_byte)
+        # print("Svg is valid ", renderer.isValid())
         renderer.render(painter, QRectF(rect))
 
     def set_path_color(self, id: str, color: QColor) -> None:
@@ -290,46 +460,56 @@ class Svg:
                 "Source must be either string containing xml or ElementTree.Element object."
             )
 
+    @classmethod
+    def from_file(cls: Svg, path: str) -> Svg:
+        path_obj = Path(path)
+        return cls(path_obj.read_text("utf-8"))
+
     def colored(self, color: QColor) -> Svg:
         hex_color = color.name(QColor.NameFormat.HexRgb)
         opacity = color.alphaF()
+        # print(opacity)
 
-        self._tree.set("fill", hex_color)
+        tree = copy.deepcopy(self._tree)
+
+        tree.set("fill", hex_color)
 
         if opacity < 1.0:
-            self._tree.set("fill-opacity", str(opacity))
-
+            tree.set("fill-opacity", str(opacity))
         else:
-            self._tree.attrib.pop("fill-opacity,", None)
+            tree.attrib.pop("fill-opacity,", None)
 
-        return Svg(self._tree)
+        return Svg(ET.tostring(tree, "unicode"))
 
     def path_colored(self, id: str, color: QColor) -> Svg:
         """Returns a Svg object with only the path elements with the given id coloured."""
         hex_color = color.name(QColor.NameFormat.HexRgb)
         opacity = color.alphaF()
 
-        for child in self._tree:
+        tree = copy.deepcopy(self._tree)
+
+        for child in tree:
             if child.get("id") == id:
                 child.set("fill", hex_color)
 
         if opacity < 1.0:
-            for child in self._tree:
+            for child in tree:
                 if child.get("id") == id:
                     child.set("fill-opacity", str(opacity))
 
-        return Svg(self._tree)
+        return Svg(ET.tostring(tree, "unicode"))
 
     def rotated(self, rotation: int | None) -> Svg:
+        tree = copy.deepcopy(self._tree)
         if rotation == 0 or rotation is None:
-            return Svg(self._tree)
+            return Svg(tree)
 
-        self._tree.set("transform", f"rotate({rotation}, 12, 12)")
+        tree.set("transform", f"rotate({rotation}, 12, 12)")
 
-        return Svg(self._tree)
+        return Svg(ET.tostring(tree, "unicode"))
 
     def __str__(self):
         return ET.tostring(self._tree)
 
     def to_string(self) -> bytes:
-        return ET.tostring(self._tree)
+        return ET.tostring(self._tree, default_namespace="")

@@ -1,61 +1,74 @@
-from abc import abstractmethod, ABCMeta
-from typing import Type
+from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal, QXmlStreamWriter, QObject, QSize, Qt, QXmlStreamReader
+from abc import ABCMeta, abstractmethod
+from typing import Self, Type
+
+from PyQt6.QtCore import (
+    QEvent,
+    QMimeData,
+    QObject,
+    QSize,
+    Qt,
+    QXmlStreamReader,
+    QXmlStreamWriter,
+    pyqtSignal,
+)
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTextEdit, QFrame, QStyledItemDelegate, QToolBar, QSizePolicy, QMenu
+from PyQt6.QtWidgets import (
+    QFrame,
+    QMainWindow,
+    QMenu,
+    QSizePolicy,
+    QStyledItemDelegate,
+    QTextEdit,
+    QToolBar,
+)
 
-from tcha.resmanager import ResourceObject, ResourceType
-from ui.element_toolsets import ElementOptions
+from tcha.consts import ResourceFlag
+from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
 
-
-ToolBarStyleSheet = """
-QToolButton::menu-indicator {image: none;}
-"""
 
 class BaseElementToolset(QToolBar):
     """Enables interface between user and element editor."""
+
     __metaclass__ = ABCMeta
     called = pyqtSignal(str)
     closed = pyqtSignal()
-    elementActionTriggered = pyqtSignal(QAction)
 
-    
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setFixedHeight(50)
+        self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea)
         self.setFloatable(False)
         self.setMovable(False)
-        self.setIconSize(QSize(23, 23))
-        self.setSizePolicy(
-        QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-        self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea)
-        self.setStyleSheet(ToolBarStyleSheet)
+        self.setIconSize(QSize(22, 22))
+        # self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        # print(f"Size Hint: {self.sizeHint().width()} {self.sizeHint().height()}")
 
     @property
     @abstractmethod
     def name(self) -> str:
         """Returns the name of the toolset as an identifier."""
-        return "" 
-    
+        return ""
+
     @abstractmethod
-    def connect_editor(self, editor: 'BaseElementEditor') -> None:
+    def connect_editor(self, editor: "BaseElementEditor") -> None:
         """Connect signals between editor and toolset to have editing interface.
-           Editor must be made visible and emit called in this method."""
+        Editor must be made visible and emit called in this method."""
         return
-    
-    @property
-    @abstractmethod
-    def element_menu(self) -> ElementOptions:
-        return ElementOptions()    
-    
+
     def close_(self) -> None:
         self.setVisible(False)
-    
+
+
 class BaseElementDelegate(QStyledItemDelegate):
-    def __init__(self, toolset: BaseElementToolset | None, parent = None):
+    def __init__(self, toolset: BaseElementToolset | None, parent=None):
         super().__init__(parent)
         self._toolset = toolset
+
+    def eventFilter(self, object: QObject, event: QEvent):
+        if event.type() == QEvent.Type.FocusOut:
+            return True
+        return super().eventFilter(object, event)
 
 
 class BaseElementModel(QObject):
@@ -65,13 +78,18 @@ class BaseElementModel(QObject):
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         """Writes the DOM-element holding the attributes of the model"""
         return QXmlStreamWriter
-       
+
     @classmethod
     @abstractmethod
     def read(cls, reader: QXmlStreamReader, resobject):
         """Creates a model from the Dom-element and the ResourceObject"""
         return BaseElementModel
-    
+
+    @classmethod
+    @abstractmethod
+    def from_mime_data(cls, resobj: ResourceObject, mime_data: QMimeData) -> Self:
+        return BaseElementModel
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -84,37 +102,55 @@ class BaseElementModel(QObject):
         return ResourceType
 
     @abstractmethod
-    def delegate(self, toolset: BaseElementToolset, parent: QObject | None = None) -> BaseElementDelegate:
+    def delegate(
+        self, toolset: BaseElementToolset, parent: QObject | None = None
+    ) -> BaseElementDelegate:
         """Returns an uninitialised delegate for visualising the model."""
         return BaseElementDelegate(toolset, parent)
-    
+
     @abstractmethod
-    def expected_height(self, width: int) -> int:
+    def sizeHint(self, width: int) -> QSize:
         """Height of the element as seen in the table calculated with the cell's width"""
-        return 30
-    
+        return QSize(100, 30)
+
     @property
     @abstractmethod
     def toolset(self) -> str:
         return ""
-    
+
     @abstractmethod
     def attrs(self) -> tuple[str]:
         return tuple()
 
+
 class BaseElementEditor(QFrame):
     __metaclass__ = ABCMeta
 
-    @abstractmethod   
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    @abstractmethod
     def model(self) -> BaseElementModel:
         return BaseElementModel
-    
-    
+
+    def focusOutEvent(self, a0):
+        return
+
+
 class BaseTextElementEditor(QTextEdit):
-    @abstractmethod   
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    @abstractmethod
     def model(self) -> BaseElementModel:
         return BaseElementModel
-    
+
+    def focusOutEvent(self, e):
+        return
+
+
 class BaseElementDefinitions:
     __metaclass__ = ABCMeta
 
@@ -129,18 +165,23 @@ class BaseElementDefinitions:
     def create_model(resource: ResourceObject) -> BaseElementModel:
         """Creates an initialised model object using the passsed RespurceObject."""
         return BaseElementModel()
-    
+
+    @staticmethod
+    @abstractmethod
+    def resource_flag() -> ResourceFlag:
+        return ResourceFlag.NoResource
+
     @staticmethod
     @abstractmethod
     def get_file(parent=None) -> str | None:
         """Gets an external resource if required else None."""
         return None
-    
-    @staticmethod 
+
+    @staticmethod
     def model() -> Type[BaseElementModel]:
         """Returns the model class object."""
         return BaseElementModel
-    
+
     @staticmethod
     @abstractmethod
     def type() -> ResourceType:
@@ -151,13 +192,30 @@ class BaseElementDefinitions:
     def action(parent: QMenu) -> QAction:
         """QAction found in 'Add to Cell' menu."""
         return QAction()
-    
+
     @staticmethod
     @abstractmethod
-    def toolset() -> BaseElementToolset:
-        return BaseElementToolset()
-    
+    def toolset(parent: QMainWindow) -> BaseElementToolset:
+        return BaseElementToolset(parent)
+
     @staticmethod
     @abstractmethod
     def editor(model: BaseElementModel) -> BaseElementEditor:
         return BaseElementEditor(model)
+
+    @staticmethod
+    @abstractmethod
+    def mime_types() -> list[str]:
+        return [""]
+
+    @staticmethod
+    @abstractmethod
+    def supports_mime_data(mime_data: QMimeData) -> bool:
+        return False
+
+    @staticmethod
+    @abstractmethod
+    def model_from_mime_data(
+        rescont: ResourceContainer, mime_data: QMimeData
+    ) -> BaseElementModel | None:
+        return None

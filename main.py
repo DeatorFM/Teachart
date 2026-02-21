@@ -3,7 +3,7 @@ import sys
 
 from PyQt6.QtCore import QCoreApplication, QDir, QProcess
 
-from tcha.core import AppCore, MainWindow
+from tcha.core import AppCore
 
 
 def restart() -> None:
@@ -17,9 +17,8 @@ def main() -> None:
     root = os.path.dirname(os.path.abspath(__file__))
     QDir.addSearchPath("icons", os.path.join(root, "resources/icons"))
     QDir.addSearchPath("stylesheet", os.path.join(root, "resources/stylesheets"))
-    vm = MainWindow(app.db())
-    vm.restartRequested.connect(restart)
-    vm.show()
+    mw = app.startup_window()
+    mw.show()
     sys.exit(app.exec())
 
 

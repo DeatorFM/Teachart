@@ -39,6 +39,7 @@ SVG_RESOURCES = {
     "list": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 13c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0 4c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm4 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zm0 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zM7 8c0 .55.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1zm-3 5c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0 4c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm4 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zm0 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zM7 8c0 .55.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1z"/></svg>',
     "minimize": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 19h10c.55 0 1 .45 1 1s-.45 1-1 1H7c-.55 0-1-.45-1-1s.45-1 1-1z"/></svg>',
     "not_interested": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.902 7.902 0 0 1 12 20zm6.31-3.1L7.1 5.69A7.902 7.902 0 0 1 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>',
+    "open": '<svg height="24px" viewBox="0 0 24 24" width="24px" fill="#e3e3e3"><path d="M0 0h24v24H0z" fill="none"/><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>',
     "pause": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>',
     "play_arrow": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A.998.998 0 0 0 8 6.82z"/></svg>',
     "question_mark": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7.92 7.54c-.8-.34-1.14-1.33-.66-2.05C8.23 4.05 9.85 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.15.27-.24.49-.3.94-.09.73-.69 1.3-1.43 1.3-.87 0-1.58-.75-1.48-1.62.06-.51.18-1.04.46-1.54.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.17 0-1.93.61-2.4 1.34-.35.57-1.08.75-1.69.5zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z"/></svg>',
@@ -55,10 +56,10 @@ SVG_RESOURCES = {
     "vertical_line": '<svg enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px"><g><rect fill-rule="evenodd" height="24" width="1" x="11" y="0"/></g></svg>',
     "visibility_off": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 6.5c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l3.06 3.06c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l2.17 2.17c.47-.14.96-.24 1.47-.24zM2.71 3.16a.996.996 0 0 0 0 1.41l1.97 1.97A11.892 11.892 0 0 0 1 11.5C2.73 15.89 7 19 12 19c1.52 0 2.97-.3 4.31-.82l2.72 2.72a.996.996 0 1 0 1.41-1.41L4.13 3.16c-.39-.39-1.03-.39-1.42 0zM12 16.5c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16c-.65.32-1.37.5-2.14.5zm2.97-5.33a2.97 2.97 0 0 0-2.64-2.64l2.64 2.64z"/></svg>',
     "volume_mute": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L11 9H8c-.55 0-1 .45-1 1z"/></svg>',
-    "volume_up": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L7 9H4c-.55 0-1 .45-1 1zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 4.45v.2c0 .38.25.71.6.85C17.18 6.53 19 9.06 19 12s-1.82 5.47-4.4 6.5c-.36.14-.6.47-.6.85v.2c0 .63.63 1.07 1.21.85C18.6 19.11 21 15.84 21 12s-2.4-7.11-5.79-8.4c-.58-.23-1.21.22-1.21.85z"/></svg>'
-    }
+    "volume_up": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L7 9H4c-.55 0-1 .45-1 1zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 4.45v.2c0 .38.25.71.6.85C17.18 6.53 19 9.06 19 12s-1.82 5.47-4.4 6.5c-.36.14-.6.47-.6.85v.2c0 .63.63 1.07 1.21.85C18.6 19.11 21 15.84 21 12s-2.4-7.11-5.79-8.4c-.58-.23-1.21.22-1.21.85z"/></svg>',
+}
 
-STANDARD_ICON_MAP: dict[QStyle, dict] = {
+STANDARD_ICON_MAP: dict[QStyle.StandardPixmap, dict] = {
     QStyle.StandardPixmap.SP_ArrowBack: {"id": "arrow_upward", "rotate": 270},
     QStyle.StandardPixmap.SP_ArrowDown: {"id": "arrow_upward", "rotate": 180},
     QStyle.StandardPixmap.SP_ArrowForward: {"id": "arrow_upward", "rotate": 90},
@@ -80,6 +81,7 @@ STANDARD_ICON_MAP: dict[QStyle, dict] = {
     QStyle.StandardPixmap.SP_DialogSaveButton: {"id": "save"},
     QStyle.StandardPixmap.SP_DialogYesButton: {"id": "circle"},
     QStyle.StandardPixmap.SP_DirHomeIcon: {"id": "home"},
+    QStyle.StandardPixmap.SP_DirIcon: {"id": "open"},
     QStyle.StandardPixmap.SP_DockWidgetCloseButton: {"id": "close"},
     QStyle.StandardPixmap.SP_FileDialogBack: {"id": "arrow_upward", "rotate": 270},
     QStyle.StandardPixmap.SP_FileDialogContentsView: {"id": "search"},
@@ -99,16 +101,28 @@ STANDARD_ICON_MAP: dict[QStyle, dict] = {
     QStyle.StandardPixmap.SP_MediaStop: {"id": "stop"},
     QStyle.StandardPixmap.SP_MediaVolume: {"id": "volume_up"},
     QStyle.StandardPixmap.SP_MediaVolumeMuted: {"id": "volume_mute"},
-    QStyle.StandardPixmap.SP_MessageBoxQuestion: {"id": "help", "os": ["Darwin", "Linux"]},
+    QStyle.StandardPixmap.SP_MessageBoxQuestion: {
+        "id": "help",
+        "os": ["Darwin", "Linux"],
+    },
     QStyle.StandardPixmap.SP_TitleBarCloseButton: {"id": "close"},
     QStyle.StandardPixmap.SP_TitleBarContextHelpButton: {"id": "question_mark"},
     QStyle.StandardPixmap.SP_TitleBarMaxButton: {"id": "fullscreen"},
     QStyle.StandardPixmap.SP_TitleBarMinButton: {"id": "minimize"},
     QStyle.StandardPixmap.SP_TitleBarNormalButton: {"id": "flip_to_front"},
-    QStyle.StandardPixmap.SP_TitleBarShadeButton: {"id": "chevron_right", "rotate": "270"},
-    QStyle.StandardPixmap.SP_TitleBarUnshadeButton: {"id": "chevron_right", "rotate": "90"},
+    QStyle.StandardPixmap.SP_TitleBarShadeButton: {
+        "id": "chevron_right",
+        "rotate": "270",
+    },
+    QStyle.StandardPixmap.SP_TitleBarUnshadeButton: {
+        "id": "chevron_right",
+        "rotate": "90",
+    },
     QStyle.StandardPixmap.SP_ToolBarHorizontalExtensionButton: {"id": "double_arrow"},
-    QStyle.StandardPixmap.SP_ToolBarVerticalExtensionButton: {"id": "double_arrow", "rotate": 90},
+    QStyle.StandardPixmap.SP_ToolBarVerticalExtensionButton: {
+        "id": "double_arrow",
+        "rotate": 90,
+    },
     QStyle.StandardPixmap.SP_TrashIcon: {"id": "delete", "os": ["Windows"]},
     QStyle.StandardPixmap.SP_VistaShield: {"id": "security", "os": ["Darwin", "Linux"]},
     QStyle.StandardPixmap.SP_DialogAbortButton: {"id": "not_interested"},

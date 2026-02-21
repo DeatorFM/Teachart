@@ -1,25 +1,27 @@
-from PyQt6 import QtWidgets, QtGui, QtCore
+from PyQt6 import QtCore, QtGui, QtWidgets
+
 
 class PictureView:
-
     def setUi(self, agent: QtWidgets.QWidget):
-        agent.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        agent.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed
+        )
         agent.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         agent.setObjectName("PictureElement")
         self.main_layout = QtWidgets.QVBoxLayout(self)
         self.main_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.main_layout.setContentsMargins(3,3,3,3)
+        self.main_layout.setContentsMargins(3, 3, 3, 3)
         self.main_layout.setSpacing(0)
 
         self.piclabel = PictureLabel(self)
         self.piclabel.resized.connect(self.fitToPicture)
         self.main_layout.addWidget(self.piclabel)
 
-
         agent.setLayout(self.main_layout)
 
     def fitToPicture(self) -> None:
-        self.setFixedSize(self.piclabel.width()+6, self.piclabel.height()+6)
+        self.setFixedSize(self.piclabel.width() + 6, self.piclabel.height() + 6)
+
 
 class PictureLabel(QtWidgets.QLabel):
     resized = QtCore.pyqtSignal(int, int)
@@ -36,12 +38,13 @@ class PictureLabel(QtWidgets.QLabel):
         self._points = QtCore.QPoint(0, 0)
         self._preview = None
 
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
-        self.setStyleSheet("background: none;")
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed
+        )
 
     def mouseMoveEvent(self, e: QtGui.QMouseEvent) -> None:
         # Execute Resize
-        if self._resizing == False:
+        if not self._resizing:
             self._section = self.updateCursor(e.pos())
         if e.buttons() == QtCore.Qt.MouseButton.LeftButton and self._section != None:
             self._resizing = True
@@ -51,18 +54,20 @@ class PictureLabel(QtWidgets.QLabel):
             self.updateGeometry()
         super().mouseMoveEvent(e)
 
-    def updateCursor(self, pos: QtCore.QPoint) -> str|None:
+    def updateCursor(self, pos: QtCore.QPoint) -> str | None:
         x = self.mapToGlobal(QtCore.QPoint(0, 0)).x()
         y = self.mapToGlobal(QtCore.QPoint(0, 0)).y()
-        if (pos.y() >= self.height()-5 and pos.y() <= self.height()) and (pos.x() >= self.width()-5 and pos.x() <= self.width()):
+        if (pos.y() >= self.height() - 5 and pos.y() <= self.height()) and (
+            pos.x() >= self.width() - 5 and pos.x() <= self.width()
+        ):
             self.setCursor(QtCore.Qt.CursorShape.SizeFDiagCursor)
             self._preview = PreviewOverlay(x, y, self)
             return "BottomRight"
-        elif (pos.y() >= self.height()-5 and pos.y() <= self.height()):
+        elif pos.y() >= self.height() - 5 and pos.y() <= self.height():
             self.setCursor(QtCore.Qt.CursorShape.SizeVerCursor)
             self._preview = PreviewOverlay(x, y, self)
             return "Bottom"
-        elif (pos.x() >= self.width()-5 and pos.x() <= self.width()):
+        elif pos.x() >= self.width() - 5 and pos.x() <= self.width():
             self.setCursor(QtCore.Qt.CursorShape.SizeHorCursor)
             self._preview = PreviewOverlay(x, y, self)
             return "Right"
@@ -81,7 +86,8 @@ class PictureLabel(QtWidgets.QLabel):
             newSizeX = self.width() + (pos.x() - self.width())
             newSizeY = self.height() + (pos.y() - self.height())
             newSize = QtCore.QSize(newSizeX, newSizeY)
-        else: return
+        else:
+            return
         if newSize.width() < 100:
             newSize.setWidth(100)
         if newSize.height() < 1:
@@ -90,7 +96,7 @@ class PictureLabel(QtWidgets.QLabel):
         print(newSize)
         self._preview.setFixedSize(newSize)
 
-    def mouseReleaseEvent(self, e: QtGui.QMouseEvent) -> None: 
+    def mouseReleaseEvent(self, e: QtGui.QMouseEvent) -> None:
         if e.button() == QtCore.Qt.MouseButton.LeftButton:
             self._resizing = False
             self._section = None
@@ -103,8 +109,9 @@ class PictureLabel(QtWidgets.QLabel):
                 self.resized.emit(w, h)
                 self.forceRepaint.emit(w, h)
 
-    def section(self) -> str|None:
+    def section(self) -> str | None:
         return self._section
+
 
 class PreviewOverlay(QtWidgets.QWidget):
     def __init__(self, x: int, y: int, parent=None) -> None:
@@ -126,13 +133,15 @@ class PreviewOverlay(QtWidgets.QWidget):
 class CommentEdit(QtWidgets.QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed
+        )
         self.cursorPositionChanged.connect(self.fit_to_text)
 
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(self.parent().width(), 15)
-    
+
     def fit_to_text(self) -> None:
         doc_height = self.document().size().height()
         if 0 <= doc_height:
-            self.setMinimumHeight(int(doc_height)+20)
+            self.setMinimumHeight(int(doc_height) + 20)

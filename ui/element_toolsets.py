@@ -1,69 +1,55 @@
-from PyQt6.QtWidgets import (QMenu, QToolBar, QSpinBox, QToolButton, QSlider, QTimeEdit, QPushButton, QLineEdit, QComboBox,
-                             QGridLayout, QWidgetAction, QLabel, QFontComboBox)
-from PyQt6.QtCore import QCoreApplication, pyqtSignal, pyqtSlot, QRegularExpression
-from PyQt6.QtGui import QActionGroup, QIcon, QPixmap, QRegularExpressionValidator, QEnterEvent, QColor, QKeySequence
-from ui.commons import *
-from ui.StyledWidget import *
-from enum import Enum
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QEvent,
+    QRegularExpression,
+    QSize,
+    Qt,
+    pyqtSignal,
+    pyqtSlot,
+)
+from PyQt6.QtGui import (
+    QActionGroup,
+    QColor,
+    QEnterEvent,
+    QMouseEvent,
+    QRegularExpressionValidator,
+)
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFontComboBox,
+    QFrame,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QSlider,
+    QSpinBox,
+    QStyle,
+    QTimeEdit,
+    QToolBar,
+    QToolButton,
+    QWidget,
+    QWidgetAction,
+)
 
-class CellActions(Enum):
-    Remove_Element = 0
-    Move_Up = 1
-    Move_Down = 2
+from tcha.styling import SvgIcon
+from ui.commons import ColorMenu, LabeledWidget, SplitButton, SwitchAction
+from ui.StyledWidget import convertColors
 
-class ElementOptions(QMenu):
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setObjectName("ElementOptions")
-        icon1 = QIcon()
-        icon1.addPixmap(QPixmap("resources/icons/ic_trash.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self._ac_remove = self.addAction(icon1, "")
-        self._ac_remove.setData(CellActions.Remove_Element)
 
-        self.addSeparator()
-
-        icon2 = QIcon()
-        icon2.addPixmap(QPixmap("resources/icons/ic_move_up.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self._ac_moveup = self.addAction(icon2, "")
-        self._ac_moveup.setData(CellActions.Move_Up)
-
-        icon3 = QIcon()
-        icon3.addPixmap(QPixmap("resources/icons/ic_move_down.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self._ac_movedown = self.addAction(icon3, "")
-        self._ac_movedown.setData(CellActions.Move_Down)      
-
-        self.retranslateUi()
-
-    def retranslateUi(self) -> None:
-        _translate = QCoreApplication.translate
-        self._ac_remove.setText(_translate("ElementOptions", "Remove element"))
-        self._ac_moveup.setText(_translate("ElementOptions", "Move element up"))
-        self._ac_movedown.setText(_translate("ElementOptions", "Move element down"))
-        
 class TextToolsetView:
-
     def setUI(self, agent: QToolBar) -> None:
         agent.setObjectName("TextToolset")
 
-        icon = QIcon()
-        icon.addPixmap(QPixmap("resources/icons/ic_close_red.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.ac_close = agent.addAction(icon, "")
-        self.ac_close.setShortcut(QKeySequence.StandardKey.Cancel)
-
-        self.ac_element_options = agent.addAction("")
-        self.element_options_menu = ElementOptions(agent)
-        widget = agent.widgetForAction(self.ac_element_options)
-        widget.setMenu(self.element_options_menu)
-        widget.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-
         self.cb_Font = QFontComboBox(agent)
-        self.cb_Font.setMaximumSize(QSize(120, 25))
+        self.cb_Font.setMaximumHeight(28)
         self.cb_Font.setObjectName("CB_Font")
-        
+
         agent.addWidget(self.cb_Font)
 
         self.cb_FontSize = FontSizeBox(agent)
-        self.cb_FontSize.setMinimumSize(QSize(55, 25))
+        self.cb_FontSize.setMinimumWidth(65)
+        self.cb_FontSize.setMaximumHeight(28)
         self.cb_FontSize.setEditable(True)
         self.cb_FontSize.setObjectName("CB_FontSize")
         self.cb_FontSize.setContentsMargins(5, 0, 5, 0)
@@ -71,56 +57,121 @@ class TextToolsetView:
 
         agent.addSeparator()
 
-        icon1 = QIcon()
-        icon1.addPixmap(QPixmap("resources/icons/ic_bold.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1 = SvgIcon("resources/icons/ic_bold.svg")
         self.ac_bold = agent.addAction(icon1, None)
         self.ac_bold.setCheckable(True)
 
-        icon2 = QIcon()
-        icon2.addPixmap(QPixmap("resources/icons/ic_italic.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2 = SvgIcon("resources/icons/ic_italic.svg")
         self.ac_italic = agent.addAction(icon2, None)
         self.ac_italic.setCheckable(True)
 
-        icon3 = QIcon()
-        icon3.addPixmap(QPixmap("resources/icons/ic_underline.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon3 = SvgIcon("resources/icons/ic_underline.svg")
         self.ac_underline = agent.addAction(icon3, None)
         self.ac_underline.setCheckable(True)
 
-        icon4 = QIcon()
-        icon4.addPixmap(QPixmap("resources/icons/ic_textcolor.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon4 = SvgIcon("resources/icons/ic_textColor.svg")
         self.ac_textcolor = agent.addAction(icon4, None)
         self.ac_textcolor.setObjectName("TextColor")
-        self.ac_textcolor.setProperty("color", QColor("#000000"))
-       
+        self.ac_textcolor.setProperty("color", QColor())
+
         textcolors = [
-            "#000000", "#434343", "#666666", "#999999", "#b7b7b7", "#cccccc", "#d9d9d9", "#efefef", "#f3f3f3", "#ffffff",
-            "#980000", "#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#4a86e8", "#0000ff", "#9900ff", "#ff00ff", 
-            "#e6b8af", "#f4cccc", "#fce5cd", "#fff2cc", "#d9ead3", "#d0e0e3", "#c9daf8", "#cfe2f3", "#d9d2e9", "#ead1dc", 
-            "#dd7e6b", "#ea9999", "#f9cb9c", "#ffe599", "#b6d7a8", "#a2c4c9", "#a4c2f4", "#9fc5e8", "#b4a7d6", "#d5a6bd", 
-            "#cc4125", "#e06666", "#f6b26b", "#ffd966", "#93c47d", "#76a5af", "#6d9eeb", "#6fa8dc", "#8e7cc3", "#c27ba0", 
-            "#a61c00", "#cc0000", "#e69138", "#f1c232", "#6aa84f", "#45818e", "#3c78d8", "#3d85c6", "#674ea7", "#a64d79", 
-            "#85200c", "#990000", "#b45f06", "#bf9000", "#38761d", "#134f5c", "#1155cc", "#0b5394", "#351c75", "#741b47", 
-            "#5b0f00", "#660000", "#783f04", "#7f6000", "#274e13", "#0c343d", "#1c4587", "#073763", "#20124d", "#4c1130"
-                    ]
+            "#000000",
+            "#434343",
+            "#666666",
+            "#999999",
+            "#b7b7b7",
+            "#cccccc",
+            "#d9d9d9",
+            "#efefef",
+            "#f3f3f3",
+            "#ffffff",
+            "#980000",
+            "#ff0000",
+            "#ff9900",
+            "#ffff00",
+            "#00ff00",
+            "#00ffff",
+            "#4a86e8",
+            "#0000ff",
+            "#9900ff",
+            "#ff00ff",
+            "#e6b8af",
+            "#f4cccc",
+            "#fce5cd",
+            "#fff2cc",
+            "#d9ead3",
+            "#d0e0e3",
+            "#c9daf8",
+            "#cfe2f3",
+            "#d9d2e9",
+            "#ead1dc",
+            "#dd7e6b",
+            "#ea9999",
+            "#f9cb9c",
+            "#ffe599",
+            "#b6d7a8",
+            "#a2c4c9",
+            "#a4c2f4",
+            "#9fc5e8",
+            "#b4a7d6",
+            "#d5a6bd",
+            "#cc4125",
+            "#e06666",
+            "#f6b26b",
+            "#ffd966",
+            "#93c47d",
+            "#76a5af",
+            "#6d9eeb",
+            "#6fa8dc",
+            "#8e7cc3",
+            "#c27ba0",
+            "#a61c00",
+            "#cc0000",
+            "#e69138",
+            "#f1c232",
+            "#6aa84f",
+            "#45818e",
+            "#3c78d8",
+            "#3d85c6",
+            "#674ea7",
+            "#a64d79",
+            "#85200c",
+            "#990000",
+            "#b45f06",
+            "#bf9000",
+            "#38761d",
+            "#134f5c",
+            "#1155cc",
+            "#0b5394",
+            "#351c75",
+            "#741b47",
+            "#5b0f00",
+            "#660000",
+            "#783f04",
+            "#7f6000",
+            "#274e13",
+            "#0c343d",
+            "#1c4587",
+            "#073763",
+            "#20124d",
+            "#4c1130",
+        ]
         self.color_menu = ColorMenu(convertColors(textcolors), agent)
         action_widget = agent.widgetForAction(self.ac_textcolor)
         action_widget.setMenu(self.color_menu)
-        action_widget.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        action_widget.setStyleSheet(fromStyle("TB_textcolor"))
-        
+        action_widget.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+
         agent.addSeparator()
-        
+
         self.veralign_group = QActionGroup(agent)
         self.veralign_group.setExclusive(False)
 
-        icon7 = QIcon()
-        icon7.addPixmap(QPixmap("resources/icons/ic_subscript.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon7 = SvgIcon("resources/icons/ic_subscript.svg")
         self.ac_subscript = agent.addAction(icon7, None)
         self.ac_subscript.setCheckable(True)
         self.veralign_group.addAction(self.ac_subscript)
-        
-        icon8 = QIcon()
-        icon8.addPixmap(QPixmap("resources/icons/ic_superscript.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+
+        icon8 = SvgIcon("resources/icons/ic_superscript.svg")
         self.ac_superscript = agent.addAction(icon8, None)
         self.ac_superscript.setCheckable(True)
         self.veralign_group.addAction(self.ac_superscript)
@@ -130,106 +181,90 @@ class TextToolsetView:
         self.align_group = QActionGroup(agent)
         self.align_group.setExclusive(True)
 
-        icon9 = QIcon()
-        icon9.addPixmap(QPixmap("resources/icons/ic_alignleft.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon9 = SvgIcon("resources/icons/ic_alignleft.svg")
         self.ac_align_left = agent.addAction(icon9, None)
         self.ac_align_left.setCheckable(True)
         self.ac_align_left.setChecked(True)
         self.align_group.addAction(self.ac_align_left)
 
-        icon10 = QIcon()
-        icon10.addPixmap(QPixmap("resources/icons/ic_aligncenter.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon10 = SvgIcon("resources/icons/ic_aligncenter.svg")
         self.ac_align_center = agent.addAction(icon10, None)
         self.ac_align_center.setCheckable(True)
         self.align_group.addAction(self.ac_align_center)
 
-        icon11 = QIcon()
-        icon11.addPixmap(QPixmap("resources/icons/ic_alignright.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon11 = SvgIcon("resources/icons/ic_alignright.svg")
         self.ac_align_right = agent.addAction(icon11, None)
         self.ac_align_right.setCheckable(True)
         self.align_group.addAction(self.ac_align_right)
 
-        icon12 = QIcon()
-        icon12.addPixmap(QPixmap("resources/icons/ic_alignjustify.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon12 = SvgIcon("resources/icons/ic_alignjustify.svg")
         self.ac_align_justify = agent.addAction(icon12, None)
         self.ac_align_justify.setCheckable(True)
         self.align_group.addAction(self.ac_align_justify)
 
         agent.addSeparator()
 
-        icon13 = QIcon()
-        icon13.addPixmap(QPixmap("resources/icons/ic_list.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon13 = SvgIcon("resources/icons/ic_list.svg")
         self.ac_list = agent.addAction(icon13, None)
 
-        icon14 = QIcon()
-        icon14.addPixmap(QPixmap("resources/icons/ic_numlist.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon14 = SvgIcon("resources/icons/ic_numlist.svg")
         self.ac_numlist = agent.addAction(icon14, None)
 
-        icon15 = QIcon()
-        icon15.addPixmap(QPixmap("resources/icons/ic_dedent.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon15 = SvgIcon("resources/icons/ic_dedent.svg")
         self.ac_dedent = agent.addAction(icon15, None)
 
-        icon16 = QIcon()
-        icon16.addPixmap(QPixmap("resources/icons/ic_indent.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon16 = SvgIcon("resources/icons/ic_indent.svg")
         self.ac_indent = agent.addAction(icon16, None)
 
         agent.addSeparator()
 
-        icon17 = QIcon()
-        icon17.addPixmap(paintIcon("resources/icons/ic_table.svg", QColor("#a0a0a0")), QIcon.Mode.Normal, QIcon.State.Off)
+        icon17 = SvgIcon("resources/icons/ic_table.svg")
         self.ac_table = agent.addAction(icon17, None)
         self.menu_table = TableMenu(agent)
         agent.widgetForAction(self.ac_table).setMenu(self.menu_table)
-        agent.widgetForAction(self.ac_table).setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        agent.widgetForAction(self.ac_table).setPopupMode(
+            QToolButton.ToolButtonPopupMode.InstantPopup
+        )
 
-        icon18 = QIcon()
-        icon18.addPixmap(paintIcon("resources/icons/ic_symbol.svg", QColor("#a0a0a0")), QIcon.Mode.Normal, QIcon.State.Off)
+        icon18 = SvgIcon("resources/icons/ic_symbol.svg")
         self.ac_symbol = agent.addAction(icon18, None)
 
-        icon19 = QIcon()
-        icon19.addPixmap(paintIcon("resources/icons/ic_hyperlink.svg", QColor("#a0a0a0")), QIcon.Mode.Normal, QIcon.State.Off)
+        icon19 = SvgIcon("resources/icons/ic_hyperlink.svg")
         self.ac_hyperlink = agent.addAction(icon19, None)
 
         self.tabletools_group = QActionGroup(agent)
 
         seperator1 = agent.addSeparator()
         self.tabletools_group.addAction(seperator1)
-        
-        icon20 = QIcon()
-        icon20.addPixmap(QPixmap("resources/icons/ic_insertRowBottom.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+
+        icon20 = SvgIcon("resources/icons/ic_insertRowBottom.svg")
         self.ac_row_bottom = agent.addAction(icon20, None)
         self.tabletools_group.addAction(self.ac_row_bottom)
 
-        icon21 = QIcon()
-        icon21.addPixmap(QPixmap("resources/icons/ic_insertRowTop.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon21 = SvgIcon("resources/icons/ic_insertRowTop.svg")
         self.ac_row_top = agent.addAction(icon21, None)
         self.tabletools_group.addAction(self.ac_row_top)
 
-        icon22 = QIcon()
-        icon22.addPixmap(QPixmap("resources/icons/ic_insertColumnRight.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon22 = SvgIcon("resources/icons/ic_insertColumnRight.svg")
         self.ac_column_right = agent.addAction(icon22, None)
         self.tabletools_group.addAction(self.ac_column_right)
 
-        icon23 = QIcon()
-        icon23.addPixmap(QPixmap("resources/icons/ic_insertColumnLeft.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon23 = SvgIcon("resources/icons/ic_insertColumnLeft.svg")
         self.ac_column_left = agent.addAction(icon23, None)
         self.tabletools_group.addAction(self.ac_column_left)
 
         seperator2 = agent.addSeparator()
         self.tabletools_group.addAction(seperator2)
 
-        icon24 = QIcon()
-        icon24.addPixmap(QPixmap("resources/icons/ic_deleterow.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon24 = SvgIcon("resources/icons/ic_deleteRow.svg")
         self.ac_delete_row = agent.addAction(icon24, None)
         self.tabletools_group.addAction(self.ac_delete_row)
 
-        icon25 = QIcon()
-        icon25.addPixmap(QPixmap("resources/icons/ic_deletecolumn.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon25 = SvgIcon("resources/icons/ic_deleteColumn.svg")
         self.ac_delete_column = agent.addAction(icon25, None)
         self.tabletools_group.addAction(self.ac_delete_column)
 
-        icon26 = QIcon()
-        icon26.addPixmap(QPixmap("resources/icons/ic_deletetable.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon26 = SvgIcon("resources/icons/ic_deleteTable.svg")
         self.ac_delete_table = agent.addAction(icon26, None)
         self.tabletools_group.addAction(self.ac_delete_table)
 
@@ -237,11 +272,8 @@ class TextToolsetView:
 
         self.retranslateUi()
 
-
     def retranslateUi(self) -> None:
         _translate = QCoreApplication.translate
-        self.ac_close.setToolTip(_translate("TextToolset", "Finish editing"))
-        self.ac_element_options.setText(_translate("TextToolset", "Text"))
         self.ac_bold.setToolTip(_translate("TextToolset", "Bold"))
         self.ac_italic.setToolTip(_translate("TextToolset", "Italic"))
         self.ac_underline.setToolTip(_translate("TextToolset", "Underline"))
@@ -261,195 +293,176 @@ class TextToolsetView:
         self.ac_hyperlink.setToolTip(_translate("TextToolset", "Insert hyperlink"))
         self.ac_row_bottom.setToolTip(_translate("TextToolset", "Insert row below"))
         self.ac_row_top.setToolTip(_translate("TextToolset", "Insert row above"))
-        self.ac_column_right.setToolTip(_translate("TextToolset", "Insert column right"))
+        self.ac_column_right.setToolTip(
+            _translate("TextToolset", "Insert column right")
+        )
         self.ac_column_left.setToolTip(_translate("TextToolset", "Insert column left"))
         self.ac_delete_row.setToolTip(_translate("TextToolset", "Delete selected row"))
-        self.ac_delete_column.setToolTip(_translate("TextToolset", "Delete selected column"))
+        self.ac_delete_column.setToolTip(
+            _translate("TextToolset", "Delete selected column")
+        )
         self.ac_delete_table.setToolTip(_translate("TextToolset", "Delete Table"))
 
-class PictureToolsetView:
 
+class PictureToolsetView:
     def setUi(self, agent: QToolBar):
         agent.setObjectName("PictureToolset")
 
-        icon = QIcon()
-        icon.addPixmap(QPixmap("resources/icons/ic_close_red.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.ac_close = agent.addAction(icon, "")
-
-        self.ac_element_options = agent.addAction("")
-        self.element_options_menu = ElementOptions(agent)
-        widget = agent.widgetForAction(self.ac_element_options)
-        widget.setMenu(self.element_options_menu)
-        widget.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-
-        self.ac_width_label = agent.addAction("")
-        self.ac_width_label.setDisabled(True)
-
         self.sb_ImageWidth = QSpinBox(agent)
         self.sb_ImageWidth.setMaximum(16000)
+        self.sb_ImageWidth.setMaximumHeight(28)
         self.sb_ImageWidth.setObjectName("SB_ImageWidth")
-        self.sb_ImageWidth.setMinimumWidth(50)
-        agent.addWidget(self.sb_ImageWidth)
-
-        self.ac_height_label = agent.addAction("")
-        self.ac_height_label.setDisabled(True)
+        self.sb_ImageWidth.setMinimumWidth(65)
+        self.pair1 = LabeledWidget("", self.sb_ImageWidth)
+        agent.addWidget(self.pair1)
 
         self.sb_ImageHeight = QSpinBox(agent)
         self.sb_ImageHeight.setMaximum(16000)
+        self.sb_ImageHeight.setMaximumHeight(28)
+        self.sb_ImageHeight.setMinimumWidth(65)
         self.sb_ImageHeight.setObjectName("SB_ImageHeight")
         self.sb_ImageHeight.setSingleStep(1)
-        agent.addWidget(self.sb_ImageHeight)
+        self.pair2 = LabeledWidget("", self.sb_ImageHeight)
+        agent.addWidget(self.pair2)
 
         agent.addSeparator()
 
-        icon1 = QIcon()
-        icon1.addPixmap(QPixmap("resources/icons/ic_link.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1 = SvgIcon("resources/icons/ic_link.svg")
         self.ac_keep_aspect_ratio = agent.addAction(icon1, None)
         self.ac_keep_aspect_ratio.setCheckable(True)
         self.ac_keep_aspect_ratio.setChecked(True)
 
-
-        icon2 = QIcon()
-        icon2.addPixmap(QPixmap("resources/icons/ic_rotateRight.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2 = SvgIcon("resources/icons/ic_rotateRight.svg")
         self.ac_rotate_right = agent.addAction(icon2, None)
 
-        icon3 = QIcon()
-        icon3.addPixmap(QPixmap("resources/icons/ic_rotateLeft.svg"), QIcon.Mode.Normal, QIcon.State.Off)  
-        self.ac_rotate_left = agent.addAction(icon3, None)   
+        icon3 = SvgIcon("resources/icons/ic_rotateLeft.svg")
+        self.ac_rotate_left = agent.addAction(icon3, None)
 
         agent.addSeparator()
 
-        icon4 = QIcon()
-        icon4.addPixmap(QPixmap("resources/icons/ic_reset.svg"), QIcon.Mode.Normal, QIcon.State.Off)  
-        self.ac_reset_image= agent.addAction(icon4, None)   
+        icon4 = SvgIcon("resources/icons/ic_reset.svg")
+        self.ac_reset_image = agent.addAction(icon4, None)
 
         self.retranslateUi()
 
     def retranslateUi(self):
         _translate = QCoreApplication.translate
-        self.ac_close.setToolTip(_translate("PictureToolset", "Finish editing"))
-        self.ac_element_options.setText(_translate("PictureToolset", "Picture"))
-        self.ac_width_label.setText(_translate("PictureToolset", "Width"))
-        self.ac_height_label.setText(_translate("PictureToolset", "Height"))
-        self.ac_keep_aspect_ratio.setToolTip(_translate("PictureToolset", "Keep aspect ratio when changing values"))
-        self.ac_rotate_right.setToolTip(_translate("PictureToolset", "Rotate right 90°"))
+        self.pair1.set_label_text(_translate("PictureToolset", "Width"))
+        self.pair2.set_label_text(_translate("PictureToolset", "Height"))
+        self.ac_keep_aspect_ratio.setToolTip(
+            _translate("PictureToolset", "Keep aspect ratio when changing values")
+        )
+        self.ac_rotate_right.setToolTip(
+            _translate("PictureToolset", "Rotate right 90°")
+        )
         self.ac_rotate_left.setToolTip(_translate("PictureToolset", "Rotate left 90°"))
-        self.ac_reset_image.setToolTip(_translate("PictureToolset", "Restore the picture's original size"))
+        self.ac_reset_image.setToolTip(
+            _translate("PictureToolset", "Restore the picture's original size")
+        )
+
 
 class AudioToolsetView:
-
     def setUi(self, agent: QToolBar):
         agent.setObjectName("AudioToolset")
 
-        icon = QIcon()
-        icon.addPixmap(QPixmap("resources/icons/ic_close_red.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        self.ac_close = agent.addAction(icon, "")
-
-        self.ac_element_options = agent.addAction("")
-        self.element_options_menu = ElementOptions(agent)
-        widget = agent.widgetForAction(self.ac_element_options)
-        widget.setMenu(self.element_options_menu)
-        widget.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-
-        icon1 = QIcon()
-        icon1.addPixmap(QPixmap("resources/icons/ic_play.svg"), QIcon.Mode.Normal, QIcon.State.Off)
-        icon2 = QIcon()
-        icon2.addPixmap(QPixmap("resources/icons/ic_pause.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        icon2 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         self.ac_play_pause = SwitchAction(icon1, icon2, agent)
         agent.addAction(self.ac_play_pause)
 
-        self.hs_PlayTime = QSlider(agent) 
+        self.hs_PlayTime = QSlider(agent)
         self.hs_PlayTime.setOrientation(Qt.Orientation.Horizontal)
         self.hs_PlayTime.setObjectName("hs_PlayTime")
+        self.hs_PlayTime.setMinimumWidth(100)
+        self.hs_PlayTime.setMaximumWidth(200)
         agent.addWidget(self.hs_PlayTime)
 
         self.te_PlayTime = QTimeEdit(agent)
         self.te_PlayTime.setObjectName("sb_PlayTime")
         self.te_PlayTime.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.te_PlayTime.setDisplayFormat("h:mm:ss")
+        self.te_PlayTime.setMaximumWidth(60)
+        self.te_PlayTime.setMaximumHeight(28)
         agent.addWidget(self.te_PlayTime)
 
-
-        icon3 = QIcon()
-        icon3.addPixmap(QPixmap("resources/icons/ic_rew.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon3 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaSeekBackward)
         ac_rew = agent.addAction(icon3, "")
         self.tb_rew = agent.widgetForAction(ac_rew)
         # self.pb_rew.setIconSize(QSize(20, 20))
         self.tb_rew.setAutoRepeat(True)
 
-        icon4 = QIcon()
-        icon4.addPixmap(QPixmap("resources/icons/ic_fwd.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon4 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaSeekForward)
         ac_fwd = agent.addAction(icon4, "")
         self.tb_fwd = agent.widgetForAction(ac_fwd)
         self.tb_fwd.setAutoRepeat(True)
 
         agent.addSeparator()
 
-        icon5 = QIcon()
-        icon5.addPixmap(QPixmap("resources/icons/ic_rew5.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon5 = SvgIcon("resources/icons/ic_rew5.svg")
         self.ac_rew5 = agent.addAction(icon5, None)
 
-        icon6 = QIcon()
-        icon6.addPixmap(QPixmap("resources/icons/ic_fwd5.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon6 = SvgIcon("resources/icons/ic_fwd5.svg")
         self.ac_fwd5 = agent.addAction(icon6, None)
 
         agent.addSeparator()
 
-        icon7 = QIcon()
-        icon7.addPixmap(QPixmap("resources/icons/ic_repeat.svg"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon7 = SvgIcon("resources/icons/ic_repeat.svg")
         self.ac_repeat = agent.addAction(icon7, None)
         self.ac_repeat.setCheckable(True)
 
         self.sb_RepeatTimes = QSpinBox(agent)
         self.sb_RepeatTimes.setObjectName("sb_RepeatTimes")
         self.sb_RepeatTimes.setMinimum(1)
+        self.sb_RepeatTimes.setMaximumHeight(28)
         self.sb_RepeatTimes.setDisabled(True)
         agent.addWidget(self.sb_RepeatTimes)
-
-        self.ac_pause_length_label = agent.addAction("")
-        self.ac_pause_length_label.setDisabled(True)
 
         self.sb_PauseLength = QSpinBox(agent)
         self.sb_PauseLength.setObjectName("sb_PauseLength")
         self.sb_PauseLength.setMinimum(0)
+        self.sb_PauseLength.setMaximumHeight(28)
         self.sb_PauseLength.setDisabled(True)
-        agent.addWidget(self.sb_PauseLength)
+        self.pair3 = LabeledWidget("", self.sb_PauseLength)
+        agent.addWidget(self.pair3)
 
         agent.addSeparator()
 
-        self.ac_start_label = agent.addAction("")
-        self.ac_start_label.setDisabled(True)
-
         self.te_StartTime = QTimeEdit(agent)
         self.te_StartTime.setObjectName("te_StartTime")
-        self.te_StartTime.setDisplayFormat("h:mm:ss") # ANPASSEN
-        agent.addWidget(self.te_StartTime)
-
-        self.ac_end_label = agent.addAction("")
-        self.ac_end_label.setDisabled(True)
+        self.te_StartTime.setDisplayFormat("h:mm:ss")  # ANPASSEN
+        self.te_StartTime.setMaximumHeight(28)
+        self.pair1 = LabeledWidget("", self.te_StartTime)
+        agent.addWidget(self.pair1)
 
         self.te_EndTime = QTimeEdit(agent)
         self.te_EndTime.setObjectName("te_StartTime")
         self.te_EndTime.setDisplayFormat("h:mm:ss")
-        agent.addWidget(self.te_EndTime)
+        self.te_EndTime.setMaximumHeight(28)
+        self.pair2 = LabeledWidget("", self.te_EndTime)
+        agent.addWidget(self.pair2)
 
         self.retranslateUi()
- 
+
     def retranslateUi(self):
         _translate = QCoreApplication.translate
-        self.ac_close.setToolTip(_translate("AudioToolset", "Finish Editing"))
-        self.ac_element_options.setText(_translate("AudioToolset", "Audio"))
         self.ac_play_pause.setToolTip(_translate("AudioToolset", "Play/Pause track."))
-        self.tb_rew.setToolTip(_translate("AudioToolset", "Hold to rewind or double click to reset playback."))
+        self.tb_rew.setToolTip(
+            _translate(
+                "AudioToolset", "Hold to rewind or double click to reset playback."
+            )
+        )
         self.ac_rew5.setToolTip(_translate("AudioToolset", "Rewind 5 seconds."))
         self.ac_fwd5.setToolTip(_translate("AudioToolset", "Forward 5 seconds."))
         self.tb_fwd.setToolTip(_translate("AudioToolset", "Hold to move fast forward."))
         self.sb_RepeatTimes.setSuffix(_translate("AudioToolset", " times"))
-        self.ac_pause_length_label.setText(_translate("AudioToolset", "Pause Length"))
+        self.pair3.set_label_text(_translate("AudioToolset", "Pause Length"))
         self.sb_PauseLength.setSuffix(_translate("AudioToolset", "s"))
-        self.sb_PauseLength.setToolTip(_translate("AudioToolset", "Sets the pause length between repeats"))
-        self.ac_start_label.setText(_translate("AudioToolset", "Start"))
-        self.ac_end_label.setText(_translate("AudioToolset", "Stop"))
+        self.sb_PauseLength.setToolTip(
+            _translate("AudioToolset", "Sets the pause length between repeats")
+        )
+        self.pair1.set_label_text(_translate("AudioToolset", "Start"))
+        self.pair2.set_label_text(_translate("AudioToolset", "Stop"))
+
 
 class FontSizeBox(QComboBox):
     textEntered = pyqtSignal()
@@ -457,7 +470,26 @@ class FontSizeBox(QComboBox):
     def __init__(self, parent: None) -> None:
         super().__init__(parent)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.addItems(["8", "9", "10.5", "11", "12", "14", "16", "18", "20", "22", "24", "26", "28", "36", "48", "72"])
+        self.addItems(
+            [
+                "8",
+                "9",
+                "10.5",
+                "11",
+                "12",
+                "14",
+                "16",
+                "18",
+                "20",
+                "22",
+                "24",
+                "26",
+                "28",
+                "36",
+                "48",
+                "72",
+            ]
+        )
         self.setLineEdit(QLineEdit())
         self.lineEdit().editingFinished.connect(self.checkEnteredSize)
         self._setValidator()
@@ -468,12 +500,12 @@ class FontSizeBox(QComboBox):
         validator.setRegularExpression(re)
         self.setValidator(validator)
 
-    def currentFontSize(self) -> int|float:
+    def currentFontSize(self) -> int | float:
         fontsize = self.currentText()
         fontsize = fontsize.replace(",", ".")
         return float(fontsize)
-    
-    def setCurrentFontSize(self, fontsize: int|float):
+
+    def setCurrentFontSize(self, fontsize: int | float):
         if fontsize % 1 == 0:
             self.setCurrentText(str(int(fontsize)))
         else:
@@ -487,6 +519,7 @@ class FontSizeBox(QComboBox):
         elif float(fontsize) > 100:
             self.setCurrentText(str(100))
         self.textEntered.emit()
+
 
 class TableMenu(QMenu):
     tableSize = pyqtSignal(int, int)
@@ -507,6 +540,7 @@ class TableMenu(QMenu):
         print(line, column)
         self.tableSize.emit(line, column)
 
+
 class TableGrid(QWidget):
     tableSize = pyqtSignal(int, int)
 
@@ -516,7 +550,6 @@ class TableGrid(QWidget):
         self.setUI()
 
     def setUI(self) -> None:
-        self.setStyleSheet(fromStyle("GridButton"))
         self.button_layout = QGridLayout(self)
         self.button_layout.setHorizontalSpacing(0)
         self.button_layout.setVerticalSpacing(0)
@@ -524,22 +557,21 @@ class TableGrid(QWidget):
         for iline in range(8):
             for icolumn in range(10):
                 button = GridButton(self)
-                button.line = iline+1
-                button.column = icolumn+1
+                button.line = iline + 1
+                button.column = icolumn + 1
                 button.entered.connect(self.setMarkedButtons)
                 button.sizeSet.connect(self.getTableSize)
                 button.left.connect(self.clearMarkings)
                 self.button_layout.addWidget(button, iline, icolumn)
 
         self.lb_TableSize = QLabel("0 x 0")
-        self.lb_TableSize.setStyleSheet("background: none;")
         self.button_layout.addWidget(self.lb_TableSize, 9, 1, 1, 10)
 
         self.setLayout(self.button_layout)
 
     @pyqtSlot(int, int)
     def setMarkedButtons(self, line: int, column: int) -> None:
-        for i in range(self.button_layout.count()-1):
+        for i in range(self.button_layout.count() - 1):
             button = self.button_layout.itemAt(i).widget()
             if button.column <= column and button.line <= line:
                 # print(button, button.line, button.column)
@@ -548,10 +580,10 @@ class TableGrid(QWidget):
 
             else:
                 button.setProperty("hovered", False)
-            button.style().polish(button)    
+            button.style().polish(button)
 
     def clearMarkings(self):
-        for i in range(self.button_layout.count()-1):
+        for i in range(self.button_layout.count() - 1):
             button = self.button_layout.itemAt(i).widget()
             button.setProperty("hovered", False)
             button.style().polish(button)
@@ -561,17 +593,26 @@ class TableGrid(QWidget):
         self.tableSize.emit(line, column)
 
     def showTableSize(self, line: int, column: int) -> None:
-        self.lb_TableSize.setText(f"{column} x {line}") 
+        self.lb_TableSize.setText(f"{column} x {line}")
+
 
 class GridButton(QFrame):
     entered = pyqtSignal(int, int)
     sizeSet = pyqtSignal(int, int)
     left = pyqtSignal()
 
+    extra_stylesheet = """
+    QFrame[hovered=true] {
+        background: #4183e3
+        }
+    """
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setStyleSheet(self.extra_stylesheet)
+        self.setFrameShape(QFrame.Shape.Box)
         self.setProperty("hovered", False)
-        self.setFixedSize(15, 15)
+        self.setFixedSize(20, 20)
         self.line: int
         self.column: int
 
@@ -583,11 +624,12 @@ class GridButton(QFrame):
         self.setProperty("hovered", False)
         self.style().polish(self)
         self.left.emit()
-        super().leaveEvent(a0)        
+        super().leaveEvent(a0)
 
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         self.sizeSet.emit(self.line, self.column)
         super().mouseReleaseEvent(e)
+
 
 class ColorSplitButton(SplitButton):
     def __init__(self, parent) -> None:

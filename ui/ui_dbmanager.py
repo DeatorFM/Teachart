@@ -1,18 +1,42 @@
-from PyQt6.QtWidgets import QVBoxLayout, QSplitter, QCalendarWidget, QTimeEdit, QCheckBox, QTabWidget, QWidget, QComboBox, QSpinBox, QStyledItemDelegate, QDialog, QHBoxLayout, QFrame, QListWidget, QLineEdit, QTreeView, QSpacerItem, QSizePolicy, QTableView, QDialogButtonBox, QStyleOptionViewItem, QPushButton
-from PyQt6.QtCore import QCoreApplication, Qt, QSize, QModelIndex, QT_TR_NOOP as tr
-from PyQt6.QtGui import QPainter
+from PyQt6.QtCore import QT_TR_NOOP as tr
+from PyQt6.QtCore import QCoreApplication, QModelIndex, QSize, Qt
 from PyQt6.QtSql import QSqlRelationalDelegate
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QHBoxLayout,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QSpinBox,
+    QSplitter,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTableView,
+    QTabWidget,
+    QTreeView,
+    QVBoxLayout,
+    QWidget,
+)
+
 from tcha.dbmodels import CourseModel
+from tcha.styling import SvgIcon
 from ui.commons import IconButton
 
 
 class CourseDelegate(QStyledItemDelegate):
-    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QLineEdit | QSpinBox:
+    def createEditor(
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> QLineEdit | QSpinBox:
         if index.column() == 1:
             return QLineEdit(parent)
         elif index.column() == 2:
             return QSpinBox(parent)
-        
+
     def setEditorData(self, editor: QLineEdit | QSpinBox, index: QModelIndex):
         if isinstance(editor, QLineEdit):
             editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
@@ -22,7 +46,12 @@ class CourseDelegate(QStyledItemDelegate):
             current_value = index.data(Qt.ItemDataRole.EditRole)
             editor.setValue(int(current_value))
 
-    def updateEditorGeometry(self, editor: QLineEdit | QSpinBox, option: QStyleOptionViewItem, index: QModelIndex):
+    def updateEditorGeometry(
+        self,
+        editor: QLineEdit | QSpinBox,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+    ):
         editor.setGeometry(option.rect)
 
     def setModelData(self, editor: QWidget, model: CourseModel, index: QModelIndex):
@@ -33,43 +62,45 @@ class CourseDelegate(QStyledItemDelegate):
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         return QSize(option.rect.size().width(), 30)
 
+
 class ProxyStudentDelegate(QSqlRelationalDelegate):
     def createEditor(self, parent, option, index):
         proxy = index.model()
         source_index = proxy.mapToSource(index)
         return super().createEditor(parent, option, source_index)
-    
+
     def setEditorData(self, editor, index):
         proxy = index.model()
         source_index = proxy.mapToSource(index)
         super().setEditorData(editor, source_index)
-    
+
     def setModelData(self, editor, model, index):
         base_model = model.sourceModel()
-        source_index =  model.mapToSource(index)
+        source_index = model.mapToSource(index)
         super().setModelData(editor, base_model, source_index)
+
 
 class ProxyScheduleDelegate(QSqlRelationalDelegate):
     def createEditor(self, parent, option, index):
         proxy = index.model()
         source_index = proxy.mapToSource(index)
         return super().createEditor(parent, option, source_index)
-    
+
     def setEditorData(self, editor, index):
         proxy = index.model()
         source_index = proxy.mapToSource(index)
         super().setEditorData(editor, source_index)
-    
+
     def setModelData(self, editor, model, index):
         base_model = model.sourceModel()
-        source_index =  model.mapToSource(index)
+        source_index = model.mapToSource(index)
         super().setModelData(editor, base_model, source_index)
 
     def sizeHint(self, option, index):
         return QSize(option.rect.size().width(), 30)
 
-class DbManagerView:
 
+class DbManagerView:
     def setupUi(self, dbmanager):
         dbmanager.setObjectName("dbmanager")
         dbmanager.resize(900, 600)
@@ -93,12 +124,16 @@ class DbManagerView:
         hl3.setContentsMargins(-1, 0, -1, -1)
         hl3.setObjectName("hl3")
 
-        self.pb_new_course = IconButton("resources/icons/ic_new.svg", dbmanager)
+        self.pb_new_course = IconButton(
+            SvgIcon("resources/icons/ic_new.svg"), dbmanager
+        )
         self.pb_new_course.setText("")
         self.pb_new_course.setObjectName("pb_new_course")
         hl3.addWidget(self.pb_new_course)
 
-        self.pb_remove_course = IconButton("resources/icons/ic_trash.svg", dbmanager)
+        self.pb_remove_course = IconButton(
+            SvgIcon("resources/icons/ic_trash.svg"), dbmanager
+        )
         self.pb_remove_course.setText("")
         self.pb_remove_course.setObjectName("pb_remove_course")
         hl3.addWidget(self.pb_remove_course)
@@ -137,18 +172,24 @@ class DbManagerView:
         hl2.setContentsMargins(-1, 0, -1, -1)
         hl2.setObjectName("hl2")
 
-        self.pb_assign_students = IconButton("resources/icons/ic_assign.svg", self.student_tab)
+        self.pb_assign_students = IconButton(
+            SvgIcon("resources/icons/ic_assign.svg"), self.student_tab
+        )
         self.pb_assign_students.setText("")
         self.pb_assign_students.setObjectName("pb_assign_students")
         hl2.addWidget(self.pb_assign_students)
 
-        self.pb_unassign_student = IconButton("resources/icons/ic_unassign.svg", self.student_tab)
+        self.pb_unassign_student = IconButton(
+            SvgIcon("resources/icons/ic_unassign.svg"), self.student_tab
+        )
         self.pb_unassign_student.setText("")
         self.pb_unassign_student.setObjectName("pb_unassign_student")
         self.pb_unassign_student.setEnabled(False)
         hl2.addWidget(self.pb_unassign_student)
 
-        self.pb_remove_student = IconButton("resources/icons/ic_trash.svg", self.student_tab)
+        self.pb_remove_student = IconButton(
+            SvgIcon("resources/icons/ic_trash.svg"), self.student_tab
+        )
         self.pb_remove_student.setText("")
         self.pb_remove_student.setObjectName("pb_remove_student")
         self.pb_remove_student.setEnabled(False)
@@ -175,7 +216,9 @@ class DbManagerView:
         self.cb_show_unassigned.setObjectName("cb_show_unassigned")
         hl2.addWidget(self.cb_show_unassigned)
 
-        spacerItem = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacerItem = QSpacerItem(
+            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         hl2.addItem(spacerItem)
         vl2.addLayout(hl2)
 
@@ -207,13 +250,17 @@ class DbManagerView:
         # self.pb_new_schedule.setObjectName("pb_new_schedule")
         # hl4.addWidget(self.pb_new_schedule)
 
-        self.pb_remove_schedule = IconButton("resources/icons/ic_trash.svg", self.schedules_tab)
+        self.pb_remove_schedule = IconButton(
+            SvgIcon("resources/icons/ic_trash.svg"), self.schedules_tab
+        )
         self.pb_remove_schedule.setText("")
         self.pb_remove_schedule.setObjectName("pb_remove_schedule")
         self.pb_remove_schedule.setEnabled(False)
         hl4.addWidget(self.pb_remove_schedule)
 
-        spacerItem1 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacerItem1 = QSpacerItem(
+            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         hl4.addItem(spacerItem1)
         vl3.addLayout(hl4)
 
@@ -235,9 +282,18 @@ class DbManagerView:
         dbmanager.setWindowTitle(_translate("dbmanager", "Manage Courses"))
         self.le_search.setPlaceholderText(_translate("dbmanager", "Search"))
         self.le2_search.setPlaceholderText(_translate("dbmanager", "Search"))
-        self.cb_show_unassigned.setText(_translate("dbmanager", "Show unassigned students only"))
-        self.data_tabs.setTabText(self.data_tabs.indexOf(self.student_tab), _translate("dbmanager", "Students"))
-        self.data_tabs.setTabText(self.data_tabs.indexOf(self.schedules_tab), _translate("dbmanager", "Schedules"))
+        self.cb_show_unassigned.setText(
+            _translate("dbmanager", "Show unassigned students only")
+        )
+        self.data_tabs.setTabText(
+            self.data_tabs.indexOf(self.student_tab),
+            _translate("dbmanager", "Students"),
+        )
+        self.data_tabs.setTabText(
+            self.data_tabs.indexOf(self.schedules_tab),
+            _translate("dbmanager", "Schedules"),
+        )
+
 
 class AssignmentView:
     def setupUi(self, assign_student_dialog: QDialog):
@@ -254,7 +310,9 @@ class AssignmentView:
         self.le_search.setObjectName("le_search")
         horizontalLayout.addWidget(self.le_search)
 
-        spacerItem = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacerItem = QSpacerItem(
+            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         horizontalLayout.addItem(spacerItem)
         verticalLayout.addLayout(horizontalLayout)
 
@@ -269,22 +327,30 @@ class AssignmentView:
         self.lw_selected_students = QListWidget(assign_student_dialog)
         self.lw_selected_students.setMaximumHeight(30)
         self.lw_selected_students.setObjectName("lw_selected_students")
-        self.lw_selected_students.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.lw_selected_students.setSelectionMode(
+            QListWidget.SelectionMode.NoSelection
+        )
         self.lw_selected_students.setFlow(QListWidget.Flow.LeftToRight)
         self.lw_selected_students.setAlternatingRowColors(True)
-        self.lw_selected_students.setEditTriggers(QListWidget.EditTrigger.NoEditTriggers)
+        self.lw_selected_students.setEditTriggers(
+            QListWidget.EditTrigger.NoEditTriggers
+        )
         self.lw_selected_students.setDragEnabled(False)
         verticalLayout.addWidget(self.lw_selected_students)
 
         self.button_box = QDialogButtonBox(parent=assign_student_dialog)
         self.button_box.setOrientation(Qt.Orientation.Horizontal)
-        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.setStandardButtons(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         self.button_box.setObjectName("button_box")
         verticalLayout.addWidget(self.button_box)
 
         self.pb_new_student = QPushButton(assign_student_dialog)
-        self.button_box.addButton(self.pb_new_student, QDialogButtonBox.ButtonRole.ResetRole)
-        
+        self.button_box.addButton(
+            self.pb_new_student, QDialogButtonBox.ButtonRole.ResetRole
+        )
+
         self.button_box.accepted.connect(assign_student_dialog.accept)
         self.button_box.rejected.connect(assign_student_dialog.reject)
 
@@ -294,6 +360,8 @@ class AssignmentView:
 
     def retranslateUi(self, assign_student_dialog):
         _translate = QCoreApplication.translate
-        assign_student_dialog.setWindowTitle(_translate("assign_student_dialog", "Dialog"))
+        assign_student_dialog.setWindowTitle(
+            _translate("assign_student_dialog", "Dialog")
+        )
         self.le_search.setPlaceholderText(_translate("assign_student_dialog", "Search"))
         self.pb_new_student.setText(_translate("assign_student_dialog", "New"))

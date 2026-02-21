@@ -29,11 +29,35 @@ class BaseElementModel(Protocol): ...
 class CellModel(QAbstractListModel):
     modelChanged = pyqtSignal()
 
-    def __init__(self, data=[], parent: QObject | None = None) -> None:
+    def __init__(self, data: list | None = None, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._data: list[BaseElementModel] = data
-        self.height: int = 30
+        self._data: list[BaseElementModel] = data if data is not None else []
+        self._cached_size: QSize = QSize(100, 30)
         self.cell_index = (-1, -1)
+
+    @property
+    def height(self) -> int:
+        return self._cached_size.height()
+
+    def sizeHint(self, width: int) -> QSize:
+        # if width != self._cached_size.width():
+        self.recalculate_size(width)
+        return QSize(self._cached_size)
+
+    def recalculate_size(self, width: int) -> None:
+        if not self._data:
+            self._cached_size = QSize(100, 30)
+            return
+        if width > 0 and width < 2147483647:
+            height = 0
+            for model in self._data:
+                height += model.sizeHint(width).height()
+            self._cached_size = QSize(width, height + 10)
+        else:
+            height = 0
+            for model in self._data:
+                height += model.sizeHint(self._cached_size.width()).height()
+            self._cached_size = QSize(width, height + 10)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -41,6 +65,10 @@ class CellModel(QAbstractListModel):
     def add_model(self, model: BaseElementModel) -> None:
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
+        self._cached_size.setHeight(
+            self._cached_size.height()
+            + model.sizeHint(self._cached_size.width()).height()
+        )
         self.endInsertRows()
         print(f"Model of type {model} added.")
 
@@ -166,13 +194,6 @@ class CellModel(QAbstractListModel):
         except IndexError:
             return False
 
-    def change_on_mouse_hover(self) -> bool:
-        for row in self:
-            if row.change_on_mouse_hover():
-                return True
-            else:
-                return False
-
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeStartElement("cell")
         if self._data:
@@ -199,16 +220,12 @@ class CellModel(QAbstractListModel):
     def __repr__(self) -> str:
         return str(self._data)
 
-    def expected_cell_height(self, width: int) -> int:
-        if self._data:
-            height = sum([model.expected_size(width).height() for model in self._data])
-            return height
-        else:
-            return 30
-
     def __del__(self) -> None:
         # print("CellModel deleted")
         self.clear()
+
+    def __bool__(self) -> bool:
+        return bool(self._data)
 
     def flags(self, index: QModelIndex):
         return (
@@ -369,7 +386,7 @@ class TableModel(QAbstractTableModel):
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
         try:
-            self.beginInsertRows(QModelIndex(), row, row)
+            self.beginInsertRows(QModelIndex(), row + 1, row + 1)
             self._data.insert(
                 row + 1, [CellModel(parent=self) for _ in range(self.columnCount())]
             )
@@ -386,7 +403,7 @@ class TableModel(QAbstractTableModel):
         self, column: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
         try:
-            self.beginInsertColumns(parent, column, column)
+            self.beginInsertColumns(parent, column + 1, column + 1)
             for row in self._data:
                 row.insert(column + 1, CellModel(parent=self))
             self._header_data[Qt.Orientation.Horizontal].insert(

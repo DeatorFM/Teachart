@@ -1,9 +1,8 @@
 """Template stylesheet."""
 
-
-TEMPLATE_STYLESHEET = '''
+TEMPLATE_STYLESHEET = """
 QWidget {
-    background: <t><c k="foreground:base" /></t>;
+    background: <t><c k="background:base" /></t>;
     color: <t><c k="foreground:base"/></t>;
     selection-color:<t><c k="foreground:base"/></t>;
     selection-background-color:<t><c k="primary:base" state="selection.background"/></t>
@@ -1159,9 +1158,9 @@ ParameterTree > .QWidget > .QWidget > .QWidget > QComboBox{
 ParameterTree::item,ParameterTree > .QWidget {
     background:<t><c k="background:base" state="list"/></t>;
     }
-    '''  # noqa: E501
+    """  # noqa: E501
 
-TEMPLATE_STANDARD_ICONS_STYLESHEET = '''
+TEMPLATE_STANDARD_ICONS_STYLESHEET = """
 
 QCalendarWidget{
     leftarrow-icon:<t><img><c k="foreground:base" state="icon"/><url id="arrow_upward" rotate="270"/></img></t>;
@@ -1198,4 +1197,4 @@ QMdiSubWindow{
 QToolBarExtension{
     qproperty-icon:<t><img><c k="foreground:base" state="icon"/><url id="double_arrow"/></img></t>
     }
-    '''  
+    """
