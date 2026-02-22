@@ -197,8 +197,8 @@ class Editor(QMainWindow):
         self.ui.ac_add_column.triggered.connect(
             lambda: self.tablemodel.insertColumn(self.ui.table.currentIndex().column())
         )
-        self.ui.ac_rmv_row.triggered.connect(self.on_about_to_remove_row)
-        self.ui.ac_rmv_column.triggered.connect(self.on_about_to_remove_column)
+        self.ui.ac_rmv_row.triggered.connect(lambda: self.table.remove_row())
+        self.ui.ac_rmv_column.triggered.connect(lambda: self.table.remove_column())
         self.ui.menu_elements.triggered.connect(self.on_element_action)
 
         self.ui.ac_del_element.triggered.connect(self.remove_element)
@@ -463,9 +463,17 @@ class Editor(QMainWindow):
     def remove_element(self) -> None:
         editor = self.table.editor
         if editor:
-            model = editor.model()
-            index = editor.currentIndex()
-            model.removeRow(index.row(), index)
+            result = QMessageBox.question(
+                editor,
+                tr("Confirm removal"),
+                tr("Are you sure you want to permanently remove this element?"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if result == QMessageBox.StandardButton.Yes:
+                model = editor.model()
+                index = editor.currentIndex()
+                editor.setCurrentIndex(QModelIndex())
+                model.removeRow(index.row())
 
     def move_element_up(self) -> None:
         editor = self.table.editor
@@ -525,8 +533,10 @@ class Editor(QMainWindow):
             model = definition.create_model(resobj)
 
             cell_model = self.table.editor.model()
-            if cell_model:
+            print(f"Adding to cell model {cell_model}")
+            if cell_model is not None:
                 cell_model.add_model(model)
+                print("Model added")
                 self.table.editor.geometriesChanged.emit()
 
     def print_lesson(self) -> None:

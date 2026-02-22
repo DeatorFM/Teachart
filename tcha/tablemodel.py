@@ -79,7 +79,6 @@ class CellModel(QAbstractListModel):
 
     def removeRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
         try:
-            print(f"Row is {row} * {count}")
             if row >= 0:
                 self.beginRemoveRows(parent, row, row + count - 1)
                 for _ in range(count):
@@ -326,6 +325,12 @@ class TableModel(QAbstractTableModel):
             HeaderDataItem.vertical() for _ in range(rows)
         ]
         return cls(TableData(data, header_data))
+
+    def get_row(self, row: int) -> tuple[CellModel]:
+        return tuple(self._data[row])
+
+    def get_column(self, column: int) -> tuple[CellModel]:
+        return tuple([row[column] for row in self._data])
 
     def index(
         self, row: int, column: int, parent: QModelIndex = QModelIndex()

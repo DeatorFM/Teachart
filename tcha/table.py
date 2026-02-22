@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListView,
     QMenu,
+    QMessageBox,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -40,9 +41,9 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
+from tcha import editor
 from tcha.status import StatusButton, StatusLabel
-from tcha.styling import SvgIcon
-from tcha.tablemodel import CellModel
+from tcha.tablemodel import CellModel, TableModel
 
 TableViewStyleSheet = """
 QTableView {selection-background-color: none; background-color: white; border: 1px solid #ababab}
@@ -588,16 +589,47 @@ class Table(QTableView):
             self.model().insertColumn(column)
 
     def remove_row(self, row: int = -1) -> None:
-        if row == -1:
-            self.model().removeRow(self.currentIndex().row())
-        else:
-            self.model().removeRow(row)
+        """Removes specified row or if not current row"""
+        rmv_row = row if row > -1 else self.currentIndex().row()
+        print(f"About to remove row {rmv_row}")
+        model: TableModel = self.model()
+        if self._editor and self.model().rowCount() > 1:
+            if any(model.get_row(rmv_row)):
+                result = QMessageBox.question(
+                    self,
+                    tr("Confirm removal"),
+                    tr(
+                        "This row has content. Are you sure you want to permanently remove this row?"
+                    ),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if result == QMessageBox.StandardButton.Yes:
+                    self.setCurrentIndex(QModelIndex())
+                    model.removeRow(rmv_row)
+            else:
+                self.setCurrentIndex(QModelIndex())
+                model.removeRow(rmv_row)
 
     def remove_column(self, column: int = -1) -> None:
-        if column == -1:
-            self.model().removeColumn(self.currentIndex().column())
-        else:
-            self.model().removeColumn(column)
+        rmv_col = column if column > -1 else self.currentIndex().column()
+        print(f"About to remove column {rmv_col}")
+        model: TableModel = self.model()
+        if self._editor and self.model().columnCount() > 1:
+            if any(model.get_column(rmv_col)):
+                result = QMessageBox.question(
+                    self,
+                    tr("Confirm removal"),
+                    tr(
+                        "This column has content. Are you sure you want to permanently remove this column?"
+                    ),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if result == QMessageBox.StandardButton.Yes:
+                    self.setCurrentIndex(QModelIndex())
+                    model.removeColumn(rmv_col)
+            else:
+                self.setCurrentIndex(QModelIndex())
+                model.removeColumn(rmv_col)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() & Qt.MouseButton.LeftButton:
