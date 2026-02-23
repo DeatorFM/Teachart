@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Protocol, Self, Sequence
+from unittest.mock import Base
 
 from PyQt6.QtCore import (
     QAbstractListModel,
@@ -26,14 +27,71 @@ from PyQt6.QtGui import QFont
 class BaseElementModel(Protocol): ...
 
 
+class CellItem(list):
+    """Describes the raw data of a cell."""
+
+    def __init__(self):
+        super().__init__()
+        self._current_size = QSize(100, 30)
+
+    def __delitem__(self, key: int):
+        model: BaseElementModel = self[key]
+        self._current_size.setHeight(self.height - model.sizeHint(self.width).height())
+        super().__delitem__(key)
+
+    def append(self, object: BaseElementModel):
+        if isinstance(object, BaseElementModel):
+            super().append(object)
+            self.current_size.setHeight(
+                self.height + object.sizeHint(self.width).height()
+            )
+            return
+        raise TypeError("Argument must be of type of BaseElementModel")
+
+    def insert(self, index: int, object: BaseElementModel):
+        if isinstance(object, BaseElementModel):
+            super().insert(index, object)
+            self.current_size.setHeight(
+                self.height + object.sizeHint(self.width).height()
+            )
+            return
+        raise TypeError("Argument must be of type of BaseElementModel")
+
+    def pop(self, index=-1):
+        model = self[index]
+        self._current_size.setHeight(self.height - model.sizeHint(self.width).height())
+        return super().pop(index)
+
+    @property
+    def current_size(self) -> QSize:
+        return self._current_size
+
+    @property
+    def height(self) -> int:
+        return self._current_size.height()
+
+    @property
+    def width(self) -> int:
+        return self._current_size.width()
+
+    def set_current_size(self, size: QSize) -> None:
+        self._current_size = size
+
+
 class CellModel(QAbstractListModel):
+    """Model to edit a cell's data inside a CellEditor."""
+
     modelChanged = pyqtSignal()
 
-    def __init__(self, data: list | None = None, parent: QObject | None = None) -> None:
+    def __init__(
+        self,
+        data: CellItem,
+        index: QModelIndex = QModelIndex(),
+        parent: QObject | None = None,
+    ) -> None:
         super().__init__(parent)
-        self._data: list[BaseElementModel] = data if data is not None else []
-        self._cached_size: QSize = QSize(100, 30)
-        self.cell_index = (-1, -1)
+        self._data: CellItem[BaseElementModel] = data
+        self.cell_index = index
 
     @property
     def height(self) -> int:
@@ -46,18 +104,20 @@ class CellModel(QAbstractListModel):
 
     def recalculate_size(self, width: int) -> None:
         if not self._data:
-            self._cached_size = QSize(100, 30)
+            self._data.set_current_size(QSize(100, 30))
             return
         if width > 0 and width < 2147483647:
             height = 0
             for model in self._data:
                 height += model.sizeHint(width).height()
-            self._cached_size = QSize(width, height + 10)
+            self._data.set_current_size(QSize(width, height + 10))
         else:
             height = 0
             for model in self._data:
                 height += model.sizeHint(self._cached_size.width()).height()
-            self._cached_size = QSize(width, height + 10)
+            self._data.set_current_size(QSize(width, height + 10))
+
+    def adjust_size(self, index: int, old: QSize, new: QSize) -> None: ...
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -65,10 +125,6 @@ class CellModel(QAbstractListModel):
     def add_model(self, model: BaseElementModel) -> None:
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
-        self._cached_size.setHeight(
-            self._cached_size.height()
-            + model.sizeHint(self._cached_size.width()).height()
-        )
         self.endInsertRows()
         print(f"Model of type {model} added.")
 
@@ -124,6 +180,11 @@ class CellModel(QAbstractListModel):
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
+        # New source info
+        # TODO: Redefine mime data for "application/x-teachart"
+        idx = indexes[0]
+        stream.writeInt16()
+
         # Write source info
         index = indexes[0]
         stream.writeInt32(self.cell_index[0])  # Table row
@@ -158,6 +219,9 @@ class CellModel(QAbstractListModel):
             return self.moveRows(QModelIndex(), source_item_row, 1, QModelIndex(), row)
 
         return False
+
+    def mimeTypes(self) -> list[str]:
+        return ["application/x-teachart", "application/x-qabstractitemmodeldatalist"]
 
     def moveRows(
         self,
@@ -240,7 +304,7 @@ class CellModel(QAbstractListModel):
         return CellModel(deepcopy(self._data))
 
 
-@dataclass()
+@dataclass
 class HeaderDataItem:
     orientation: Qt.Orientation
     section_size: int
@@ -277,12 +341,11 @@ class TableModel(QAbstractTableModel):
     ) -> None:
         super().__init__(parent)
         print(data)
-        self._data: list[list[CellModel]]
+        self._data: list[list[CellItem]]
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
             Qt.Orientation.Vertical: [],
         }
-        self.header_index: tuple[int, int] = (0, 0)
 
         if data:
             self._data = data.table
@@ -305,7 +368,7 @@ class TableModel(QAbstractTableModel):
         return len(max(self._data, key=len))
 
     def supportedDropActions(self):
-        return Qt.DropAction.MoveAction
+        return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     @classmethod
     def new(cls, rows: int, columns: int) -> Self:
@@ -315,7 +378,7 @@ class TableModel(QAbstractTableModel):
         for _ in range(rows):
             row = []
             for _ in range(columns):
-                cell = CellModel()
+                cell = CellItem()
                 row.append(cell)
             data.append(row)
         header_data[Qt.Orientation.Horizontal] = [
@@ -326,19 +389,18 @@ class TableModel(QAbstractTableModel):
         ]
         return cls(TableData(data, header_data))
 
-    def get_row(self, row: int) -> tuple[CellModel]:
+    def get_row(self, row: int) -> tuple[CellItem]:
         return tuple(self._data[row])
 
-    def get_column(self, column: int) -> tuple[CellModel]:
+    def get_column(self, column: int) -> tuple[CellItem]:
         return tuple([row[column] for row in self._data])
 
     def index(
         self, row: int, column: int, parent: QModelIndex = QModelIndex()
     ) -> QModelIndex:
-        # print("Index called!")
         return self.createIndex(row, column, 0)
 
-    def data(self, index: QModelIndex, role: int = ...) -> CellModel:
+    def data(self, index: QModelIndex, role: int = ...) -> CellItem:
         return self._data[index.row()][index.column()]
 
     def header_count(self, orientation: Qt.Orientation) -> int:
@@ -392,9 +454,7 @@ class TableModel(QAbstractTableModel):
     ) -> bool:
         try:
             self.beginInsertRows(QModelIndex(), row + 1, row + 1)
-            self._data.insert(
-                row + 1, [CellModel(parent=self) for _ in range(self.columnCount())]
-            )
+            self._data.insert(row + 1, [CellItem() for _ in range(self.columnCount())])
             self._header_data[Qt.Orientation.Vertical].insert(
                 row + 1, HeaderDataItem.vertical()
             )
@@ -410,7 +470,7 @@ class TableModel(QAbstractTableModel):
         try:
             self.beginInsertColumns(parent, column + 1, column + 1)
             for row in self._data:
-                row.insert(column + 1, CellModel(parent=self))
+                row.insert(column + 1, CellItem())
             self._header_data[Qt.Orientation.Horizontal].insert(
                 column + 1, HeaderDataItem.horizontal()
             )

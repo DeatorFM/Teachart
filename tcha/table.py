@@ -41,24 +41,8 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
-from tcha import editor
 from tcha.status import StatusButton, StatusLabel
-from tcha.tablemodel import CellModel, TableModel
-
-TableViewStyleSheet = """
-QTableView {selection-background-color: none; background-color: white; border: 1px solid #ababab}
-QTableView::item:selected {border: 2px solid #2980b9; background-color: white}
-"""
-
-ListViewStyleSheet = """
-QListView {selection-background-color: none; border: 2px solid #1967d2; background-color: white;}
-QListView::item:selected {selection-background-color: none; border: 2px solid #3498db; background-color: white;}
-"""
-
-HeaderViewStyleSheet = """
-QLineEdit {background-color: white;}
-QHeaderView::section {color: black;}
-"""
+from tcha.tablemodel import CellItem, CellModel, TableModel
 
 
 class CellEditor(QListView):
@@ -112,7 +96,6 @@ class CellEditor(QListView):
         model.rowsRemoved.connect(self.update_list_geometry)
 
     def update_list_geometry(self) -> None:
-        print("SizeHint changed")
         self.geometriesChanged.emit()
         self.scheduleDelayedItemsLayout()
 
@@ -239,7 +222,7 @@ class CellDelegate(QStyledItemDelegate):
             if cell_rect.width() < 140 and cell_rect.width() > 135:
                 # Text display problems between 125 and 130 to fix
                 cell_rect.setWidth(140)
-            cell = index.data()
+            cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
                 for i, model in enumerate(cell):
@@ -283,14 +266,14 @@ class CellDelegate(QStyledItemDelegate):
             editor.setGeometry(editor_rect)
             editor.viewport().update()
 
+    def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
+        if editor:
+            editor.setModel(CellModel(index.data(), index))
+
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
-        print("Request cell geometry update")
         model: CellModel = index.data()
-        print(f"Current Model Height {model.height}")
         adjusted_width = rect.width()
-        print(f"Calculate height with width {adjusted_width}")
         model.recalculate_size(adjusted_width)
-        print(f"New Model Height {model.height}")
         self.sizeHintChanged.emit(index)
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
@@ -308,17 +291,12 @@ class CellDelegate(QStyledItemDelegate):
         # print(f"Passed event: {event.type().name} of object '{object}'")
         return super().eventFilter(object, event)
 
-    def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
-        if editor:
-            editor.setModel(index.data())
-            editor.model().cell_index = (index.row(), index.column())
-
     def destroyEditor(self, editor: CellEditor, index: QModelIndex):
         self._open_editor_index = QModelIndex()
         super().destroyEditor(editor, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        size = index.data().sizeHint(option.rect.width())
+        size = index.data().current_size()
         return size
 
 

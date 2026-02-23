@@ -444,11 +444,15 @@ class Editor(QMainWindow):
                 "is valid",
             )
             self.ui.table_group.setEnabled(True)
+            self.ui.ac_copy.setEnabled(True)
+            self.ui.ac_paste.setEnabled(self.ui.ac_from_clipboard.isEnabled())
             editor.connect_toolsets(self.toolsets)
             # editor.elementActivated.connect(self.on_element_activated)
 
     def on_cell_closed(self) -> None:
         self.ui.table_group.setDisabled(True)
+        self.ui.ac_copy.setEnabled(False)
+        self.ui.ac_paste.setEnabled(False)
         for toolset in self.toolsets.values():
             toolset.setVisible(False)
 
