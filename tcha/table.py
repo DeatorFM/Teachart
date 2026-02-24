@@ -349,8 +349,12 @@ class HeaderView(QHeaderView):
 
     def on_section_resized(self, logicalIndex: int, oldSize: int, newSize: int) -> None:
         if self.orientation() == Qt.Orientation.Horizontal:
+            vindex = self.visualIndex(logicalIndex)
+            cells: list[CellItem] = self.model().get_column(vindex)
+            for cell in cells:
+                cell.recalculate_items(newSize - 1)
             self.model().setHeaderData(
-                self.visualIndex(logicalIndex),
+                vindex,
                 self.orientation(),
                 QSize(newSize, 30),
                 Qt.ItemDataRole.SizeHintRole,

@@ -99,6 +99,8 @@ class AudioModel(BaseElementModel):
         self._current_time = current_time
         self._text = os.path.basename(self.resource.path)
 
+        self._item_size = QSize(100, 49)
+
     @staticmethod
     def restype() -> ResourceType:
         return ResourceType.AUDIO
@@ -118,6 +120,9 @@ class AudioModel(BaseElementModel):
         writer.writeAttribute("start_time", str(self.start_time))
         writer.writeAttribute("end_time", str(self.end_time))
         return writer
+
+    def set_item_size(self, size: QSize):
+        self._item_size = QSize(size.width(), 49)
 
     @classmethod
     def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
@@ -145,6 +150,9 @@ class AudioModel(BaseElementModel):
     @property
     def text(self) -> str:
         return self._text
+
+    def recalculate_size(self, width):
+        self._item_size.setWidth(width)
 
     def delegate(
         self, toolset: BaseElementToolset, parent: QObject
@@ -524,7 +532,6 @@ class AudioDelegate(BaseElementDelegate):
 
     def sizeHint(self, option, index):
         if index.data():
-            # Account for 2px top + 2px bottom padding
             return QSize(option.rect.width(), 49)
         else:
             return QSize(option.rect.width(), 0)

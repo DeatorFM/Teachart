@@ -60,6 +60,8 @@ class PictureModel(BaseElementModel):
         self._rotation = rotation
         self._adjusted = adjusted  # If sizes have been adjusted by the user
 
+        self._item_size = QSize(size.width(), self._height)
+
         self._original_aspect_ratio: float = size.height() / size.width()
 
         print("Image loaded from", self._resource.path)
@@ -109,6 +111,13 @@ class PictureModel(BaseElementModel):
     @property
     def path(self) -> str:
         return self.resource.path
+
+    def recalculate_size(self, width: int):
+        if self._adjusted and width >= self._width:
+            return
+        else:
+            self.set_size(width, round(self.height * (width / self._width)))
+            self.set_adjusted(False)
 
     @property
     def width(self) -> int:
@@ -266,11 +275,13 @@ class PictureEditor(BaseElementEditor):
                 self._model.set_size(width, height)
         else:
             self._model.set_height(height)
+            self._model.set_item_size(QSize(self._max_width, height))
         self._model.set_adjusted(True)
         self.sizeChanged.emit(self._model.width, self._model.height)
 
     def set_size(self, width: int, height: int) -> None:
         self._model.set_size(width, height)
+        self._model.set_item_size(QSize(self._max_width, height))
         self.sizeChanged.emit(self.model.width, self.model.height)
 
     def refresh(self) -> None:
@@ -342,11 +353,11 @@ class PictureDelegate(BaseElementDelegate):
             # )
             painter.drawPixmap(new_rect, pixmap)
         else:
-            model.set_size(
-                sub_rect.width(),
-                round(model.height * (sub_rect.width() / model.width)),
-            )
-            model.set_adjusted(False)
+            # model.set_size(
+            #     sub_rect.width(),
+            #     round(model.height * (sub_rect.width() / model.width)),
+            # )
+            # model.set_adjusted(False)
             # print(
             #     f"Painting image with column constraints: {image_rect.width()} * {image_rect.height()}"
             # )
@@ -396,11 +407,10 @@ class PictureDelegate(BaseElementDelegate):
         return False
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        model: PictureModel | None = index.data()
+        model = index.data()
         if isinstance(model, PictureModel):
-            return model.sizeHint(option.rect.width())
+            return model.item_size()
         else:
-            print("PictureModel missing for size hint")
             return QSize(option.rect.width(), 0)
 
 

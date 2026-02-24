@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Protocol, Self, Sequence
-from unittest.mock import Base
+from typing import Any, Self, Sequence
 
 from PyQt6.QtCore import (
     QAbstractListModel,
@@ -23,8 +22,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import QFont
 
-
-class BaseElementModel(Protocol): ...
+from nativeelements.baseelement import BaseElementModel
 
 
 class CellItem(list):
@@ -41,6 +39,7 @@ class CellItem(list):
 
     def append(self, object: BaseElementModel):
         if isinstance(object, BaseElementModel):
+            object.recalculate_size(self._current_size.width())
             super().append(object)
             self.current_size.setHeight(
                 self.height + object.sizeHint(self.width).height()
@@ -64,7 +63,9 @@ class CellItem(list):
 
     @property
     def current_size(self) -> QSize:
-        return self._current_size
+        return QSize(
+            self._current_size.width(), sum(map(lambda x: x.item_size.height(), self))
+        )
 
     @property
     def height(self) -> int:
@@ -73,6 +74,11 @@ class CellItem(list):
     @property
     def width(self) -> int:
         return self._current_size.width()
+
+    def recalculate_items(self, width: int) -> None:
+        for item in self:
+            item: BaseElementModel
+            item.recalculate_size(width)
 
     def set_current_size(self, size: QSize) -> None:
         self._current_size = size

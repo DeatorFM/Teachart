@@ -107,6 +107,10 @@ class TextModel(QTextDocument, BaseElementModel):
     def name(self) -> str:
         return "TextElement"
 
+    def recalculate_size(self, width: int):
+        self.setTextWidth(width - 8)
+        self.set_item_size(QSize(width, self.size().toSize().height() + 14))
+
     def editable(self) -> bool:
         return True
 
@@ -146,7 +150,7 @@ class TextModel(QTextDocument, BaseElementModel):
 class TextEditor(BaseTextElementEditor):
     currentPropsChanged = pyqtSignal(dict)
     tableEntered = pyqtSignal(bool)
-    sizeChanged = pyqtSignal()
+    sizeChanged = pyqtSignal(int, int)
 
     def __init__(self, target_width: float, model: TextModel, parent=None) -> None:
         super().__init__(parent)
@@ -242,13 +246,17 @@ class TextEditor(BaseTextElementEditor):
 
     def fit_to_text(self) -> None:
         document: TextModel = self.document()
-        self.document().setTextWidth(self._target_width)
-        docHeight = document.size().height()
-        if 0 <= docHeight:
+        old_height = document.size().toSize().height()
+        document.setTextWidth(self._target_width)
+        new_height = document.size().height()
+        if 0 <= new_height:
             self.setFixedHeight(
-                int(docHeight) + 10
+                int(new_height) + 10
             )  # Add 10px buffer to prevent scrolling
-            self.sizeChanged.emit()
+            document.set_item_size(
+                QSize(self._target_width, document.size().toSize().height())
+            )
+            self.sizeChanged.emit(old_height, new_height)
 
     @pyqtSlot(dict)
     def set_text_format(self, props: dict) -> None:
@@ -791,6 +799,12 @@ class TextDelegate(BaseElementDelegate):
     ) -> None:
         model.setData(index, editor.document())
 
+    def on_size_changed(
+        self, index: QModelIndex, old_height: int, new_height: int
+    ) -> None:
+        self.sizeHintChanged.emit(index)
+        self.sizeUpdated.emit(index, old_height, new_height)
+
     def destroyEditor(self, editor: TextEditor, index: QModelIndex):
         editor.sizeChanged.disconnect()
         self._toolset.close_()
@@ -799,7 +813,7 @@ class TextDelegate(BaseElementDelegate):
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         model: TextModel | None = index.data()
         if model:
-            return model.sizeHint(option.rect.width())
+            return model.item_size
         else:
             return QSize(option.rect.width(), 30)
 

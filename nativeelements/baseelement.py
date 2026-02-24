@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from curses import qiflush
 from typing import Self, Type
 
 from PyQt6.QtCore import (
@@ -18,7 +19,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QMainWindow,
     QMenu,
-    QSizePolicy,
     QStyledItemDelegate,
     QTextEdit,
     QToolBar,
@@ -73,6 +73,21 @@ class BaseElementDelegate(QStyledItemDelegate):
 
 class BaseElementModel(QObject):
     __metaclass__ = ABCMeta
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._item_size = QSize(100, 30)
+
+    @property
+    def item_size(self) -> QSize:
+        return self._item_size
+
+    def set_item_size(self, size: QSize) -> None:
+        self._item_size = size
+
+    @abstractmethod
+    def recalculate_size(self, width: int) -> None:
+        return
 
     @abstractmethod
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
