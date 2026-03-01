@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from email.header import Header
 from typing import Any, Self, Sequence
 
 from PyQt6.QtCore import (
@@ -28,60 +29,47 @@ from nativeelements.baseelement import BaseElementModel
 class CellItem(list):
     """Describes the raw data of a cell."""
 
-    def __init__(self):
+    def __init__(self, hheader_item: HeaderDataItem):
         super().__init__()
-        self._current_size = QSize(100, 30)
-
-    def __delitem__(self, key: int):
-        model: BaseElementModel = self[key]
-        self._current_size.setHeight(self.height - model.sizeHint(self.width).height())
-        super().__delitem__(key)
+        if hheader_item.orientation != Qt.Orientation.Horizontal:
+            raise ValueError("HeaderDataItem must have a horizontal orientation.")
+        self._header = hheader_item
 
     def append(self, object: BaseElementModel):
         if isinstance(object, BaseElementModel):
-            object.recalculate_size(self._current_size.width())
+            object.recalculate_size(self.width)
             super().append(object)
-            self.current_size.setHeight(
-                self.height + object.sizeHint(self.width).height()
-            )
             return
         raise TypeError("Argument must be of type of BaseElementModel")
 
     def insert(self, index: int, object: BaseElementModel):
         if isinstance(object, BaseElementModel):
+            object.recalculate_size(self.width)
             super().insert(index, object)
-            self.current_size.setHeight(
-                self.height + object.sizeHint(self.width).height()
-            )
-            return
         raise TypeError("Argument must be of type of BaseElementModel")
-
-    def pop(self, index=-1):
-        model = self[index]
-        self._current_size.setHeight(self.height - model.sizeHint(self.width).height())
-        return super().pop(index)
 
     @property
     def current_size(self) -> QSize:
         return QSize(
-            self._current_size.width(), sum(map(lambda x: x.item_size.height(), self))
-        )
+            self.width, sum(map(lambda x: x.item_size.height(), self)))
 
     @property
     def height(self) -> int:
-        return self._current_size.height()
+        return sum(map(lambda x: x.item_size.height(), self))
 
     @property
     def width(self) -> int:
-        return self._current_size.width()
+        return self._header.section_size - 1
 
-    def recalculate_items(self, width: int) -> None:
+    def recalculate_items(self) -> None:
+        """Recalculates the cell's size based on headers width"""
         for item in self:
             item: BaseElementModel
-            item.recalculate_size(width)
+            item.recalculate_size(self.width)
 
-    def set_current_size(self, size: QSize) -> None:
-        self._current_size = size
+    def set_header_item(self, hheader: HeaderDataItem) -> None:
+        self._header = hheader
+        self.recalculate_items()
 
 
 class CellModel(QAbstractListModel):
@@ -122,8 +110,6 @@ class CellModel(QAbstractListModel):
             for model in self._data:
                 height += model.sizeHint(self._cached_size.width()).height()
             self._data.set_current_size(QSize(width, height + 10))
-
-    def adjust_size(self, index: int, old: QSize, new: QSize) -> None: ...
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -342,22 +328,13 @@ class TableData:
 class TableModel(QAbstractTableModel):
     modelChanged = pyqtSignal()
 
-    def __init__(
-        self, data: TableData | None = None, parent: QObject | None = None
-    ) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        print(data)
-        self._data: list[list[CellItem]]
+        self._data: list[list[CellItem]] = []
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
             Qt.Orientation.Vertical: [],
-        }
-
-        if data:
-            self._data = data.table
-            self._header_data = data.headers
-        else:
-            self._data = None
+        }-
 
     def is_valid(self) -> bool:
         return (
@@ -379,21 +356,10 @@ class TableModel(QAbstractTableModel):
     @classmethod
     def new(cls, rows: int, columns: int) -> Self:
         """Creates empty TableModel with number of rows and column"""
-        data = []
-        header_data = {}
-        for _ in range(rows):
-            row = []
-            for _ in range(columns):
-                cell = CellItem()
-                row.append(cell)
-            data.append(row)
-        header_data[Qt.Orientation.Horizontal] = [
-            HeaderDataItem.horizontal() for _ in range(columns)
-        ]
-        header_data[Qt.Orientation.Vertical] = [
-            HeaderDataItem.vertical() for _ in range(rows)
-        ]
-        return cls(TableData(data, header_data))
+        model = cls()
+        model.insertColumns(0, columns)
+        model.insertRows(0, rows)
+        return cls(TableData())
 
     def get_row(self, row: int) -> tuple[CellItem]:
         return tuple(self._data[row])
@@ -458,12 +424,25 @@ class TableModel(QAbstractTableModel):
     def insertRows(
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
+        # TODO: Fix Adding
         try:
-            self.beginInsertRows(QModelIndex(), row + 1, row + 1)
-            self._data.insert(row + 1, [CellItem() for _ in range(self.columnCount())])
-            self._header_data[Qt.Orientation.Vertical].insert(
-                row + 1, HeaderDataItem.vertical()
-            )
+            self.beginInsertRows(QModelIndex(), row + 1, row + count)
+            for _ in range(count):
+                self._header_data[Qt.Orientation.Vertical].insert(
+                    row + 1, HeaderDataItem.vertical()
+                )
+                self._data.insert(
+                    row + 1,
+                    [
+                        CellItem(
+                            self._header_data[Qt.Orientation.Horizontal][
+                                col
+                            ].section_size
+                            - 1
+                        )
+                        for col in range(self.columnCount())
+                    ],
+                )
             self.endInsertRows()
             self.modelChanged.emit()
             return True
@@ -473,10 +452,14 @@ class TableModel(QAbstractTableModel):
     def insertColumns(
         self, column: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
+        # TODO: Fix Adding
         try:
             self.beginInsertColumns(parent, column + 1, column + 1)
             for row in self._data:
-                row.insert(column + 1, CellItem())
+                row.insert(
+                    column + 1,
+                    CellItem(100),
+                )
             self._header_data[Qt.Orientation.Horizontal].insert(
                 column + 1, HeaderDataItem.horizontal()
             )

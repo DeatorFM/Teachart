@@ -296,7 +296,7 @@ class CellDelegate(QStyledItemDelegate):
         super().destroyEditor(editor, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        size = index.data().current_size()
+        size = index.data().current_size
         return size
 
 

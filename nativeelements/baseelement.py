@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from curses import qiflush
 from typing import Self, Type
 
 from PyQt6.QtCore import (
