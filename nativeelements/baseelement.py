@@ -133,6 +133,10 @@ class BaseElementModel(QObject):
         return ""
 
     @abstractmethod
+    def copy(self) -> BaseElementModel:
+        return BaseElementModel()
+
+    @abstractmethod
     def attrs(self) -> tuple[str]:
         return tuple()
 

@@ -1,14 +1,18 @@
-from genericpath import exists
-from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtCore import QXmlStreamReader, Qt, QFileDevice, QT_TR_NOOP as tr
-from enum import Enum
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from genericpath import exists
+
+from PyQt6.QtCore import QT_TR_NOOP as tr
+from PyQt6.QtCore import QFileDevice, Qt, QXmlStreamReader
+from PyQt6.QtWidgets import QMessageBox
+
 
 @dataclass(frozen=True)
 class Error:
     message: str
     critical: bool
+
 
 class FileError(Enum):
     NoError = 0
@@ -22,8 +26,8 @@ class FileError(Enum):
     MissingFileId = 8
     BadZip = 9
 
-class LFExceptions:
 
+class LFExceptions:
     class LFException(Exception):
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
@@ -32,6 +36,7 @@ class LFExceptions:
 
     class ModelReadError(Exception):
         """Model of element could not be read."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message = tr("Model has invalid valuies and could not be read.")
@@ -39,6 +44,7 @@ class LFExceptions:
 
     class MissingXml(Exception):
         """Critical error when necessary xml not found."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("Crucial XML definitions missing to parse table.")
@@ -46,6 +52,7 @@ class LFExceptions:
 
     class InvalidXml(Exception):
         """Error when xml is faulty."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("XML could not be read.")
@@ -53,6 +60,7 @@ class LFExceptions:
 
     class BrokenTable(Exception):
         """Table data is invalid and cannot be displayed."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("Table data is faulty.")
@@ -60,6 +68,7 @@ class LFExceptions:
 
     class MissingResource(Exception):
         """File defined in xml not found."""
+
         def __init__(self, critical: bool = False, res_path: str | None = None, *args):
             super().__init__(*args)
             self.message: str = tr("Ressource for table element could not be found.")
@@ -68,6 +77,7 @@ class LFExceptions:
 
     class InvalidResource(Exception):
         """Available resource could not be read."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("A resource could not be read.")
@@ -75,6 +85,7 @@ class LFExceptions:
 
     class InvalidElement(Exception):
         """Element could not be read due to invalid values."""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("An element could not be read.")
@@ -82,6 +93,7 @@ class LFExceptions:
 
     class ChecksumMismatch(Exception):
         """Checksum mismatch"""
+
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str = tr("Checksum comparison failed.")
@@ -95,7 +107,7 @@ class LFExceptions:
             self.details: str = ", ".join(args)
 
     class UnsupportedVersion(Exception):
-        def __init__(self, version: int,  *args):
+        def __init__(self, version: int, *args):
             super().__init__(*args)
             self.critical = True
             self.message = "Lesson-file version not supported"
@@ -107,9 +119,11 @@ class LFExceptions:
             self.critical = critical
             self.message = "Metadata could not be read"
 
+
 class QtError(Exception):
     """Error related to Qt module."""
-    def __init__(self, qterror: int, qterror_string: str, critical: bool,  *args):
+
+    def __init__(self, qterror: int, qterror_string: str, critical: bool, *args):
         super().__init__(*args)
         self.qterror = qterror
         self.error_string = qterror_string
@@ -117,9 +131,11 @@ class QtError(Exception):
 
     def __str__(self) -> str:
         return f"QtError: code={self.qterror} string='{self.error_string}'"
-    
+
+
 class PyException(Exception):
     """Acts as a wrapper for python exception."""
+
     def __init__(self, pyexception: Exception, critical: bool, *args) -> None:
         super().__init__(*args)
         self.pyexception = pyexception
@@ -127,19 +143,28 @@ class PyException(Exception):
 
     def __hash__(self):
         return hash(self.pyexception)
-    
+
+
 class CriticalError(Exception):
     def __init__(self, *args):
         super().__init__(*args)
         self.critical = False
-    
+
+
+class CopyError(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class ErrorCode(Enum):
     NoError = 0
     NonCritical = 1
     Critical = 2
 
+
 class ErrorLogger:
-    """Logs errors and evaluates them. """
+    """Logs errors and evaluates them."""
+
     def __init__(self, logging_file: str | None, raise_critical: bool = False):
         self._errors: set[LFExceptions.LFException] = set()
         self._logger = None
@@ -155,12 +180,11 @@ class ErrorLogger:
         self._logger = logging.getLogger(log_file)  # Create unique logger per file
         self._logger.handlers.clear()  # Clear existing handlers
         self._logger.setLevel(logging.INFO)
-        
+
         handler = logging.FileHandler(log_file)
-        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        formatter = logging.Formatter("%(asctime)s - %(message)s")
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
-
 
     def set_file(self, filename: str) -> None:
         self._file = filename.strip(".log")
@@ -179,7 +203,6 @@ class ErrorLogger:
         if self._raise_critical and error.critical:
             raise CriticalError
 
-
     def show_result(self, title: str, non_critical_msg: str, critical_msg: str) -> None:
         """Evaluates all errors and shows a MessageBox accordingly."""
         if self.code() == ErrorCode.NoError:
@@ -193,7 +216,6 @@ class ErrorLogger:
         for e in self._errors:
             if e.critical:
                 return True
-            
 
     def clear(self) -> None:
         self._errors.clear()

@@ -24,6 +24,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QFont
 
 from nativeelements.baseelement import BaseElementModel
+from tcha.settings import Settings
 
 
 class CellItem(list):
@@ -46,20 +47,24 @@ class CellItem(list):
         if isinstance(object, BaseElementModel):
             object.recalculate_size(self.width)
             super().insert(index, object)
-        raise TypeError("Argument must be of type of BaseElementModel")
+            return
+        raise TypeError(
+            f"Argument must be of type of BaseElementModel. Object type: {type(object)}"
+        )
 
     @property
     def current_size(self) -> QSize:
-        return QSize(
-            self.width, sum(map(lambda x: x.item_size.height(), self)))
+        return QSize(self.width, self.height)
 
     @property
     def height(self) -> int:
-        return sum(map(lambda x: x.item_size.height(), self))
+        if len(self) > 0:
+            return sum(map(lambda x: x.item_size.height() + 4, self)) + 5
+        return 30
 
     @property
     def width(self) -> int:
-        return self._header.section_size - 1
+        return self._header.section_size - 4
 
     def recalculate_items(self) -> None:
         """Recalculates the cell's size based on headers width"""
@@ -71,9 +76,15 @@ class CellItem(list):
         self._header = hheader
         self.recalculate_items()
 
+    def __repr__(self):
+        return f"CellItem: {super().__repr__()}"
+
+    def __str__(self):
+        return f"CellItem: {super().__str__()}"
+
 
 class CellModel(QAbstractListModel):
-    """Model to edit a cell's data inside a CellEditor."""
+    """Model to edit a cell's data inside a CellEditor and to connect CellItem with views."""
 
     modelChanged = pyqtSignal()
 
@@ -90,26 +101,6 @@ class CellModel(QAbstractListModel):
     @property
     def height(self) -> int:
         return self._cached_size.height()
-
-    def sizeHint(self, width: int) -> QSize:
-        # if width != self._cached_size.width():
-        self.recalculate_size(width)
-        return QSize(self._cached_size)
-
-    def recalculate_size(self, width: int) -> None:
-        if not self._data:
-            self._data.set_current_size(QSize(100, 30))
-            return
-        if width > 0 and width < 2147483647:
-            height = 0
-            for model in self._data:
-                height += model.sizeHint(width).height()
-            self._data.set_current_size(QSize(width, height + 10))
-        else:
-            height = 0
-            for model in self._data:
-                height += model.sizeHint(self._cached_size.width()).height()
-            self._data.set_current_size(QSize(width, height + 10))
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -166,29 +157,30 @@ class CellModel(QAbstractListModel):
             print("The data could not be saved into model.")
             return False
 
-    def mimeData(self, indexes) -> QMimeData:
+    def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:
         print("Cell's mime data")
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
-        # New source info
-        # TODO: Redefine mime data for "application/x-teachart"
-        idx = indexes[0]
-        stream.writeInt16()
-
         # Write source info
         index = indexes[0]
-        stream.writeInt32(self.cell_index[0])  # Table row
-        stream.writeInt32(self.cell_index[1])  # Table column
-        stream.writeInt32(index.row())  # Item index in cell
-        stream.writeInt32(1)  # map_items
-        stream.writeQString("CellEditor")  # Source identifier
+        stream.writeInt8(1)  # Source Level
+        stream.writeInt32(self.cell_index.row())  # Table row
+        stream.writeInt32(self.cell_index.column())  # Table column
+        stream.writeInt32(index.row())  # Cell row
 
-        mimedata.setData("application/x-qabstractitemmodeldatalist", encoded_data)
+        mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
 
-    def dropMimeData(self, data, action, row, column, parent):
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ):
         if not data.hasFormat("application/x-qabstractitemmodeldatalist"):
             return False
 
@@ -213,7 +205,7 @@ class CellModel(QAbstractListModel):
         return False
 
     def mimeTypes(self) -> list[str]:
-        return ["application/x-teachart", "application/x-qabstractitemmodeldatalist"]
+        return ["application/x-teachart"]
 
     def moveRows(
         self,
@@ -272,13 +264,6 @@ class CellModel(QAbstractListModel):
     def __iter__(self):
         return iter(self._data)
 
-    def __repr__(self) -> str:
-        return str(self._data)
-
-    def __del__(self) -> None:
-        # print("CellModel deleted")
-        self.clear()
-
     def __bool__(self) -> bool:
         return bool(self._data)
 
@@ -334,7 +319,7 @@ class TableModel(QAbstractTableModel):
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
             Qt.Orientation.Vertical: [],
-        }-
+        }
 
     def is_valid(self) -> bool:
         return (
@@ -348,18 +333,22 @@ class TableModel(QAbstractTableModel):
         return len(self._data)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
+        if not self._data:
+            return 0
         return len(max(self._data, key=len))
 
     def supportedDropActions(self):
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     @classmethod
-    def new(cls, rows: int, columns: int) -> Self:
+    def new(cls: TableModel, rows: int, columns: int) -> Self:
         """Creates empty TableModel with number of rows and column"""
-        model = cls()
-        model.insertColumns(0, columns)
-        model.insertRows(0, rows)
-        return cls(TableData())
+        if rows > 0 and columns > 0:
+            model = cls()
+            model.insertRows(-1, rows)
+            model.insertColumns(-1, columns)
+            return model
+        raise ValueError("Row and column count must be at least 1.")
 
     def get_row(self, row: int) -> tuple[CellItem]:
         return tuple(self._data[row])
@@ -389,6 +378,11 @@ class TableModel(QAbstractTableModel):
                 if self._header_data[orientation][section].text:
                     return self._header_data[orientation][section].text
                 else:
+                    if (
+                        Settings.qsettings().value("Application/debug", False, bool)
+                        and orientation == Qt.Orientation.Horizontal
+                    ):
+                        return str(self._header_data[orientation][section].section_size)
                     return str(section + 1)
             elif role == Qt.ItemDataRole.FontRole:
                 font = QFont()
@@ -424,22 +418,18 @@ class TableModel(QAbstractTableModel):
     def insertRows(
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
+        """Inserts new row after the given row"""
         # TODO: Fix Adding
         try:
-            self.beginInsertRows(QModelIndex(), row + 1, row + count)
+            self.beginInsertRows(QModelIndex(), row, row + count - 1)
             for _ in range(count):
                 self._header_data[Qt.Orientation.Vertical].insert(
-                    row + 1, HeaderDataItem.vertical()
+                    row, HeaderDataItem.vertical()
                 )
                 self._data.insert(
-                    row + 1,
+                    row,
                     [
-                        CellItem(
-                            self._header_data[Qt.Orientation.Horizontal][
-                                col
-                            ].section_size
-                            - 1
-                        )
+                        CellItem(self._header_data[Qt.Orientation.Horizontal][col])
                         for col in range(self.columnCount())
                     ],
                 )
@@ -454,15 +444,15 @@ class TableModel(QAbstractTableModel):
     ) -> bool:
         # TODO: Fix Adding
         try:
-            self.beginInsertColumns(parent, column + 1, column + 1)
-            for row in self._data:
-                row.insert(
-                    column + 1,
-                    CellItem(100),
-                )
-            self._header_data[Qt.Orientation.Horizontal].insert(
-                column + 1, HeaderDataItem.horizontal()
-            )
+            self.beginInsertColumns(parent, column, column + count - 1)
+            for _ in range(count):
+                hitem = HeaderDataItem.horizontal()
+                for row in self._data:
+                    row.insert(
+                        column,
+                        CellItem(hitem),
+                    )
+                self._header_data[Qt.Orientation.Horizontal].insert(column, hitem)
             self.endInsertColumns()
             self.modelChanged.emit()
             return True
@@ -585,7 +575,7 @@ class TableModel(QAbstractTableModel):
         except IndexError:
             return False
 
-    def mimeData(self, indexes):
+    def mimeData(self, indexes: list[QModelIndex]):
         print("Table's mime data")
         mimedata = QMimeData()
         encoded_data = QByteArray()
@@ -593,20 +583,26 @@ class TableModel(QAbstractTableModel):
 
         # Write source info
         index = indexes[0]
-        stream.writeInt32(index.row())
-        stream.writeInt32(index.column())
-        stream.writeInt32(0)
-        stream.writeInt32(1)  # map_items
-        stream.writeQString("Table")  # Source identifier
+        stream.writeInt8(0)  # Level
+        stream.writeInt32(index.row())  # Table row
+        stream.writeInt32(index.column())  # Table column
+        stream.writeInt32(0)  # Cell row
 
-        mimedata.setData("application/x-qabstractitemmodeldatalist", encoded_data)
+        mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
 
-    def canDropMimeData(self, data, action, row, column, parent):
+    def canDropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ):
         if action == Qt.DropAction.IgnoreAction:
             return False
 
-        if not data.hasFormat("application/x-qabstractitemmodeldatalist"):
+        if not data.hasFormat("application/x-teachart"):
             return False
 
         if not parent.isValid():
@@ -614,7 +610,14 @@ class TableModel(QAbstractTableModel):
 
         return True
 
-    def dropMimeData(self, data, action, row, column, parent):
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
         if self.canDropMimeData(data, action, row, column, parent):
             print(
                 "Dropped at",
@@ -627,41 +630,51 @@ class TableModel(QAbstractTableModel):
                 data.formats(),
             )
 
-            encoded_data = data.data("application/x-qabstractitemmodeldatalist")
+            encoded_data = data.data("application/x-teachart")
             stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
+            source_lvl = stream.readInt8()
             source_table_row = stream.readInt32()
             source_table_column = stream.readInt32()
             source_item_row = stream.readInt32()
-            map_items = stream.readInt32()
-            source_type = stream.readQString()
 
-            print(source_type)
-            if source_type == "Table":
-                # Handle cell swapping
-                source_index = self.index(source_table_row, source_table_column)
-                self.swap_items(source_index, parent)
-                return True
+            if action == Qt.DropAction.MoveAction:
+                if source_lvl == 0:  # Cell has been moved
+                    # Handle cell swapping
+                    source_index = self.index(source_table_row, source_table_column)
+                    self.swap_items(source_index, parent)
+                    return True
 
-            if source_type == "CellEditor":
-                target_cell = self._data[parent.row()][parent.column()]
-                if (source_table_row, source_table_column) == (
-                    parent.row(),
-                    parent.column(),
-                ):
-                    # Internal cell move
-                    return target_cell.dropMimeData(data, action, row, column, parent)
-                else:
-                    # Move between cells
-                    source_cell = self._data[source_table_row][source_table_column]
-                    if source_cell.rowCount() > 0:
-                        model = source_cell.pop_model(source_item_row)
-                        target_cell.add_model(model)
-                        return True
+                if source_lvl == 1:  # Cell element has been moved
+                    target_cell = self._data[parent.row()][parent.column()]
+                    if (source_table_row, source_table_column) == (
+                        parent.row(),
+                        parent.column(),
+                    ):
+                        # Internal cell move
+                        return target_cell.dropMimeData(
+                            data, action, row, column, parent
+                        )
                     else:
-                        return False
+                        # Move between cells
+                        source_cell = self._data[source_table_row][source_table_column]
+                        if len(source_cell) > 0:
+                            model = source_cell.pop(source_item_row)
+                            target_cell.append(model)
+                            return True
+                        else:
+                            return False
+
+            elif action == Qt.DropAction.CopyAction:
+                if source_lvl == 0:
+                    source_index = self.index(source_table_row, source_table_column)
+                    cell_item = self.data(source_index)
+                    ...
 
         return False
+
+    def mimeTypes(self) -> list[str]:
+        return ["application/x-teachart"]
 
     def swap_items(
         self, source_index: QModelIndex, destination_index: QModelIndex
@@ -678,6 +691,14 @@ class TableModel(QAbstractTableModel):
         ) = (
             self._data[destination_row][destination_column],
             self._data[source_row][source_column],
+        )
+
+        # Update header items after swap
+        self._data[source_row][source_column].set_header_item(
+            self._header_data[Qt.Orientation.Horizontal][source_column]
+        )
+        self._data[destination_row][destination_column].set_header_item(
+            self._header_data[Qt.Orientation.Horizontal][destination_column]
         )
 
         self.dataChanged.emit(source_index, source_index)
@@ -738,7 +759,7 @@ class TableModel(QAbstractTableModel):
             self.clear()
 
     def __str__(self):
-        return str(self._data)
+        return f"Data: {self._data}\nHeader: {self._header_data}"
 
     def __deepcopy__(self, memo: dict | None = None) -> TableModel:
         data = deepcopy(self._data)

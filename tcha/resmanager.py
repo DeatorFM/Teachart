@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
-from traitlets import ObjectName
+
+from tcha.error import CopyError
 
 
 class ResourceType(enum.Enum):
@@ -36,13 +37,13 @@ class ResourceObject(QObject):
         num: int,
         rtype: ResourceType = ResourceType.NONE,
         name: str | None = None,
-        parent=None,
+        parent: ResourceContainer | None = None,
     ):
         """Creates object that holds reference to a resource and manages its lifetime by counting its users"""
         super().__init__(parent)
         self._type_num: int = num  # Ordinal number of object with type 'type'
         self._type = rtype
-        self._name: str | None = name if name else str(id(self))
+        self._name: str = name if name else str(id(self))
         self._f: QFile | None = QFile(self.path) if self.path else None
         if self._f:
             self._f.open(QFile.OpenModeFlag.ReadOnly)
@@ -134,6 +135,16 @@ class ResourceObject(QObject):
         """Sets a function that returns data from an element"""
         self._datalink = link
 
+    def copy(self) -> ResourceObject:
+        if self.path:
+            raise CopyError(
+                "ResourceObject with cannot be copied because en external resource cannot exist more than once."
+            )
+        else:
+            cont: ResourceContainer = self.parent()
+            obj = cont.create(self.type)
+        return obj
+
     def is_serialised(self) -> bool:
         return exists(self.path) if self.path else False
 
@@ -222,6 +233,12 @@ class ResourceContainer(QObject):
         """The ordinal number of every object of one type is adjusted."""
         for obj in self.contents_by_type(restype):
             obj.adjust_type_num(num)
+
+    @pyqtSlot(ResourceObject)
+    def _on_object_copied(self, obj: ResourceObject) -> None:
+        obj.resourceExpired.connect(self.delete)
+        obj.copied.connect(self._on_object_copied)
+        self._objects[obj.name] = obj
 
     @pyqtSlot(str, ResourceType, int)
     def delete(self, name: str, restype: ResourceType, num: int) -> bool:

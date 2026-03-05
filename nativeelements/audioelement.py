@@ -218,6 +218,18 @@ class AudioModel(BaseElementModel):
         self._resource.delete_member()
         self._resource = None
 
+    def copy(self) -> AudioModel:
+        model = AudioModel(
+            self.resource,
+            self.is_repeating,
+            self.repeats,
+            self.pause_length,
+            self.start_time,
+            self.end_time,
+        )
+        model.set_text(self.text)
+        return model
+
     def attrs(self) -> tuple[str]:
         return (
             "resource",

@@ -117,8 +117,11 @@ class TextModel(QTextDocument, BaseElementModel):
     def delegate(self, toolset: BaseElementToolset, parent=None) -> TextDelegate:
         return TextDelegate(toolset, parent)
 
-    def change_on_mouse_hover(self) -> bool:
-        return False
+    def copy(self) -> TextModel:
+        resource_copy = self._resource.copy()
+        model = TextModel(resource_copy)
+        model.setHtml(self.toHtml())
+        return model
 
     def attrs(self) -> tuple[str]:
         return tuple(["resource"])
@@ -126,20 +129,6 @@ class TextModel(QTextDocument, BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
-
-    def sizeHint(self, width: int) -> QSize:
-        current_width = self.textWidth()
-        content_width = width - 8
-        if content_width - 8 != int(current_width):
-            copy = self.clone()
-            copy.setTextWidth(float(content_width))
-            size = copy.size().toSize()
-            print(f"Current text height: {size.height() + 14}")
-            return QSize(width, size.height() + 14)
-        else:
-            size = self.size().toSize()
-            print(f"Current text height: {size.height() + 14}")
-            return QSize(width, size.height() + 14)
 
     # def __deepcopy__(self, memo: dict | None = None) -> TextModel:
     #     model = TextModel(self._resource)
@@ -254,7 +243,9 @@ class TextEditor(BaseTextElementEditor):
                 int(new_height) + 10
             )  # Add 10px buffer to prevent scrolling
             document.set_item_size(
-                QSize(self._target_width, document.size().toSize().height())
+                QSize(
+                    int(self._target_width) + 8, document.size().toSize().height() + 10
+                )
             )
             self.sizeChanged.emit(old_height, new_height)
 
@@ -328,6 +319,9 @@ class TextEditor(BaseTextElementEditor):
     def mouseMoveEvent(self, e: QMouseEvent) -> None:
         self.has_hyperlink(e.pos())
         super().mouseMoveEvent(e)
+
+    def wheelEvent(self, e):
+        return
 
     def on_cursor_position_changed(self) -> None:
         table = self.in_table()
@@ -572,9 +566,6 @@ class TextEditor(BaseTextElementEditor):
         else:
             return default
 
-    def sizeHint(self) -> QSize:
-        return QSize(100, 50)
-
     def contextMenuEvent(self, e: QContextMenuEvent):
         self.menu.open_(
             e.globalPos(),
@@ -792,18 +783,13 @@ class TextDelegate(BaseElementDelegate):
         option: QStyleOptionViewItem,
         index: QModelIndex,
     ) -> None:
-        editor.setGeometry(option.rect.adjusted(2, 2, -2, -2))
+        print(f"Geometry with width: {option.rect.width() - 7}")
+        editor.setGeometry(option.rect.adjusted(2, 2, -5, -2))
 
     def setModelData(
         self, editor: TextEditor | None, model, index: QModelIndex
     ) -> None:
         model.setData(index, editor.document())
-
-    def on_size_changed(
-        self, index: QModelIndex, old_height: int, new_height: int
-    ) -> None:
-        self.sizeHintChanged.emit(index)
-        self.sizeUpdated.emit(index, old_height, new_height)
 
     def destroyEditor(self, editor: TextEditor, index: QModelIndex):
         editor.sizeChanged.disconnect()

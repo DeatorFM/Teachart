@@ -114,9 +114,12 @@ class PictureModel(BaseElementModel):
 
     def recalculate_size(self, width: int):
         if self._adjusted and width >= self._width:
+            self._item_size = QSize(width, self._item_size.height())
             return
         else:
-            self.set_size(width, round(self.height * (width / self._width)))
+            h = round(self.height * (width / self._width))
+            self.set_size(width, h)
+            self._item_size = QSize(width, h)
             self.set_adjusted(False)
 
     @property
@@ -153,20 +156,7 @@ class PictureModel(BaseElementModel):
     # def last_size(self) -> QSize:
     #     return self._last_size
 
-    def sizeHint(self, width: int):
-        # Account for 2px padding on each side + 3px extra right spacing (4px left+top+bottom, 5px right total)
-        content_width = width - 8
-        if self._adjusted:
-            return QSize(width, self._height + 4)
-        return QSize(
-            width,
-            round(self._height * (content_width / self._width)) + 4,
-        )
-
     def editable(self) -> bool:
-        return False
-
-    def change_on_mouse_hover(self) -> bool:
         return False
 
     def set_resource(self, obj: ResourceObject) -> None:
@@ -207,6 +197,12 @@ class PictureModel(BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+    def copy(self):
+        model = PictureModel(
+            self.resource, self.width, self.height, self.rotation, self.adjusted
+        )
+        return model
 
     def attrs(self) -> tuple[str]:
         return (
@@ -261,6 +257,7 @@ class PictureEditor(BaseElementEditor):
                 self._model.height * (width / self._model.width)
             )  # Current height * (new width / current width)
             self._model.set_size(width, height)
+            self._model.set_item_size(QSize(self._max_width, height + 4))
         else:
             self._model.set_width(width)
         self._model.set_adjusted(True)
@@ -275,13 +272,13 @@ class PictureEditor(BaseElementEditor):
                 self._model.set_size(width, height)
         else:
             self._model.set_height(height)
-            self._model.set_item_size(QSize(self._max_width, height))
+        self._model.set_item_size(QSize(self._max_width, height + 4))
         self._model.set_adjusted(True)
         self.sizeChanged.emit(self._model.width, self._model.height)
 
     def set_size(self, width: int, height: int) -> None:
         self._model.set_size(width, height)
-        self._model.set_item_size(QSize(self._max_width, height))
+        self._model.set_item_size(QSize(self._max_width, height + 4))
         self.sizeChanged.emit(self.model.width, self.model.height)
 
     def refresh(self) -> None:
@@ -312,6 +309,7 @@ class PictureEditor(BaseElementEditor):
         self._model.set_size(
             self.max_width, round(self._model.original_aspect_ratio * self.max_width)
         )
+        self._model.set_item_size(self.max_width, self._model.height)
         self._model.set_rotation(0)
         self.sizeChanged.emit(self.model.width, self.model.height)
 
@@ -357,7 +355,7 @@ class PictureDelegate(BaseElementDelegate):
             #     sub_rect.width(),
             #     round(model.height * (sub_rect.width() / model.width)),
             # )
-            # model.set_adjusted(False)
+            model.set_adjusted(False)
             # print(
             #     f"Painting image with column constraints: {image_rect.width()} * {image_rect.height()}"
             # )
@@ -409,7 +407,7 @@ class PictureDelegate(BaseElementDelegate):
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         model = index.data()
         if isinstance(model, PictureModel):
-            return model.item_size()
+            return model.item_size
         else:
             return QSize(option.rect.width(), 0)
 

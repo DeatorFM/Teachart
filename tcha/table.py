@@ -225,18 +225,21 @@ class CellDelegate(QStyledItemDelegate):
             cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
+                cmodel = CellModel(cell, index)
                 for i, model in enumerate(cell):
                     if model:
                         # print("Cell width", cell_rect.width())
                         delegate: BaseElementDelegate = model.delegate(
                             None, self.parent()
                         )
-                        delegate_size = delegate.sizeHint(sub_option, cell.index(i))
+                        delegate_size = delegate.sizeHint(
+                            sub_option, cmodel.index(i, 0)
+                        )
                         sub_option.rect = QRect(
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        delegate.paint(painter, sub_option, cell.index(i), False)
+                        delegate.paint(painter, sub_option, cmodel.index(i, 0), False)
                         y_offset += delegate_size.height()
                         # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
             # print("Cell offset height", y_offset, "vs. expected height", cell.expected_cell_height(option.rect.width()), "vs cell height ", cell.height)
@@ -271,9 +274,8 @@ class CellDelegate(QStyledItemDelegate):
             editor.setModel(CellModel(index.data(), index))
 
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
-        model: CellModel = index.data()
-        adjusted_width = rect.width()
-        model.recalculate_size(adjusted_width)
+        model: CellItem = index.data()
+        model.recalculate_items()
         self.sizeHintChanged.emit(index)
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
@@ -352,7 +354,7 @@ class HeaderView(QHeaderView):
             vindex = self.visualIndex(logicalIndex)
             cells: list[CellItem] = self.model().get_column(vindex)
             for cell in cells:
-                cell.recalculate_items(newSize - 1)
+                cell.recalculate_items()
             self.model().setHeaderData(
                 vindex,
                 self.orientation(),
@@ -616,7 +618,7 @@ class Table(QTableView):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() & Qt.MouseButton.LeftButton:
             if self._drag_start_position:
-                self.setCurrentIndex(QModelIndex())
+                # self.setCurrentIndex(QModelIndex())
                 distance = (event.pos() - self._drag_start_position).manhattanLength()
                 if distance >= QApplication.startDragDistance():
                     self.startDrag(Qt.DropAction.MoveAction)
@@ -657,8 +659,10 @@ class Table(QTableView):
                 )
                 self._editor.dropEvent(editor_event)
                 event.ignore()
+                # self.setCurrentIndex(QModelIndex())
                 return
         super().dropEvent(event)
+        self.setCurrentIndex(QModelIndex())
 
     def show_context_menu(self, position):
         index = self.indexAt(position)

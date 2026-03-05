@@ -30,7 +30,7 @@ from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
-from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
+from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from tcha.table import CellEditor, Table
 from tcha.tablemodel import TableModel
@@ -192,10 +192,12 @@ class Editor(QMainWindow):
         self.ui.table.changeMade.connect(self.set_unsaved)
 
         self.ui.ac_add_row.triggered.connect(
-            lambda: self.tablemodel.insertRow(self.ui.table.currentIndex().row())
+            lambda: self.tablemodel.insertRow(self.ui.table.currentIndex().row() + 1)
         )
         self.ui.ac_add_column.triggered.connect(
-            lambda: self.tablemodel.insertColumn(self.ui.table.currentIndex().column())
+            lambda: self.tablemodel.insertColumn(
+                self.ui.table.currentIndex().column() + 1
+            )
         )
         self.ui.ac_rmv_row.triggered.connect(lambda: self.table.remove_row())
         self.ui.ac_rmv_column.triggered.connect(lambda: self.table.remove_column())
