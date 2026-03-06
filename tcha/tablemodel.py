@@ -669,7 +669,7 @@ class TableModel(QAbstractTableModel):
                 if source_lvl == 0:
                     source_index = self.index(source_table_row, source_table_column)
                     cell_item = self.data(source_index)
-                    ...
+                    # TODO: Implement Copy Action for level 0 and 1
 
         return False
 
