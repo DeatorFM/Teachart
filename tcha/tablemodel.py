@@ -76,6 +76,11 @@ class CellItem(list):
         self._header = hheader
         self.recalculate_items()
 
+    def copy_to(self, new_cell: CellItem) -> None:
+        for model in self:
+            copied_model = model.copy()
+            new_cell.append(copied_model)
+
     def __repr__(self):
         return f"CellItem: {super().__repr__()}"
 
@@ -669,7 +674,7 @@ class TableModel(QAbstractTableModel):
                 if source_lvl == 0:
                     source_index = self.index(source_table_row, source_table_column)
                     cell_item = self.data(source_index)
-                    # TODO: Implement Copy Action for level 0 and 1
+                    ...
 
         return False
 
