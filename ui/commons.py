@@ -1,3 +1,4 @@
+from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QEvent, QObject, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QColor, QCursor, QIcon, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import (
@@ -10,6 +11,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListView,
     QMenu,
+    QMessageBox,
     QPushButton,
     QToolButton,
     QWidget,
@@ -285,3 +287,37 @@ class SearchableComboBox(QComboBox):
             self.lineEdit().setFocus()
         else:
             super().focusOutEvent(event)
+
+
+class PasteConfirmation(QMessageBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("PasteMessageBox")
+        self.setWindowTitle(tr("Select paste method"))
+        self.setIcon(QMessageBox.Icon.Question)
+        self.setText("This cell already has content. How would you like to paste?")
+
+        self.pb_replace = self.addButton(
+            tr("Replace"), QMessageBox.ButtonRole.ActionRole
+        )
+        self.pb_replace.setToolTip(
+            tr("Replaces the selected cell with the copied cell.")
+        )
+        self.pb_replace.clicked.connect(self.accept)
+
+        self.pb_append = self.addButton(tr("Append"), QMessageBox.ButtonRole.ActionRole)
+        self.pb_append.setToolTip(
+            tr(
+                "Appends the copied cell's contents after the last element of the selected cell."
+            )
+        )
+        self.pb_append.clicked.connect(self.accept)
+        self.pb_cancel = self.addButton(QMessageBox.StandardButton.Cancel)
+        self.setDefaultButton(QMessageBox.StandardButton.Cancel)
+
+    def selected_paste_method(self) -> int:
+        if self.clickedButton() == self.pb_replace:
+            return 1
+        if self.clickedButton() == self.pb_append:
+            return 2
+        return 0

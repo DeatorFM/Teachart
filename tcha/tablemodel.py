@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import enum
 from copy import deepcopy
 from dataclasses import dataclass, field
-from email.header import Header
 from typing import Any, Self, Sequence
 
 from PyQt6.QtCore import (
@@ -25,31 +25,43 @@ from PyQt6.QtGui import QFont
 
 from nativeelements.baseelement import BaseElementModel
 from tcha.settings import Settings
+from ui.commons import PasteConfirmation
 
 
 class CellItem(list):
     """Describes the raw data of a cell."""
 
-    def __init__(self, hheader_item: HeaderDataItem):
+    def __init__(self, hheader_item: HeaderDataItem, num: int):
         super().__init__()
         if hheader_item.orientation != Qt.Orientation.Horizontal:
             raise ValueError("HeaderDataItem must have a horizontal orientation.")
+        self._internal_counter = 0
         self._header = hheader_item
+        self._num = num
 
     def append(self, object: BaseElementModel):
+        """Append an element model to the cell."""
         if isinstance(object, BaseElementModel):
             object.recalculate_size(self.width)
+            if object.number == 0:
+                self._internal_counter += 1
+                object.set_number(self._internal_counter)
             super().append(object)
             return
-        raise TypeError("Argument must be of type of BaseElementModel")
+        raise TypeError(
+            f"Argument must be of type of BaseElementModel but type is {type(object)}"
+        )
 
     def insert(self, index: int, object: BaseElementModel):
         if isinstance(object, BaseElementModel):
             object.recalculate_size(self.width)
+            if object.number == 0:
+                self._internal_counter += 1
+                object.set_number(self._internal_counter)
             super().insert(index, object)
             return
         raise TypeError(
-            f"Argument must be of type of BaseElementModel. Object type: {type(object)}"
+            f"Argument must be of type of BaseElementModel but type is {type(object)}"
         )
 
     @property
@@ -59,12 +71,20 @@ class CellItem(list):
     @property
     def height(self) -> int:
         if len(self) > 0:
-            return sum(map(lambda x: x.item_size.height() + 4, self)) + 5
+            return sum(map(lambda x: x.item_size.height() + 8, self))
         return 30
 
     @property
     def width(self) -> int:
         return self._header.section_size - 4
+
+    @property
+    def header(self) -> HeaderDataItem:
+        return self._header
+
+    @property
+    def num(self) -> int:
+        return self._num
 
     def recalculate_items(self) -> None:
         """Recalculates the cell's size based on headers width"""
@@ -77,9 +97,16 @@ class CellItem(list):
         self.recalculate_items()
 
     def copy_to(self, new_cell: CellItem) -> None:
+        """Copies all elements of a model to another CellItem"""
         for model in self:
             copied_model = model.copy()
             new_cell.append(copied_model)
+
+    def row_for_num(self, num: int) -> int:
+        for row, model in enumerate(self):
+            if model.number == num:
+                return row
+        return -1
 
     def __repr__(self):
         return f"CellItem: {super().__repr__()}"
@@ -145,7 +172,15 @@ class CellModel(QAbstractListModel):
     def index(
         self, row: int, column: int = 0, parent: QModelIndex = ...
     ) -> QModelIndex:
-        return self.createIndex(row, column, "Cell")
+        return self.createIndex(row, column, 1)
+
+    def index_for_num(self, num: int) -> QModelIndex:
+        """Returns the model with the given number. If not found returns an invalid QModelIndex."""
+        for row, model in enumerate(self._data):
+            if model.number == num:
+                return self.index(row, 0)
+
+        return QModelIndex()
 
     def data(self, index: QModelIndex, role: int = 1) -> BaseElementModel:
         try:
@@ -163,17 +198,20 @@ class CellModel(QAbstractListModel):
             return False
 
     def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:
-        print("Cell's mime data")
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
         # Write source info
         index = indexes[0]
+        stream.writeInt64(id(self.cell_index.model()))  # Source model
         stream.writeInt8(1)  # Source Level
-        stream.writeInt32(self.cell_index.row())  # Table row
-        stream.writeInt32(self.cell_index.column())  # Table column
-        stream.writeInt32(index.row())  # Cell row
+        stream.writeInt32(self.cell_index.data().num)  # Cell item number
+        stream.writeInt32(index.data().number)  # Model number
+        stream.writeInt8(0)  # Delete source?
+        print(
+            f"Written mime data: Source level 1; Table row {self.cell_index.row()}; Table column {self.cell_index.column()}; Cell row {index.row()}"
+        )
 
         mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
@@ -195,7 +233,6 @@ class CellModel(QAbstractListModel):
         source_table_row = stream.readInt32()
         source_table_column = stream.readInt32()
         source_item_row = stream.readInt32()
-        map_items = stream.readInt32()
         source_type = stream.readQString()
 
         print(source_type)
@@ -320,6 +357,7 @@ class TableModel(QAbstractTableModel):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
+        self._internal_counter = 0
         self._data: list[list[CellItem]] = []
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
@@ -341,6 +379,9 @@ class TableModel(QAbstractTableModel):
         if not self._data:
             return 0
         return len(max(self._data, key=len))
+
+    def counter(self) -> int:
+        return self._internal_counter
 
     def supportedDropActions(self):
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
@@ -366,8 +407,32 @@ class TableModel(QAbstractTableModel):
     ) -> QModelIndex:
         return self.createIndex(row, column, 0)
 
+    def index_for_num(self, num: int) -> QModelIndex:
+        """Returns the index of the CellItem with the given number."""
+        for row_idx, row in enumerate(self._data):
+            for col_idx, cell in enumerate(row):
+                if cell.num == num:
+                    return self.index(row_idx, col_idx)
+        return QModelIndex()
+
+    def increase_counter(self) -> int:
+        self._internal_counter += 1
+        return self._internal_counter
+
     def data(self, index: QModelIndex, role: int = ...) -> CellItem:
         return self._data[index.row()][index.column()]
+
+    def setData(
+        self, index: QModelIndex, value: CellItem, role=Qt.ItemDataRole.DisplayRole
+    ) -> bool:
+        try:
+            if isinstance(value, CellItem):
+                self._data[index.row()][index.column()] = value
+                self.dataChanged.emit(index, index)
+                return True
+            return False
+        except IndexError:
+            return False
 
     def header_count(self, orientation: Qt.Orientation) -> int:
         if orientation == Qt.Orientation.Horizontal:
@@ -400,6 +465,8 @@ class TableModel(QAbstractTableModel):
                     return QSize(
                         self._header_data[orientation][section].section_size, 30
                     )
+            elif role == Qt.ItemDataRole.EditRole:
+                return self._header_data[orientation][section]
         except IndexError:
             pass
 
@@ -424,7 +491,6 @@ class TableModel(QAbstractTableModel):
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
         """Inserts new row after the given row"""
-        # TODO: Fix Adding
         try:
             self.beginInsertRows(QModelIndex(), row, row + count - 1)
             for _ in range(count):
@@ -434,7 +500,10 @@ class TableModel(QAbstractTableModel):
                 self._data.insert(
                     row,
                     [
-                        CellItem(self._header_data[Qt.Orientation.Horizontal][col])
+                        CellItem(
+                            self._header_data[Qt.Orientation.Horizontal][col],
+                            self.increase_counter(),
+                        )
                         for col in range(self.columnCount())
                     ],
                 )
@@ -447,7 +516,6 @@ class TableModel(QAbstractTableModel):
     def insertColumns(
         self, column: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
-        # TODO: Fix Adding
         try:
             self.beginInsertColumns(parent, column, column + count - 1)
             for _ in range(count):
@@ -455,7 +523,7 @@ class TableModel(QAbstractTableModel):
                 for row in self._data:
                     row.insert(
                         column,
-                        CellItem(hitem),
+                        CellItem(hitem, self.increase_counter()),
                     )
                 self._header_data[Qt.Orientation.Horizontal].insert(column, hitem)
             self.endInsertColumns()
@@ -581,17 +649,19 @@ class TableModel(QAbstractTableModel):
             return False
 
     def mimeData(self, indexes: list[QModelIndex]):
-        print("Table's mime data")
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
         # Write source info
         index = indexes[0]
+        stream.writeInt64(id(self))  # Model pointer
         stream.writeInt8(0)  # Level
-        stream.writeInt32(index.row())  # Table row
-        stream.writeInt32(index.column())  # Table column
-        stream.writeInt32(0)  # Cell row
+        stream.writeInt32(index.data().num)  # CellItem number
+        stream.writeInt32(0)  # Model number
+        print(
+            f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
+        )
 
         mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
@@ -638,43 +708,87 @@ class TableModel(QAbstractTableModel):
             encoded_data = data.data("application/x-teachart")
             stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-            source_lvl = stream.readInt8()
-            source_table_row = stream.readInt32()
-            source_table_column = stream.readInt32()
-            source_item_row = stream.readInt32()
+            model_ptr = stream.readInt64()  # Source model must have the same pointer
+            source_lvl = stream.readInt8()  # Level
+            source_item_num = stream.readInt32()
+            source_model_num = stream.readInt32()
+
+            if model_ptr != id(self):
+                return False
 
             if action == Qt.DropAction.MoveAction:
                 if source_lvl == 0:  # Cell has been moved
                     # Handle cell swapping
-                    source_index = self.index(source_table_row, source_table_column)
+                    source_index = self.index_for_num(source_item_num)
                     self.swap_items(source_index, parent)
                     return True
 
                 if source_lvl == 1:  # Cell element has been moved
                     target_cell = self._data[parent.row()][parent.column()]
-                    if (source_table_row, source_table_column) == (
-                        parent.row(),
-                        parent.column(),
-                    ):
+                    if parent.isValid() and source_item_num == parent.data().num:
                         # Internal cell move
                         return target_cell.dropMimeData(
                             data, action, row, column, parent
                         )
+
                     else:
                         # Move between cells
-                        source_cell = self._data[source_table_row][source_table_column]
+                        source_cell = self.data(self.index_for_num(source_item_num))
+
                         if len(source_cell) > 0:
-                            model = source_cell.pop(source_item_row)
+                            model = source_cell.pop(
+                                source_cell.row_for_num(source_model_num)
+                            )
                             target_cell.append(model)
                             return True
+
                         else:
                             return False
 
             elif action == Qt.DropAction.CopyAction:
+                source_index = self.index_for_num(source_item_num)
+                source_item = self.data(source_index)
                 if source_lvl == 0:
-                    source_index = self.index(source_table_row, source_table_column)
-                    cell_item = self.data(source_index)
-                    ...
+                    if parent.data():
+                        dialog = PasteConfirmation()
+                        result = dialog.exec()
+
+                        if result == PasteConfirmation.DialogCode.Accepted:
+                            if dialog.selected_paste_method() == 1:  # Replace cell
+                                print("Replacing cell")
+                                if parent != source_index:
+                                    new_item = CellItem(
+                                        self.headerData(
+                                            parent.column(),
+                                            Qt.Orientation.Horizontal,
+                                            Qt.ItemDataRole.EditRole,
+                                        )
+                                    )
+                                    source_item.copy_to(new_item)
+                                    return self.setData(parent, new_item)
+                                return False
+
+                            elif dialog.selected_paste_method() == 2:  # Append to cell
+                                destination_item = parent.data()
+                                source_item.copy_to(destination_item)
+                                self.dataChanged.emit(parent, parent)
+
+                        return False
+
+                    else:
+                        destination_cell = parent.data()
+                        source_item.copy_to(destination_cell)
+                        return True
+
+                if source_lvl == 1:
+                    destination_cell: CellItem = parent.data()
+                    model: BaseElementModel = source_item[
+                        source_item.row_for_num(source_model_num)
+                    ]
+                    if model:
+                        destination_cell.append(model.copy())
+                        return True
+                    return False
 
         return False
 

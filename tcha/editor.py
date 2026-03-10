@@ -447,7 +447,7 @@ class Editor(QMainWindow):
             )
             self.ui.table_group.setEnabled(True)
             self.ui.ac_copy.setEnabled(True)
-            self.ui.ac_paste.setEnabled(self.ui.ac_from_clipboard.isEnabled())
+            self.ui.ac_paste.setEnabled(self.has_index_copied())
             editor.connect_toolsets(self.toolsets)
             # editor.elementActivated.connect(self.on_element_activated)
 
@@ -479,7 +479,11 @@ class Editor(QMainWindow):
                 model = editor.model()
                 index = editor.currentIndex()
                 editor.setCurrentIndex(QModelIndex())
-                model.removeRow(index.row())
+                if model.removeRow(index.row()):
+                    if not editor.copied_index().isValid():
+                        clipboard = QApplication.clipboard()
+                        clipboard.mimeData().removeFormat("application/x-teachart")
+                        clipboard.dataChanged.emit()
 
     def move_element_up(self) -> None:
         editor = self.table.editor
@@ -565,9 +569,22 @@ class Editor(QMainWindow):
                         f"Supported definition for current mime types: {self.def_for_mime_type}"
                     )
                     return
+
+            if self.has_index_copied() and self.ui.table.editor:
+                self.ui.ac_paste.setEnabled(True)
+            else:
+                self.ui.ac_paste.setEnabled(False)
+
         self.def_for_mime_type = None
         self.ui.ac_from_clipboard.setEnabled(False)
         print(f"Supported definition of mime type: {self.def_for_mime_type}")
+
+    def has_index_copied(self) -> bool:
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            if "application/x-teachart" in clipboard.mimeData().formats():
+                return True
+        return False
 
     def from_clipboard(self) -> None:
         """Creates either a TextElement or a PictureElement with the contents of the clipboard."""

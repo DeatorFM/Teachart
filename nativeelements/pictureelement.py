@@ -217,14 +217,9 @@ class PictureModel(BaseElementModel):
     def __str__(self) -> str:
         return f"Picture element: width={self._width} height={self._height} rotation={self._rotation} user_adjusted={self._adjusted}"
 
-    def __deepcopy__(self, memo: dict | None = None) -> PictureModel:
-        return PictureModel(
-            deepcopy(self._resource),
-            self._width,
-            self._height,
-            self._rotation,
-            self._adjusted,
-        )
+    # def __del__(self) -> None:
+    #     self._resource.delete_member()
+    #     self._resource = None
 
 
 class PictureEditor(BaseElementEditor):

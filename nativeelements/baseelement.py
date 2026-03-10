@@ -76,6 +76,7 @@ class BaseElementModel(QObject):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._item_size = QSize(100, 30)
+        self._num = 0
 
     @property
     def item_size(self) -> QSize:
@@ -83,6 +84,14 @@ class BaseElementModel(QObject):
 
     def set_item_size(self, size: QSize) -> None:
         self._item_size = size
+
+    @property
+    def number(self) -> int:
+        """Returns the item number."""
+        return self._num
+
+    def set_number(self, num: int) -> None:
+        self._num = num  #
 
     @abstractmethod
     def recalculate_size(self, width: int) -> None:

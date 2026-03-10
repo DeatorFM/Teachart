@@ -2,7 +2,10 @@ from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractItemModel,
     QByteArray,
+    QDataStream,
     QEvent,
+    QIODevice,
+    QMimeData,
     QModelIndex,
     QObject,
     QPoint,
@@ -121,6 +124,44 @@ class CellEditor(QListView):
             self._editor_just_destroyed = False
             self.geometriesChanged.emit()
 
+    def copy_index(self, index: QModelIndex) -> None:
+        if index.isValid():
+            clipboard = QApplication.clipboard()
+            mime_data = self.model().mimeData([index])
+            clipboard.setMimeData(mime_data)
+
+    def copied_index(self) -> QModelIndex | None:
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            if "application/x-teachart" in clipboard.mimeData().formats():
+                encoded_data = clipboard.mimeData().data("application/x-teachart")
+                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+
+                model_ptr = stream.readInt64()  # Model pointer
+                source_model = self.model().cell_index.model()
+                if id(source_model) == model_ptr:
+                    source_lvl = stream.readInt8()  # Level
+                    _ = stream.readInt32()  # Cell item number
+                    model_num = stream.readInt32()  # Model item number
+                    if source_lvl == 1:
+                        model: CellModel = self.model()
+                        idx = model.index_for_num(model_num)
+                        return idx
+        return QModelIndex()
+
+    def keyPressEvent(self, e: QKeyEvent):
+        print("Cell Editor got key press")
+        if (
+            Qt.KeyboardModifier.ControlModifier
+            in e.keyCombination().keyboardModifiers()
+        ):
+            if e.key() == Qt.Key.Key_C:
+                if self.currentIndex().isValid():
+                    self.copy_index(self.currentIndex())
+                    e.accept()
+
+        return super().keyPressEvent(e)
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         print("My mouse has clicked yeah")
         if event.button() == Qt.MouseButton.LeftButton:
@@ -153,8 +194,10 @@ class CellEditor(QListView):
         drag = QDrag(self)
         mime_data = self.model().mimeData([self.currentIndex()])
         drag.setMimeData(mime_data)
-
         drag.exec(Qt.DropAction.MoveAction)
+        clipboard = QApplication.clipboard()
+        clipboard.mimeData().removeFormat("application/x-teachart")
+        clipboard.dataChanged.emit()
 
     def dropEvent(self, event: QDropEvent):
         print("Drop event")
@@ -211,6 +254,8 @@ class CellDelegate(QStyledItemDelegate):
         painter.restore()
 
         # print(f"CellDelegate's rect: {option.rect.width()}")
+
+        option.features
 
         if index != self._open_editor_index:
             # Apply 2px padding to simulate CellEditor frame
@@ -285,6 +330,7 @@ class CellDelegate(QStyledItemDelegate):
 
         if isinstance(event, QKeyEvent) and isinstance(object, CellEditor):
             if object.state() == QListView.State.EditingState:
+                object.keyPressEvent(event)
                 return True
             print(
                 f"CellEditor QKeyEvent in Non-Editing-State: {Qt.Key(event.key()).name}"
@@ -429,6 +475,9 @@ class Table(QTableView):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
+        self.verticalHeader().sectionMoved.connect(
+            lambda: self.setCurrentIndex(QModelIndex())
+        )
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
 
@@ -522,7 +571,8 @@ class Table(QTableView):
     def add_element(self, element: BaseElementModel) -> None:
         if self.currentIndex().isValid():
             cell = self.currentIndex().data()
-            cell.add_model(element)
+            cell.append(element)
+            self.model().dataChanged.emit(self.currentIndex(), self.currentIndex())
 
     def set_extra_emit(self):
         self.itemDelegate().extra_emit = True
@@ -590,11 +640,18 @@ class Table(QTableView):
                 if result == QMessageBox.StandardButton.Yes:
                     self.setCurrentIndex(QModelIndex())
                     model.removeRow(rmv_row)
+
             else:
                 self.setCurrentIndex(QModelIndex())
                 model.removeRow(rmv_row)
 
+            if not self.copied_index().isValid():
+                clipboard = QApplication.clipboard()
+                clipboard.mimeData().removeFormat("application/x-teachart")
+                clipboard.dataChanged.emit()
+
     def remove_column(self, column: int = -1) -> None:
+        """Removes column from model and clears clipboard if index with same column was copied"""
         rmv_col = column if column > -1 else self.currentIndex().column()
         print(f"About to remove column {rmv_col}")
         model: TableModel = self.model()
@@ -611,9 +668,30 @@ class Table(QTableView):
                 if result == QMessageBox.StandardButton.Yes:
                     self.setCurrentIndex(QModelIndex())
                     model.removeColumn(rmv_col)
+                    if self.copied_index() and self.copied_index().column() == rmv_col:
+                        QApplication.clipboard().clear()
             else:
                 self.setCurrentIndex(QModelIndex())
                 model.removeColumn(rmv_col)
+                if not self.copied_index().isValid():
+                    clipboard = QApplication.clipboard()
+                    clipboard.mimeData().removeFormat("application/x-teachart")
+                    clipboard.dataChanged.emit()
+
+    def keyPressEvent(self, e: QKeyEvent):
+        print("Table got key press")
+        if (
+            Qt.KeyboardModifier.ControlModifier
+            in e.keyCombination().keyboardModifiers()
+        ):
+            if e.key() == Qt.Key.Key_C:
+                self.copy_index(self.currentIndex())
+                e.accept()
+                return
+            elif e.key() == Qt.Key.Key_V:
+                self.paste_index(QApplication.clipboard().mimeData())
+
+        return super().keyPressEvent(e)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() & Qt.MouseButton.LeftButton:
@@ -621,7 +699,14 @@ class Table(QTableView):
                 # self.setCurrentIndex(QModelIndex())
                 distance = (event.pos() - self._drag_start_position).manhattanLength()
                 if distance >= QApplication.startDragDistance():
-                    self.startDrag(Qt.DropAction.MoveAction)
+                    drag = QDrag(self)
+                    mime_data = self.model().mimeData([self.currentIndex()])
+                    drag.setMimeData(mime_data)
+                    drag.exec(Qt.DropAction.MoveAction)
+                    # self.startDrag(Qt.DropAction.MoveAction)
+                    clipboard = QApplication.clipboard()
+                    clipboard.mimeData().removeFormat("application/x-teachart")
+                    clipboard.dataChanged.emit()
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, e) -> None:
@@ -635,6 +720,45 @@ class Table(QTableView):
                 e.accept()
                 return
         super().mousePressEvent(e)
+
+    def copy_index(self, index: QModelIndex) -> None:
+        if index.isValid():
+            clipboard = QApplication.clipboard()
+            mime_data = self.model().mimeData([index])
+            clipboard.setMimeData(mime_data)
+
+    def paste_index(self, mime_data: QMimeData) -> None:
+        if mime_data and not set(mime_data.formats()).isdisjoint(
+            set(self.model().mimeTypes())
+        ):
+            current = self.currentIndex()
+            self.setCurrentIndex(QModelIndex())
+            if current.isValid():
+                self.model().dropMimeData(
+                    mime_data,
+                    Qt.DropAction.CopyAction,
+                    current.row(),
+                    current.column(),
+                    current,
+                )
+
+    def copied_index(self) -> QModelIndex:
+        """Return the index that was copied. The index is unvalid if the cell item could not be found or is not in the clipboard."""
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            if "application/x-teachart" in clipboard.mimeData().formats():
+                encoded_data = clipboard.mimeData().data("application/x-teachart")
+                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+
+                model_ptr = stream.readInt64()  # Skip
+                if id(self.model()) == model_ptr:
+                    source_lvl = stream.readInt8()  # Level
+                    item_num = stream.readInt32()  # Cell item number
+                    if source_lvl == 0:
+                        model: TableModel = self.model()
+                        idx = model.index_for_num(item_num)
+                        return idx
+        return QModelIndex()
 
     def dropEvent(self, event: QDropEvent):
         if self._editor:
@@ -659,7 +783,7 @@ class Table(QTableView):
                 )
                 self._editor.dropEvent(editor_event)
                 event.ignore()
-                # self.setCurrentIndex(QModelIndex())
+                self.setCurrentIndex(QModelIndex())
                 return
         super().dropEvent(event)
         self.setCurrentIndex(QModelIndex())

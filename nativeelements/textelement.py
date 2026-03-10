@@ -130,6 +130,10 @@ class TextModel(QTextDocument, BaseElementModel):
         self._resource.delete_member()
         self._resource = None
 
+    def __del__(self) -> None:
+        self._resource.delete_member()
+        self._resource = None
+
     # def __deepcopy__(self, memo: dict | None = None) -> TextModel:
     #     model = TextModel(self._resource)
     #     model.setHtml(self.toHtml())

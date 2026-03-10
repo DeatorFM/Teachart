@@ -242,10 +242,6 @@ class AudioModel(BaseElementModel):
             "text",
         )
 
-    def sizeHint(self, width: int) -> QSize:
-        # Account for 2px top + 2px bottom padding
-        return QSize(width, 45 + 4)
-
     def __str__(self):
         return f"""AudioModel: resource={self.resource} name={self._text} repeating={self._is_repeating} repeats={self._repeats} 
         pause_length={self._pause_length}s start_time={self._start_time}ms end_time={self._end_time} current={self._current_time}"""
