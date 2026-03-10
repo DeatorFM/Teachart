@@ -5,7 +5,7 @@ import tempfile
 import os.path as osp
 import uuid
 
-from PyQt6.QtCore import QXmlStreamWriter, QXmlStreamReader, QByteArray, QBuffer, QDateTime, Qt, qChecksum, QFile
+from PyQt6.QtCore import QXmlStreamWriter, QXmlStreamReader, QByteArray, QBuffer, QDateTime, Qt, qChecksum, QFile, QSize
 
 from tcha.tablemodel import TableModel, CellModel, HeaderDataItem, TableData
 from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
@@ -374,12 +374,13 @@ class XmlReader:
     @staticmethod
     def read_table(xml_file: QFile, rescont: ResourceContainer, res_path: str, error_handler: ErrorLogger) -> TableModel:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
-        reader = QXmlStreamReader(xml_file)        
+        reader = QXmlStreamReader(xml_file)   
         
-        rows = 0
-        columns = 0
+        row = 0
+        column = 0
         def_row_count = 0
         def_column_count = 0
+        header = 0
         
         in_table = False
         writing_row = False
@@ -396,14 +397,14 @@ class XmlReader:
                     attrs = reader.attributes()
                     try:
                         def_row_count = int(attrs.value("rows"))
-                        rows += def_row_count
+                        # rows += def_row_count
 
                         def_column_count = int(attrs.value("columns"))
-                        columns += def_column_count 
+                        # columns += def_column_count 
                         
                         if rows == 0 or columns == 0: raise ValueError
 
-                        headers = {Qt.Orientation.Horizontal : [], Qt.Orientation.Vertical : [HeaderDataItem.vertical() for _ in range(rows)]}
+                        model = TableModel.new(def_row_count, def_column_count)
                         in_table = True
 
                     except ValueError as e:
@@ -419,8 +420,10 @@ class XmlReader:
                             attrs = reader.attributes()
 
                             try:
-                                if len(headers[Qt.Orientation.Horizontal]) < def_column_count:
-                                    headers[Qt.Orientation.Horizontal].append(HeaderDataItem(Qt.Orientation.Horizontal, int(attrs.value("size")), True, str(attrs.value("text"))))
+                                if header < def_column_count:
+                                    model.setHeaderData(header, Qt.Orientation.Horizontal, str(attrs.value("text")), Qt.ItemDataRole.DisplayRole)
+                                    model.setHeaderData(header, Qt.Orientation.Horizontal, QSize(int(attrs.value("size")), 0), Qt.ItemDataRole.SizeHintRole)
+                                    header += 1
                                     continue
                                 error_handler.log(LFExceptions.BrokenTable(False), "Skipped horizontal header definition because it would exceed defined column count.")
                             except (ValueError, TypeError) as e:
@@ -429,13 +432,20 @@ class XmlReader:
                                 headers[Qt.Orientation.Horizontal].append(HeaderDataItem.horizontal())
 
                         case "row":
-                            row = []
-                            columns = def_column_count
-                            writing_row = True
+                            if row < def_row_count:
+                                columns = 0
+                                writing_row = True
+                                continue
+                            error_handler.log(LFExceptions.BrokenTable(False), f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {def_row_count}; Specified columns: {def_column_count}")
+                            writing_row = False    
 
                         case "cell":
-                            cell = CellModel()
-                            writing_cell = True
+                            if column < def_column_count:
+                                cell = model.data(model.index(rows, columns))
+                                writing_cell = True
+                                continue
+                            error_handler.log(LFExceptions.BrokenTable(False), f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {def_column_count}; Actual: {def_column_count + 1}")
+                            writing_cell = False
 
                         case "element":
                             if writing_cell and writing_row:
@@ -445,7 +455,7 @@ class XmlReader:
                                     model = XmlReader._element_model(str(attrs.value("type")))
                                     resobj = rescont.get(osp.join(res_path, str(attrs.value("file"))))
                                     model = model.read(attrs, resobj)
-                                    cell.add_model(model)
+                                    cell.append(model)
                                 
                                 except KeyError as e:
                                     e.critical = False
@@ -482,34 +492,27 @@ class XmlReader:
                                 headers[Qt.Orientation.Horizontal].append(HeaderDataItem.horizontal())
 
                     case "row" if writing_row:
-                        if rows > 0 and len(row) == def_column_count:
-                            data.append(row)
-                            rows -= 1
-                            writing_row = False
-                            continue
-                        error_handler.log(LFExceptions.BrokenTable(False), f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {def_row_count}; Specified columns: {def_column_count}")
+                        rows += 1
                         writing_row = False
+                        column = 0
+                        continue
+                        
 
                     case "cell" if writing_cell:
-                        if columns > 0:
-                            row.append(cell)
-                            columns -= 1
-                            writing_cell = False
-                            continue
-                        error_handler.log(LFExceptions.BrokenTable(False), f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {def_column_count}; Actual: {def_column_count + 1}")
+                        columns += 1
                         writing_cell = False
+                        continue
+                        
 
                     case "table":
-                        if rows ==  0:
+                        if rows == def_row_count:
                             in_table = False
                             break
-                        error_handler.log(LFExceptions.BrokenTable(False), f"Too less rows were parsed than the number specified in the definitions. {rows} row(s) will be added as necessary.")
-                        for _ in range(rows):
-                            data.append([CellModel()] * def_column_count)
+                        error_handler.log(LFExceptions.BrokenTable(False), f"The number of parsed rows does not match the actual number. Some rows' content might be missing.")
                         in_table = False
                         break
 
-        return TableModel(TableData(data, headers))
+        return model
             
     @staticmethod
     def _element_model(name: str) -> 'BaseElementModel':
