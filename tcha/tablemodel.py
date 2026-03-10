@@ -108,6 +108,16 @@ class CellItem(list):
                 return row
         return -1
 
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        writer.writeStartElement("cell")
+        if len(self) > 0:
+            for model in self:
+                writer = model.xml(writer)
+        else:
+            writer.writeComment("Empty")
+        writer.writeEndElement()
+        return writer
+
     def __repr__(self):
         return f"CellItem: {super().__repr__()}"
 
@@ -282,16 +292,6 @@ class CellModel(QAbstractListModel):
 
         except IndexError:
             return False
-
-    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
-        writer.writeStartElement("cell")
-        if self._data:
-            for model in self._data:
-                writer = model.xml(writer)
-        else:
-            writer.writeComment("Empty")
-        writer.writeEndElement()
-        return writer
 
     @classmethod
     def create_with_models(cls: Self, models: Sequence[BaseElementModel]) -> Self:

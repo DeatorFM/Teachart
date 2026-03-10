@@ -291,6 +291,7 @@ class AppCore(QApplication):
             and path.exists()
             and str(path) not in [editor.path for editor in self.opened_editors()]
         ):
+            editor_window = None
             try:
                 lf = LessonFile()
                 lf.open("r", str(path))
@@ -335,9 +336,10 @@ class AppCore(QApplication):
                     self._start_dialog.close()
                     self._start_dialog = None
                 self._file_model.append_file(str(Path))
-                editor_window.set_recent_files(
-                    self._file_model.export_recent_as_menu(6)
-                )
+                if editor_window:
+                    editor_window.set_recent_files(
+                        self._file_model.export_recent_as_menu(6)
+                    )
 
         else:
             QMessageBox.information(

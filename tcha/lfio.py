@@ -1,48 +1,64 @@
-from zipfile import BadZipFile, ZipFile, ZIP_DEFLATED
-from base64 import b64decode, b64encode
-from typing import Literal, Any
-import tempfile
 import os.path as osp
+import tempfile
 import uuid
+from base64 import b64decode, b64encode
+from typing import Any, Literal
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
-from PyQt6.QtCore import QXmlStreamWriter, QXmlStreamReader, QByteArray, QBuffer, QDateTime, Qt, qChecksum, QFile, QSize
+from PyQt6.QtCore import (
+    QBuffer,
+    QByteArray,
+    QDateTime,
+    QFile,
+    QSize,
+    Qt,
+    QXmlStreamReader,
+    QXmlStreamWriter,
+    qChecksum,
+)
 
-from tcha.tablemodel import TableModel, CellModel, HeaderDataItem, TableData
-from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
-from tcha.lesson import Lesson
-from tcha.error import LFExceptions, ErrorLogger, QtError
 from tcha.elements import get_definitions
+from tcha.error import ErrorLogger, LFExceptions, QtError
+from tcha.lesson import Lesson
+from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
+from tcha.tablemodel import CellModel, HeaderDataItem, TableData, TableModel
 
 CURRENT_VERSION: int = 1
 
+
 class LessonFile:
     """Provides file stream for serialised Lesson-Documents"""
+
     def __init__(self):
         self._f: ZipFile | None = None
         self._tempdir: tempfile.TemporaryDirectory | None = None
         self._last_saved = None
-        self._metadata = {
-            "version" : None,
-            "file_id" : None
-            }
-        
+        self._metadata = {"version": None, "file_id": None}
+
     def open(self, mode: Literal["r", "w"], path: str | None = None) -> bool:
         if mode == "r" and path:
             try:
                 self._last_saved = QDateTime.currentDateTime()
                 self._error_handler = ErrorLogger(path, True)
-                self._error_handler.log_msg(f"Start reading file {osp.basename(path)} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}")
-                self._tempdir = tempfile.TemporaryDirectory(".tmp", "TCHA", ignore_cleanup_errors=True)
+                self._error_handler.log_msg(
+                    f"Start reading file {osp.basename(path)} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}"
+                )
+                self._tempdir = tempfile.TemporaryDirectory(
+                    ".tmp", "TCHA", ignore_cleanup_errors=True
+                )
                 print("Temporary", self._tempdir)
                 self._f = ZipFile(path, mode)
                 self._f.extractall(self.temppath)
-                
+
                 self.set_metadata(self._metadata)
                 return True
-        
+
             except BadZipFile as e:
                 e.critical = True
-                self._error_handler.log(e, "The file is corrupted and cannot not be opened. This can happen when a file has not been closed properly during a writing process.")
+                self._error_handler.log(
+                    e,
+                    "The file is corrupted and cannot not be opened. This can happen when a file has not been closed properly during a writing process.",
+                )
                 return False
 
         elif mode == "w":
@@ -52,8 +68,14 @@ class LessonFile:
 
         else:
             raise ValueError("Open mode value invalid. It's either 'r' or 'w'.")
-        
-    def save(self, lesson: Lesson, rescont: ResourceContainer, tablemodel: TableModel, path: str | None = None) -> bool:
+
+    def save(
+        self,
+        lesson: Lesson,
+        rescont: ResourceContainer,
+        tablemodel: TableModel,
+        path: str | None = None,
+    ) -> bool:
         """Saves a new file or overwrites the entire file's contents if existing"""
         # How can we imporve that??
 
@@ -66,7 +88,9 @@ class LessonFile:
         else:
             self.change_open_mode("w")
 
-        self._error_handler.log_msg(f"Start writing to file {self._f.filename} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}")
+        self._error_handler.log_msg(
+            f"Start writing to file {self._f.filename} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}"
+        )
 
         # Generate and write xml for document structure
         xml_data = XmlWriter.write_xml(self.file_id, tablemodel, lesson)
@@ -75,7 +99,9 @@ class LessonFile:
 
         # Create checksum for document xml and write
         chksums = QByteArray()
-        xml_chksum = f"\\xml:{qChecksum(xml_data, Qt.ChecksumType.ChecksumIso3309)}\n".encode()
+        xml_chksum = (
+            f"\\xml:{qChecksum(xml_data, Qt.ChecksumType.ChecksumIso3309)}\n".encode()
+        )
         chksums.append(xml_chksum)
 
         # Copy the resources into file or create new file if necessary
@@ -91,7 +117,9 @@ class LessonFile:
             res_f.write(res_xml.data())
 
         # Generate checksum for resource definitions and append it to other definition
-        res_chksum = f"\\res:{qChecksum(res_xml, Qt.ChecksumType.ChecksumIso3309)}\n".encode()
+        res_chksum = (
+            f"\\res:{qChecksum(res_xml, Qt.ChecksumType.ChecksumIso3309)}\n".encode()
+        )
         chksums.append(res_chksum)
         encoded = b64encode(chksums.data())
 
@@ -106,7 +134,6 @@ class LessonFile:
         self._f.extract("resources.xml", self.temppath)
 
         return True
-
 
     def _copy(self, resobj: ResourceObject) -> None:
         self._f.write(resobj.path, f"resources/{resobj.filename()}")
@@ -124,19 +151,18 @@ class LessonFile:
         """Return the data of the file 'name' in the 'resources/' directory as bytes"""
         self.change_open_mode("r")
         with self._f.open(name, "r") as f:
-           return f.read()
-        
+            return f.read()
+
     def extracted(self, name: str) -> bool:
         return osp.exists(osp.join(self.temppath, name))
 
-        
     def xml(self, name: str = "structure") -> QFile:
         """Returns IO to extracted strcuture.xml as QFile. Raises an Exception of file not found or QFile throws an error."""
         if self.extracted(f"{name}.xml"):
             qfile = QFile(osp.join(self.temppath, f"{name}.xml"))
             qfile.open(QFile.OpenModeFlag.ReadOnly)
             print("Path", qfile.fileName())
-            
+
             if not qfile.error().value:
                 return qfile
             raise QtError(qfile.error(), qfile.errorString(), True)
@@ -157,62 +183,86 @@ class LessonFile:
                 if token == QXmlStreamReader.TokenType.StartElement:
                     if reader.name() == "res":
                         attrs = reader.attributes()
-                        path: str = osp.join(self.temppath, "resources", str(attrs.value("file")))
+                        path: str = osp.join(
+                            self.temppath, "resources", str(attrs.value("file"))
+                        )
                         container.save(ResourceType[str(attrs.value("type"))], path)
-           
-            if reader.error().value: self._error_handler.log(QtError(reader.error(), reader.errorString(), True), f"There was an error while parsing the xml. Details: {reader.errorString()}")
+
+            if reader.error().value:
+                self._error_handler.log(
+                    QtError(reader.error(), reader.errorString(), True),
+                    f"There was an error while parsing the xml. Details: {reader.errorString()}",
+                )
             qfile.close()
             return container
 
         except (ValueError, KeyError) as e:
             e.critical = True
-            self._error_handler.log(e, "Resource definition has invalid value. This is possibly due to an unknown or invalid resource type that is specified in the definitions.")
-            return None
-        
-        except FileNotFoundError as e:
-            e.critical = True
-            self._error_handler.log(e, f"The defined file at '{e.filename}' could not be found.")
+            self._error_handler.log(
+                e,
+                "Resource definition has invalid value. This is possibly due to an unknown or invalid resource type that is specified in the definitions.",
+            )
             return None
 
-    
+        except FileNotFoundError as e:
+            e.critical = True
+            self._error_handler.log(
+                e, f"The defined file at '{e.filename}' could not be found."
+            )
+            return None
+
     def get_table(self, rescont: ResourceContainer) -> TableModel | None:
         """Returns TableModel if file is loaded."""
         try:
             qfile = self.xml()
-            table = XmlReader.read_table(qfile, rescont, osp.join(self.temppath, "resources"), self._error_handler)
+            table = XmlReader.read_table(
+                qfile,
+                rescont,
+                osp.join(self.temppath, "resources"),
+                self._error_handler,
+            )
             qfile.close()
             return table
-        
+
         except FileNotFoundError as e:
             e.critical = True
-            self._error_handler.log(e, "The file that contains table definitions could not be found.")
+            self._error_handler.log(
+                e, "The file that contains table definitions could not be found."
+            )
             return None
         except QtError as e:
-            self._error_handler.log(e, f"There was an error while trying to read the xml file. Details: {e.error_string}")
+            self._error_handler.log(
+                e,
+                f"There was an error while trying to read the xml file. Details: {e.error_string}",
+            )
             return None
-        
-    
+
     def get_lesson(self, default: Lesson | None = None) -> Lesson | None:
         """Returns Lesson model if file is loaded and could be read otherwise returns the default value."""
         try:
             qfile = self.xml()
-            model =  XmlReader.read_lesson(qfile, self._error_handler)
+            model = XmlReader.read_lesson(qfile, self._error_handler)
             qfile.close()
             return model
-        
+
         except FileNotFoundError as e:
             e.critical = True
-            self._error_handler.log(e, "The file containing table definitions could not be found.")
+            self._error_handler.log(
+                e, "The file containing table definitions could not be found."
+            )
             return default
-        
+
         except QtError as e:
-            self._error_handler.log(e, f"There was an error while trying to read the xml file. Details: {e.error_string}")
+            self._error_handler.log(
+                e,
+                f"There was an error while trying to read the xml file. Details: {e.error_string}",
+            )
             return default
-    
+
     def set_metadata(self, metadata: dict[str, Any]) -> None:
         metadata_read = False
         try:
-            qfile = self.xml()      
+            qfile = self.xml()
             reader = QXmlStreamReader(qfile)
             while not reader.atEnd():
                 token = reader.readNext()
@@ -228,33 +278,50 @@ class LessonFile:
                         metadata_read = True
                         break
             qfile.close()
-            if reader.hasError(): self._error_handler.log(QtError(reader.error(), reader.errorString(), False), "The file that contains table definitions could not be found.")
+            if reader.hasError():
+                self._error_handler.log(
+                    QtError(reader.error(), reader.errorString(), False),
+                    "The file that contains table definitions could not be found.",
+                )
 
         except FileNotFoundError as e:
             e.critical = True
             self._error_handler.log(e, "XML file could not be found.")
 
         except QtError as e:
-            self._error_handler.log(e, f"An error occured while opening the XML file: {e.error_string}")
-            
+            self._error_handler.log(
+                e, f"An error occured while opening the XML file: {e.error_string}"
+            )
+
         except ValueError as e:
             if self._metadata["version"]:
                 e.critical = False
-                self._error_handler.log(e, "File ID could not be read due to invalid xml attribute or value that is not a uuid. A new ID will be generated.")
+                self._error_handler.log(
+                    e,
+                    "File ID could not be read due to invalid xml attribute or value that is not a uuid. A new ID will be generated.",
+                )
                 self._metadata["file_id"] = self.generate_file_id()
                 metadata_read = True
             else:
                 e.critical = True
-                self._error_handler.log(e, "Version number could not be read due to invalid xml attribute. File version could not be identified.")
-            
+                self._error_handler.log(
+                    e,
+                    "Version number could not be read due to invalid xml attribute. File version could not be identified.",
+                )
+
         except LFExceptions.UnsupportedVersion as e:
-            self._error_handler.log(e, f"This file version is not supported. File's version: {e.version}. Max. supported version: {CURRENT_VERSION}")
-            
+            self._error_handler.log(
+                e,
+                f"This file version is not supported. File's version: {e.version}. Max. supported version: {CURRENT_VERSION}",
+            )
+
         finally:
             if not metadata_read:
-                self._error_handler.log(LFExceptions.MetadataReadError(True), "Metadata could not be read because either the DOM-Element could not be found or the version number is invalid")
+                self._error_handler.log(
+                    LFExceptions.MetadataReadError(True),
+                    "Metadata could not be read because either the DOM-Element could not be found or the version number is invalid",
+                )
 
-                   
     def checksums(self) -> dict[str, int]:
         with self._f.open("chksum.dat", "r") as f:
             data = f.read()
@@ -262,52 +329,50 @@ class LessonFile:
             decoded = decoded.rstrip("\n")
             print(decoded)
             pairs = decoded.split("\n")
-            return {pair.split(":")[0] : int(pair.split(":")[1]) for pair in pairs}
-            
-            
+            return {pair.split(":")[0]: int(pair.split(":")[1]) for pair in pairs}
+
     def generate_file_id(self) -> uuid.UUID:
         return uuid.uuid1()
-    
+
     @property
     def file_id(self) -> uuid.UUID:
         return self._metadata["file_id"]
-    
+
     @property
     def version(self) -> int:
         return self._metadata["version"]
 
-    @property    
+    @property
     def path(self) -> str | None:
         if self._f:
             return self._f.filename
         return None
-    
+
     @property
     def mode(self) -> Literal["w", "r"]:
         return self._f.mode if self._f else "w"
-    
+
     @property
     def temppath(self) -> str | None:
         return self._tempdir.name if self._tempdir else None
-    
+
     @property
     def error_handler(self) -> ErrorLogger:
         return self._error_handler
-    
+
     def close(self) -> None:
         if self._f:
             self._f.close()
-    
+
     def __del__(self) -> None:
         print("LessonFile object deleted")
         if self._f:
             self._f.close()
             self._tempdir.cleanup()
             self._tempdir = None
-            
-           
-class XmlWriter:
 
+
+class XmlWriter:
     @staticmethod
     def write_xml(file_id: uuid.UUID, table: TableModel, lesson: Lesson) -> QByteArray:
         writer = QXmlStreamWriter()
@@ -330,7 +395,7 @@ class XmlWriter:
         writer.writeEndDocument()
 
         return xml_data
-    
+
     @staticmethod
     def write_res_xml(rescont: ResourceContainer) -> QByteArray:
         writer = QXmlStreamWriter()
@@ -352,14 +417,13 @@ class XmlWriter:
 
 
 class XmlReader:
-    
     @staticmethod
     def read_lesson(xml_file: QFile, error_handler: ErrorLogger) -> Lesson | None:
-        reader = QXmlStreamReader(xml_file) 
+        reader = QXmlStreamReader(xml_file)
 
         while not reader.atEnd():
             token = reader.readNext()
-            
+
             if token == QXmlStreamReader.TokenType.StartElement:
                 if reader.name() == "lesson":
                     try:
@@ -367,32 +431,39 @@ class XmlReader:
                         return model
 
                     except LFExceptions.ModelReadError as e:
-                        error_handler.log(e, "Reading of general lesson data failed. One or more of the values is invalid.")
+                        error_handler.log(
+                            e,
+                            "Reading of general lesson data failed. One or more of the values is invalid.",
+                        )
                         return None
         return None
-    
+
     @staticmethod
-    def read_table(xml_file: QFile, rescont: ResourceContainer, res_path: str, error_handler: ErrorLogger) -> TableModel:
+    def read_table(
+        xml_file: QFile,
+        rescont: ResourceContainer,
+        res_path: str,
+        error_handler: ErrorLogger,
+    ) -> TableModel:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
-        reader = QXmlStreamReader(xml_file)   
-        
+        reader = QXmlStreamReader(xml_file)
+
         row = 0
         column = 0
         def_row_count = 0
         def_column_count = 0
         header = 0
-        
+
         in_table = False
         writing_row = False
         writing_cell = False
+        tmodel = None
         cell = None
-        row = None
-        data = []
 
         while not reader.atEnd():
             token = reader.readNext()
 
-            if token == QXmlStreamReader.TokenType.StartElement: 
+            if token == QXmlStreamReader.TokenType.StartElement:
                 if reader.name() == "table":
                     attrs = reader.attributes()
                     try:
@@ -400,20 +471,24 @@ class XmlReader:
                         # rows += def_row_count
 
                         def_column_count = int(attrs.value("columns"))
-                        # columns += def_column_count 
-                        
-                        if rows == 0 or columns == 0: raise ValueError
+                        # columns += def_column_count
 
-                        model = TableModel.new(def_row_count, def_column_count)
+                        if def_row_count == 0 or def_column_count == 0:
+                            raise ValueError
+
+                        tmodel = TableModel.new(def_row_count, def_column_count)
                         in_table = True
 
                     except ValueError as e:
                         if error_handler:
                             e.critical = True
-                            error_handler.log(e, "Invalid value for row or column number. Value is not a number or values are 0.")
+                            error_handler.log(
+                                e,
+                                "Invalid value for row or column number. Value is not a number or values are 0.",
+                            )
                         return TableModel.new(0, 0)
                     continue
-            
+
                 if in_table:
                     match reader.name():
                         case "header":
@@ -421,30 +496,51 @@ class XmlReader:
 
                             try:
                                 if header < def_column_count:
-                                    model.setHeaderData(header, Qt.Orientation.Horizontal, str(attrs.value("text")), Qt.ItemDataRole.DisplayRole)
-                                    model.setHeaderData(header, Qt.Orientation.Horizontal, QSize(int(attrs.value("size")), 0), Qt.ItemDataRole.SizeHintRole)
+                                    tmodel.setHeaderData(
+                                        header,
+                                        Qt.Orientation.Horizontal,
+                                        str(attrs.value("text")),
+                                        Qt.ItemDataRole.DisplayRole,
+                                    )
+                                    tmodel.setHeaderData(
+                                        header,
+                                        Qt.Orientation.Horizontal,
+                                        QSize(int(attrs.value("size")), 0),
+                                        Qt.ItemDataRole.SizeHintRole,
+                                    )
                                     header += 1
                                     continue
-                                error_handler.log(LFExceptions.BrokenTable(False), "Skipped horizontal header definition because it would exceed defined column count.")
+                                error_handler.log(
+                                    LFExceptions.BrokenTable(False),
+                                    "Skipped horizontal header definition because it would exceed defined column count.",
+                                )
                             except (ValueError, TypeError) as e:
                                 e.critical = False
-                                error_handler.log(e, "Invalid value for header size and text. Check if values for header size or text are correct.")
-                                headers[Qt.Orientation.Horizontal].append(HeaderDataItem.horizontal())
+                                error_handler.log(
+                                    e,
+                                    "Invalid value for header size and text. Check if values for header size or text are correct.",
+                                )
 
                         case "row":
                             if row < def_row_count:
-                                columns = 0
+                                column = 0
                                 writing_row = True
                                 continue
-                            error_handler.log(LFExceptions.BrokenTable(False), f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {def_row_count}; Specified columns: {def_column_count}")
-                            writing_row = False    
+                            error_handler.log(
+                                LFExceptions.BrokenTable(False),
+                                f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {def_row_count}; Specified columns: {def_column_count}",
+                            )
+                            writing_row = False
 
                         case "cell":
                             if column < def_column_count:
-                                cell = model.data(model.index(rows, columns))
+                                cell = tmodel.data(tmodel.index(row, column))
                                 writing_cell = True
                                 continue
-                            error_handler.log(LFExceptions.BrokenTable(False), f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {def_column_count}; Actual: {def_column_count + 1}")
+                            error_handler.log(
+                                LFExceptions.BrokenTable(False),
+                                f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {def_column_count}; Actual: {def_column_count + 1}",
+                            )
                             writing_cell = False
 
                         case "element":
@@ -452,70 +548,84 @@ class XmlReader:
                                 attrs = reader.attributes()
 
                                 try:
-                                    model = XmlReader._element_model(str(attrs.value("type")))
-                                    resobj = rescont.get(osp.join(res_path, str(attrs.value("file"))))
+                                    model = XmlReader._element_model(
+                                        str(attrs.value("type"))
+                                    )
+                                    resobj = rescont.get(
+                                        osp.join(res_path, str(attrs.value("file")))
+                                    )
                                     model = model.read(attrs, resobj)
                                     cell.append(model)
-                                
+
                                 except KeyError as e:
                                     e.critical = False
-                                    error_handler.log(e, f"The resource for the element {str(attrs.value("type"))} does not exist. Model will be skipped.")
+                                    error_handler.log(
+                                        e,
+                                        f"The resource for the element {str(attrs.value('type'))} does not exist. Model will be skipped.",
+                                    )
                                     continue
                                 except AttributeError as e:
                                     e.critical = False
-                                    error_handler.log(e, f"Reading the model failed. Either the model type could not be identified or a required attribute is missing. Model will be skipped.")
+                                    error_handler.log(
+                                        e,
+                                        "Reading the model failed. Either the model type could not be identified or a required attribute is missing. Model will be skipped.",
+                                    )
                                     continue
                                 except ValueError as e:
                                     e.critical = False
-                                    error_handler.log(e, f"The resource value for model of type '{attrs.value("type")}' could not be parsed. Model will be skipped.")
+                                    error_handler.log(
+                                        e,
+                                        f"The resource value for model of type '{attrs.value('type')}' could not be parsed. Model will be skipped.",
+                                    )
                                     continue
                                 except FileNotFoundError as e:
                                     e.critical = False
-                                    error_handler.log(e, f"The resource file for model of type '{attrs.value("type")} could not be found. Model will be skipped.")
+                                    error_handler.log(
+                                        e,
+                                        f"The resource file for model of type '{attrs.value('type')} could not be found. Model will be skipped.",
+                                    )
                                     continue
                                 except LFExceptions.ModelReadError as e:
-                                    error_handler.log(e, f"Reading the model of type '{attrs.value("type")}' has failed. This could be due to invalid value. Model will be skipped.")
+                                    error_handler.log(
+                                        e,
+                                        f"Reading the model of type '{attrs.value('type')}' has failed. This could be due to invalid value. Model will be skipped.",
+                                    )
                                     continue
 
                             else:
                                 continue
 
             elif token == QXmlStreamReader.TokenType.EndElement and in_table:
-                
                 match reader.name():
-
                     case "headers":
-                        header_len = len(headers[Qt.Orientation.Horizontal])
-                        if header_len < def_column_count:
-                            error_handler.log(LFExceptions.BrokenTable(False, "Too less horizontal header definitions were parsed than the defined column count. Missing headers will be added."))
-                            for _ in range(def_column_count - header_len):
-                                headers[Qt.Orientation.Horizontal].append(HeaderDataItem.horizontal())
+                        continue
 
                     case "row" if writing_row:
-                        rows += 1
+                        row += 1
                         writing_row = False
                         column = 0
                         continue
-                        
 
                     case "cell" if writing_cell:
-                        columns += 1
+                        column += 1
                         writing_cell = False
                         continue
-                        
 
                     case "table":
-                        if rows == def_row_count:
+                        if row == def_row_count:
                             in_table = False
                             break
-                        error_handler.log(LFExceptions.BrokenTable(False), f"The number of parsed rows does not match the actual number. Some rows' content might be missing.")
+                        error_handler.log(
+                            LFExceptions.BrokenTable(False),
+                            "The number of parsed rows does not match the actual number. Some rows' content might be missing.",
+                        )
                         in_table = False
                         break
 
-        return model
-            
+        return tmodel
+
     @staticmethod
-    def _element_model(name: str) -> 'BaseElementModel':
+    def _element_model(name: str) -> "BaseElementModel":
         print("Getting model of type:", name)
         definition = get_definitions(name)
         return definition.model()

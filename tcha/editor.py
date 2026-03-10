@@ -132,7 +132,7 @@ class Editor(QMainWindow):
             self.lessonfile.error_handler.log_msg(
                 f"Finished reading file '{os.path.basename(self.lessonfile.path)}' successfully."
             )
-            self.ui.ac_xml_view.setEnabled(True)
+            self.ui.ac_xml_insp.setEnabled(True)
             self.setWindowTitle(
                 f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
             )
@@ -165,6 +165,10 @@ class Editor(QMainWindow):
             lambda: self.appActionTriggered[AppAction, QWidget].emit(
                 AppAction.CourseExplorer, self
             )
+        )
+        self.ui.ac_copy.triggered.connect(self.copy_index)
+        self.ui.ac_paste.triggered.connect(
+            lambda: self.ui.table.paste_index(QApplication.clipboard().mimeData())
         )
         # self.ui.ac_course_rec.triggered.connect()
         self.ui.cb_course.activated.connect(self.set_course)
@@ -304,10 +308,17 @@ class Editor(QMainWindow):
             return False
 
     def _on_saving_finished(self) -> None:
+        debug_tag = (
+            "(Debug-Mode)"
+            if Settings.qsettings().value("Application/debug", False, bool)
+            else ""
+        )
         print("Save successfull")
         self.ui.ac_save.setEnabled(True)
         self.ui.tb_save.setEnabled(True)
-        self.nameChanged.emit(self, basename(self.lessonfile.path))
+        self.setWindowTitle(
+            f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
+        )
         self.changes_unsaved = False
         self.statusBar().showMessage(tr("Saving finished!"))
         self.schedule()
@@ -594,6 +605,13 @@ class Editor(QMainWindow):
             model = definition.model_from_mime_data(self.rescont, mime_data)
             if model:
                 self.ui.table.add_element(model)
+
+    def copy_index(self) -> None:
+        editor = self.ui.table.editor
+        if editor:
+            editor.copy_index(editor.currentIndex())
+            return
+        self.ui.table.copy_index(self.ui.table.currentIndex())
 
     # Debug menus
 
