@@ -1,6 +1,6 @@
 import os
-from os.path import basename
 from pathlib import Path
+from pickletools import StackObject
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -13,7 +13,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -643,3 +643,28 @@ class Editor(QMainWindow):
         self.rescont.close_file_streams()
         if self.lessonfile:
             self.lessonfile.close()
+
+    # Event handlers
+
+    def closeEvent(self, ev: QCloseEvent):
+        """THe user is asked if they want to savbe the document when there are unsaved changes"""
+        if self.changes_unsaved:
+            result = QMessageBox.question(
+                self,
+                "",
+                tr("There are unsaved changes. Would you like to save the document?"),
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+            )
+            if result == QMessageBox.StandardButton.Save:
+                saved = self.save_document()
+                if not saved:
+                    ev.ignore()
+                    return
+            elif result == QMessageBox.StandardButton.Discard:
+                pass
+            else:
+                ev.ignore()
+                return
+        super().closeEvent(ev)

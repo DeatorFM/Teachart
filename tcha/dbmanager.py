@@ -392,3 +392,31 @@ class AssignmentDialog(QDialog, AssignmentView):
             return StudentDialogReturnCode.Creation, dialog.student_items()
         else:
             return StudentDialogReturnCode.NoAssignment, dialog.student_items()
+
+
+class RecordView(QDialog):
+    managerCalled = pyqtSignal(int)
+
+    def __init__(
+        self,
+        course_id: int,
+        course_model: CourseModel,
+        parent=None,
+        flags=Qt.WindowType.Dialog,
+    ):
+        super().__init__(parent, flags)
+        self.ui = uic.loadUi("ui/record_view.ui", self)
+
+        student_model = StudentModel(course_model.database())
+        self.filtered_student_model = FilteredStudentModel(student_model)
+        self.filtered_student_model.set_exclusive_course_id(course_id)
+        self.ui.tv_students.setModel(self.filtered_student_model)
+
+        name = course_model.data(
+            course_model.index(course_model.index_for_id(course_id).row(), 1)
+        )
+        wtprefix = tr("Course Record: ")
+        self.setWindowTitle("{}{}".format(wtprefix, name))
+
+        self.ui.pb_edit.clicked.connect(lambda: self.managerCalled.emit(course_id))
+        self.ui.pb_close.clicked.connect(self.close)
