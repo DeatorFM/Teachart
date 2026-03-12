@@ -218,6 +218,11 @@ class StartWindow(QMainWindow):
             lambda: self.appActionTriggered[AppAction].emit(AppAction.NewFile)
         )
         self.ui.ac_open.triggered.connect(self.open_file_dialog)
+        self.ui.ac_course_mng.triggered.connect(
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(
+                AppAction.CourseExplorer, self
+            )
+        )
         self.ui.ac_settings.triggered.connect(
             lambda: self.appActionTriggered[AppAction, QWidget].emit(
                 AppAction.Settings, self

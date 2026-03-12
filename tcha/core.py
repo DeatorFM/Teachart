@@ -350,6 +350,10 @@ class AppCore(QApplication):
 
     def open_course_exp(self, parent=None) -> None:
         dialog = DbManager(self._course_model, self._schedule_model, parent)
+        if isinstance(parent, Editor):
+            cid = parent.lesson.course_id
+            if cid > 0:
+                dialog.set_course(cid)
         dialog.exec()
 
     def open_settings(self, parent=None) -> None:

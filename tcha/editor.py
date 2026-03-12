@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from nativeelements.baseelement import BaseElementDefinitions
 from tcha.consts import AppAction, ResourceFlag
-from tcha.dbmanager import AddCourseDialog
+from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.lesson import Lesson
@@ -166,6 +166,7 @@ class Editor(QMainWindow):
                 AppAction.CourseExplorer, self
             )
         )
+        self.ui.ac_course_rec.triggered.connect(self.open_course_record)
         self.ui.ac_copy.triggered.connect(self.copy_index)
         self.ui.ac_paste.triggered.connect(
             lambda: self.ui.table.paste_index(QApplication.clipboard().mimeData())
@@ -612,6 +613,17 @@ class Editor(QMainWindow):
             editor.copy_index(editor.currentIndex())
             return
         self.ui.table.copy_index(self.ui.table.currentIndex())
+
+    # Dialog opener
+
+    def open_course_record(self) -> None:
+        dialog = RecordView(self.lesson.course_id, self.courses.sourceModel(), self)
+        dialog.managerCalled.connect(
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(
+                AppAction.CourseExplorer, self
+            )
+        )
+        dialog.open()
 
     # Debug menus
 

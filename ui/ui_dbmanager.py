@@ -325,7 +325,7 @@ class AssignmentView:
         verticalLayout.addWidget(self.tv_students)
 
         self.lw_selected_students = QListWidget(assign_student_dialog)
-        self.lw_selected_students.setMaximumHeight(30)
+        self.lw_selected_students.setMaximumHeight(50)
         self.lw_selected_students.setObjectName("lw_selected_students")
         self.lw_selected_students.setSelectionMode(
             QListWidget.SelectionMode.NoSelection

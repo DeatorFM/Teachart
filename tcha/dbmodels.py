@@ -635,6 +635,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
         self.setSourceModel(source_model)
         self._excluded_student_ids: list[int] = []
         self._exclusive_course_id: int | None = None
+        self._excluded_course_id: int | None = None
         self._hide_assigned = False
         self._search_str: str = ""
 
@@ -662,6 +663,13 @@ class FilteredStudentModel(QSortFilterProxyModel):
         self._exclusive_course_id = course_id
         self.invalidateFilter()
 
+    def set_excluded_course_id(self, course_id: int | None) -> None:
+        self.beginFilterChange()
+        if self._exclusive_course_id:
+            self._exclusive_course_id = None
+        self._excluded_course_id = course_id
+        self.invalidateFilter()
+
     def set_exclude_assigned_students(self, exclude: bool) -> None:
         self.beginFilterChange()
         self._hide_assigned = exclude
@@ -683,6 +691,13 @@ class FilteredStudentModel(QSortFilterProxyModel):
                     self.sourceModel().index(source_row, 2)
                 )
                 == self._exclusive_course_id
+            ):
+                return False
+
+        elif self._excluded_course_id:
+            if (
+                self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
+                == self._excluded_course_id
             ):
                 return False
 

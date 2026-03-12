@@ -146,6 +146,11 @@ class Ui_StartWindow(object):
         icon2 = SvgIcon("resources/icons/ic_newFile.svg")
         self.ac_new.setIcon(icon2)
 
+        self.ac_course_mng = QAction(parent=start_window)
+        self.ac_course_mng.setObjectName("ac_course_mng")
+        icon4 = SvgIcon("resources/icons/ic_edu.svg")
+        self.ac_course_mng.setIcon(icon4)
+
         self.ac_settings = QAction(parent=start_window)
         self.ac_settings.setObjectName("ac_settings")
         icon3 = SvgIcon("resources/icons/ic_settings.svg")
@@ -158,6 +163,7 @@ class Ui_StartWindow(object):
         spa1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.tb_file_actions.addWidget(spa1)
 
+        self.tb_file_actions.addAction(self.ac_course_mng)
         self.tb_file_actions.addAction(self.ac_settings)
 
         self.retranslateUi(start_window)
@@ -181,6 +187,7 @@ class Ui_StartWindow(object):
         )
         self.ac_open.setText(_translate("start_window", "Browse"))
         self.ac_new.setText(_translate("start_window", "New Sheet"))
+        self.ac_course_mng.setText(_translate("start_window", "Course Explorer"))
 
 
 class LessonCalendar(QCalendarWidget):

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QListWidgetItem,
     QMessageBox,
+    QStyle,
     QStyledItemDelegate,
     QWidget,
 )
@@ -127,6 +128,10 @@ class DbManager(QDialog, DbManagerView):
             self.add_course()
         else:
             return
+
+    def set_course(self, id: int) -> None:
+        idx = self._filtered_course_model.index_for_id(id)
+        self.tv_courses.setCurrentIndex(idx)
 
     def remove_course(self) -> None:
         current_idx = self.tv_courses.selectionModel().currentIndex()
@@ -341,7 +346,7 @@ class AssignmentDialog(QDialog, AssignmentView):
         self.student_creation_requested = False
 
         self._filtered_student_model = FilteredStudentModel(student_model)
-        self._filtered_student_model.add_excluded_course_id(course_id)
+        self._filtered_student_model.set_excluded_course_id(course_id)
 
         self.tv_students.setModel(self._filtered_student_model)
         self.tv_students.hideColumn(0)
@@ -355,14 +360,14 @@ class AssignmentDialog(QDialog, AssignmentView):
 
     def add_student(self, index: QModelIndex) -> None:
         student: StudentItem = self._filtered_student_model.getRow(index)
-        icon = QIcon()
-        icon.addFile("resources/icons/ic_close.svg")
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DockWidgetCloseButton)
         self._filtered_student_model.add_excluded_student_id(student.id)
         item = QListWidgetItem(icon, student.name, self.lw_selected_students)
         item.setData(Qt.ItemDataRole.UserRole, student)
         item.setToolTip(tr("Click to exclude."))
         self.items.append(item)
         self.lw_selected_students.addItem(item)
+        self.lw_selected_students.scrollToItem(item)
 
     def remove_student(self, item: QListWidgetItem) -> None:
         item = self.lw_selected_students.takeItem(
@@ -411,6 +416,8 @@ class RecordView(QDialog):
         self.filtered_student_model = FilteredStudentModel(student_model)
         self.filtered_student_model.set_exclusive_course_id(course_id)
         self.ui.tv_students.setModel(self.filtered_student_model)
+        self.ui.tv_students.hideColumn(0)
+        self.ui.tv_students.hideColumn(2)
 
         name = course_model.data(
             course_model.index(course_model.index_for_id(course_id).row(), 1)
@@ -419,4 +426,5 @@ class RecordView(QDialog):
         self.setWindowTitle("{}{}".format(wtprefix, name))
 
         self.ui.pb_edit.clicked.connect(lambda: self.managerCalled.emit(course_id))
+        self.ui.pb_edit.clicked.connect(self.close)
         self.ui.pb_close.clicked.connect(self.close)
