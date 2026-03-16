@@ -15,6 +15,7 @@ from PyQt6.QtCore import (
     QModelIndex,
     QObject,
     QSize,
+    QSortFilterProxyModel,
     Qt,
     QVariant,
     QXmlStreamReader,
@@ -885,3 +886,20 @@ class TableModel(QAbstractTableModel):
         headers = deepcopy(self._header_data)
         table_data = TableData(data, headers)
         return TableModel(table_data)
+
+
+class FilteredTableModel(QSortFilterProxyModel):
+    def __init__(self, source_model: TableModel, parent=None):
+        super().__init__(parent)
+        self.setSourceModel(source_model)
+        self._visible_row = 0
+
+    def set_visible_row(self, row: int) -> None:
+        self.beginFilterChange()
+        self._visible_row = row
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex):
+        if source_row == self._visible_row:
+            return True
+        return False

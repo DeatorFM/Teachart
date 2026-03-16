@@ -55,7 +55,7 @@ class Locale(Enum):
 
 class TimeFormat(StrEnum):
     TF24 = "HH:mm"
-    TF12 = "H:mm ap"
+    TF12 = "h:mm ap"
 
 
 class Appearance(IntEnum):
@@ -212,9 +212,10 @@ class SettingsDialog(QDialog):
             path, _ = QFileDialog.getOpenFileName(
                 self, tr("Open Lesson Database"), "/home", "Database files (*.db)"
             )
-        self.settings.dbpath = path
-        self.ui.le_path.setText(path)
-        self._return_flag |= ReturnFlags.Restart
+        if path:
+            self.settings.dbpath = path
+            self.ui.le_path.setText(path)
+            self._return_flag |= ReturnFlags.Restart
 
     def create_new_db(self) -> None:
         """Creates new database file without deleting the old one in the standard folder and sets it as the used database."""

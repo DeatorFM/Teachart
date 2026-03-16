@@ -18,6 +18,8 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMenuBar,
     QPlainTextEdit,
+    QSizePolicy,
+    QSpacerItem,
     QSpinBox,
     QStatusBar,
     QStyle,
@@ -71,6 +73,7 @@ class Ui_Editor(object):
         self.menu_edit.setObjectName("menu_edit")
         self.menu_elements = QMenu(self.menubar)
         self.menu_elements.setObjectName("menu_elements")
+        self.menu_elements.setEnabled(False)
         self.menu_view = QMenu(parent=self.menubar)
         self.menu_view.setObjectName("menu_view")
         self.menu_opt = QMenu(parent=self.menubar)
@@ -393,11 +396,11 @@ class Ui_Editor(object):
         locale = Locale[qsettings.value("User/language", type=str)].value
         tformat = TimeFormat[qsettings.value("User/time_format", type=str)].value
         qlocale = QLocale(locale.language, locale.region)
+        self.dt_DateTime.setLocale(qlocale)
         self.dt_DateTime.setDisplayFormat(
             f"{qlocale.dateFormat(QLocale.FormatType.ShortFormat)} {tformat}"
         )
-        self.dt_DateTime.setLocale(qlocale)
-        self.dt_DateTime.setMinimumWidth(150)
+        self.dt_DateTime.setMinimumWidth(155)
         self.dt_DateTime.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.dt_DateTime.setProperty("showGroupSeparator", False)
         self.dt_DateTime.setCalendarPopup(True)
@@ -417,7 +420,9 @@ class Ui_Editor(object):
         self.sb_duration.setMaximum(255)
         self.tb_lesson.addWidget(self.sb_duration)
 
-        self.tb_lesson.addSeparator()
+        spa = QWidget(self.tb_lesson)
+        spa.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.tb_lesson.addWidget(spa)
 
         self.tb_lesson.addAction(self.ac_show_notes)
 

@@ -45,7 +45,7 @@ from nativeelements.baseelement import (
     BaseElementToolset,
 )
 from tcha.status import StatusButton, StatusLabel
-from tcha.tablemodel import CellItem, CellModel, TableModel
+from tcha.tablemodel import CellItem, CellModel, FilteredTableModel, TableModel
 
 
 class CellEditor(QListView):
@@ -244,18 +244,19 @@ class CellDelegate(QStyledItemDelegate):
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
         self.extra_emit = False
+        self.element_selection = False
+        self.mouse_pos = QPoint()
         self._open_editor_index = QModelIndex()
 
     def paint(
         self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
-        painter.save()
-        super().paint(painter, option, QModelIndex())
-        painter.restore()
+        if not self.element_selection:
+            painter.save()
+            super().paint(painter, option, QModelIndex())
+            painter.restore()
 
         # print(f"CellDelegate's rect: {option.rect.width()}")
-
-        option.features
 
         if index != self._open_editor_index:
             # Apply 2px padding to simulate CellEditor frame
@@ -264,9 +265,10 @@ class CellDelegate(QStyledItemDelegate):
             # print("Initial y offset", y_offset)
             # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
             # print("State", index.row(), index.column(), option.state)
-            if cell_rect.width() < 140 and cell_rect.width() > 135:
-                # Text display problems between 125 and 130 to fix
-                cell_rect.setWidth(140)
+            # if (
+            #     cell_rect.width() < 140 and cell_rect.width() > 135
+            # ):  # Text display problems between 125 and 130 to fix
+            #     cell_rect.setWidth(140)
             cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
@@ -284,6 +286,14 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
+                        if self.element_selection and sub_option.rect.contains(
+                            self.mouse_pos
+                        ):
+                            painter.save()
+                            super().paint(painter, sub_option, QModelIndex())
+                            painter.restore()
+                        else:
+                            print("No intersection")
                         delegate.paint(painter, sub_option, cmodel.index(i, 0), False)
                         y_offset += delegate_size.height()
                         # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
@@ -456,11 +466,11 @@ class Table(QTableView):
         self.setDragDropMode(QTableView.DragDropMode.DragDrop)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
+        self.setCornerButtonEnabled(False)
 
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
-        self.setMouseTracking(True)
 
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
@@ -484,7 +494,6 @@ class Table(QTableView):
         self._goto_status.clicked.connect(self.focus_row)
 
         self._drag_start_position: QPoint | None = None
-        self._last_hover_pos = None
         self._can_close_editor = True
 
     @property
@@ -678,8 +687,16 @@ class Table(QTableView):
                     clipboard.mimeData().removeFormat("application/x-teachart")
                     clipboard.dataChanged.emit()
 
+    def enable_element_selection(self, enable: bool) -> None:
+        self.itemDelegate().element_selection = enable
+        print(f"Mouse tracking {enable}")
+        self.setMouseTracking(enable)
+
     def keyPressEvent(self, e: QKeyEvent):
         print("Table got key press")
+        if e.key() == Qt.Key.Key_Control:
+            self.enable_element_selection(True)
+
         if (
             Qt.KeyboardModifier.ControlModifier
             in e.keyCombination().keyboardModifiers()
@@ -693,7 +710,18 @@ class Table(QTableView):
 
         return super().keyPressEvent(e)
 
+    def keyReleaseEvent(self, ev: QKeyEvent):
+        if ev.key() == Qt.Key.Key_Control:
+            self.enable_element_selection(False)
+
+        return super().keyReleaseEvent(ev)
+
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.itemDelegate().element_selection:
+            self.itemDelegate().mouse_pos = self.viewport().mapFromParent(event.pos())
+            # TODO: Only update when a new element is entered
+            self.viewport().update()
+
         if event.buttons() & Qt.MouseButton.LeftButton:
             if self._drag_start_position:
                 # self.setCurrentIndex(QModelIndex())
@@ -707,6 +735,7 @@ class Table(QTableView):
                     clipboard = QApplication.clipboard()
                     clipboard.mimeData().removeFormat("application/x-teachart")
                     clipboard.dataChanged.emit()
+
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, e) -> None:
@@ -839,3 +868,14 @@ class Table(QTableView):
         self._editor = None
         self.setCurrentIndex(QModelIndex())
         self.cellEditorClosed.emit()
+
+
+class PresenterDelegate(CellDelegate): ...
+
+
+class PresenterTable(Table):
+    def __init__(self, model: TableModel, parent=None):
+        super().__init__(parent)
+        filtered = FilteredTableModel(model)
+        self.setModel(filtered)
+        filtered.set_visible_row(0)

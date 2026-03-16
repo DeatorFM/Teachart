@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -458,6 +459,7 @@ class Editor(QMainWindow):
                 "is valid",
             )
             self.ui.table_group.setEnabled(True)
+            self.ui.menu_elements.setEnabled(True)
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.has_index_copied())
             editor.connect_toolsets(self.toolsets)
@@ -465,6 +467,7 @@ class Editor(QMainWindow):
 
     def on_cell_closed(self) -> None:
         self.ui.table_group.setDisabled(True)
+        self.ui.menu_elements.setDisabled(True)
         self.ui.ac_copy.setEnabled(False)
         self.ui.ac_paste.setEnabled(False)
         for toolset in self.toolsets.values():
@@ -663,7 +666,7 @@ class Editor(QMainWindow):
         if self.changes_unsaved:
             result = QMessageBox.question(
                 self,
-                "",
+                tr("Unsaved Changes"),
                 tr("There are unsaved changes. Would you like to save the document?"),
                 QMessageBox.StandardButton.Save
                 | QMessageBox.StandardButton.Discard
@@ -680,3 +683,10 @@ class Editor(QMainWindow):
                 ev.ignore()
                 return
         super().closeEvent(ev)
+
+
+class PresenterCanvas(QWidget):
+    def __init__(self, parent: Editor | None = None):
+        super().__init__(parent, Qt.WindowType.Widget)
+        lo = QVBoxLayout()
+        self.setLayout(lo)
