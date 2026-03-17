@@ -14,6 +14,7 @@ from PyQt6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPoint,
     QSize,
     QSortFilterProxyModel,
     Qt,
@@ -27,6 +28,23 @@ from PyQt6.QtGui import QFont
 from nativeelements.baseelement import BaseElementModel
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
+
+
+@dataclass(frozen=True)
+class IndexPoint:
+    """Stores exact information about the position inside the table."""
+
+    row: int
+    column: int
+    erow: int
+    point: QPoint
+
+    def __eq__(self, value: IndexPoint):
+        return (
+            self.row == value.row
+            and self.column == value.column
+            and self.erow == value.erow
+        )
 
 
 class CellItem(list):
@@ -108,6 +126,14 @@ class CellItem(list):
             if model.number == num:
                 return row
         return -1
+
+    def row_for_pos(self, y_pos: int) -> int:
+        y_offset = 0
+        for row, model in enumerate(self):
+            model: BaseElementModel
+            if y_pos >= y_offset and y_pos <= y_offset + model.item_size.height() + 8:
+                return row
+            y_offset += model.item_size.height() + 8
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeStartElement("cell")

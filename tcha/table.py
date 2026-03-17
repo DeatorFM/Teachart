@@ -45,7 +45,13 @@ from nativeelements.baseelement import (
     BaseElementToolset,
 )
 from tcha.status import StatusButton, StatusLabel
-from tcha.tablemodel import CellItem, CellModel, FilteredTableModel, TableModel
+from tcha.tablemodel import (
+    CellItem,
+    CellModel,
+    FilteredTableModel,
+    IndexPoint,
+    TableModel,
+)
 
 
 class CellEditor(QListView):
@@ -245,7 +251,7 @@ class CellDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.extra_emit = False
         self.element_selection = False
-        self.mouse_pos = QPoint()
+        self.last_idx = IndexPoint(-1, -1, -1, QPoint())
         self._open_editor_index = QModelIndex()
 
     def paint(
@@ -265,15 +271,16 @@ class CellDelegate(QStyledItemDelegate):
             # print("Initial y offset", y_offset)
             # print("Painted rect:", option.rect.x(), option.rect.y(), option.rect.width())
             # print("State", index.row(), index.column(), option.state)
-            # if (
-            #     cell_rect.width() < 140 and cell_rect.width() > 135
-            # ):  # Text display problems between 125 and 130 to fix
-            #     cell_rect.setWidth(140)
+            if (
+                cell_rect.width() < 140 and cell_rect.width() > 135
+            ):  # Text display problems between 125 and 130 to fix
+                cell_rect.setWidth(140)
             cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
                 cmodel = CellModel(cell, index)
                 for i, model in enumerate(cell):
+                    trindex = IndexPoint(index.row(), index.column(), i, QPoint())
                     if model:
                         # print("Cell width", cell_rect.width())
                         delegate: BaseElementDelegate = model.delegate(
@@ -286,9 +293,7 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        if self.element_selection and sub_option.rect.contains(
-                            self.mouse_pos
-                        ):
+                        if self.element_selection and self.last_idx == trindex:
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
@@ -494,6 +499,7 @@ class Table(QTableView):
         self._goto_status.clicked.connect(self.focus_row)
 
         self._drag_start_position: QPoint | None = None
+        self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._can_close_editor = True
 
     @property
@@ -505,6 +511,9 @@ class Table(QTableView):
 
     def enable_painting(self, painting: bool) -> None:
         self._painting = painting
+
+    def model(self) -> TableModel:
+        return super().model()
 
     def setModel(self, model: QAbstractItemModel | None) -> bool:
         if model:
@@ -713,14 +722,29 @@ class Table(QTableView):
     def keyReleaseEvent(self, ev: QKeyEvent):
         if ev.key() == Qt.Key.Key_Control:
             self.enable_element_selection(False)
+            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
         return super().keyReleaseEvent(ev)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.itemDelegate().element_selection:
-            self.itemDelegate().mouse_pos = self.viewport().mapFromParent(event.pos())
-            # TODO: Only update when a new element is entered
-            self.viewport().update()
+            mouse_pos = event.pos()
+            idx = self.indexAt(event.pos())
+            if idx.isValid():
+                cell_rect = self.visualRect(idx)
+                relative_mouse_pos = QPoint(
+                    mouse_pos.x() - cell_rect.x(), mouse_pos.y() - cell_rect.y()
+                )
+                erow = idx.data().row_for_pos(relative_mouse_pos.y())
+                trindex = IndexPoint(
+                    idx.row(),
+                    idx.column(),
+                    erow,
+                    self.viewport().mapFromParent(event.pos()),
+                )
+                if trindex != self.itemDelegate().last_idx:
+                    self.itemDelegate().last_idx = trindex
+                    self.viewport().update()
 
         if event.buttons() & Qt.MouseButton.LeftButton:
             if self._drag_start_position:
