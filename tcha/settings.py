@@ -68,7 +68,7 @@ class ReturnFlags(Flag):
     Invalid = 0
     Restart = 1
     UpdateLocale = 2
-    UpdateStyle = 3
+    UpdateStyle = 4
 
 
 class SettingsDialog(QDialog):

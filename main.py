@@ -14,6 +14,7 @@ def restart() -> None:
 
 def main() -> None:
     app = AppCore(sys.argv)
+    app.restartRequested.connect(restart)
     root = os.path.dirname(os.path.abspath(__file__))
     QDir.addSearchPath("icons", os.path.join(root, "resources/icons"))
     QDir.addSearchPath("stylesheet", os.path.join(root, "resources/stylesheets"))

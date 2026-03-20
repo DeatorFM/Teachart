@@ -135,6 +135,8 @@ class AppCore(QApplication):
             self.qsettings.value("Application/pinned", [], list),
         )
 
+        self.aboutToQuit.connect(self.on_quitting)
+
     def _startup_checks(self) -> None:
         keys = self.qsettings.allKeys()
 
@@ -213,8 +215,12 @@ class AppCore(QApplication):
             self.setStyleSheet(str(stylesheet_data, encoding="utf-8"))
             palette = make_palette(module.PALETTE_COLORS)
             self.setPalette(palette)
-            style = TchaProxyStyle()
-            self.setStyle(style)
+
+            if isinstance(self.style(), TchaProxyStyle):
+                self.style().polish()
+            else:
+                style = TchaProxyStyle()
+                self.setStyle(style)
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
@@ -335,7 +341,7 @@ class AppCore(QApplication):
                 if self._start_dialog:
                     self._start_dialog.close()
                     self._start_dialog = None
-                self._file_model.append_file(str(Path))
+                self._file_model.append_file(str(path))
                 if editor_window:
                     editor_window.set_recent_files(
                         self._file_model.export_recent_as_menu(6)
@@ -362,16 +368,16 @@ class AppCore(QApplication):
             parent, self._course_model.database(), Settings.qsettings()
         )
         print("Return flags: ", return_flags)
-        if ReturnFlags.Restart & return_flags:
+        if return_flags & ReturnFlags.Restart:
             print("Restarting application")
             self.restartRequested.emit()
             return
-        if ReturnFlags.UpdateStyle & return_flags:
+        if return_flags & ReturnFlags.UpdateStyle:
             print("Updating application style")
             self._load_theme(
                 Settings.qsettings().value("User/appearance", "light", str)
             )
-        if ReturnFlags.UpdateLocale & return_flags:
+        if return_flags & ReturnFlags.UpdateLocale:
             print("Updating language")
             pass
 
@@ -403,5 +409,6 @@ class AppCore(QApplication):
         os.execv(sys.executable, ["python"] + sys.argv)
 
     def on_quitting(self) -> None:
+        print("Saving recent and pinned files")
         self.qsettings.setValue("Application/recent", self._file_model.export_recent())
         self.qsettings.setValue("Application/pinned", self._file_model.export_pinned())

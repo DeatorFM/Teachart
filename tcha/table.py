@@ -331,7 +331,11 @@ class CellDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
         if editor:
-            editor.setModel(CellModel(index.data(), index))
+            model = CellModel(index.data(), index)
+            editor.setModel(model)
+            if self.element_selection:
+                selected = model.index(self.last_idx.erow, 0)
+                editor.edit(selected)
 
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
         model: CellItem = index.data()

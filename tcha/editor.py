@@ -337,7 +337,7 @@ class Editor(QMainWindow):
             )
             self.schedules.add_schedule(
                 course_id,
-                self.dt_DateTime.dateTime(),
+                self.ui.dt_DateTime.dateTime(),
                 self.lessonfile.file_id,
                 self.lessonfile.path,
             )

@@ -124,7 +124,7 @@ class ResourceObject(QObject):
 
     def filename(self) -> str | None:
         """Returns a filename that is used for serialisation as long as the file extension is provided."""
-        return f"{self._type.name.lower()}{self._type_num}.{self._extension}"
+        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}"
 
     @property
     def data(self) -> bytes | None:

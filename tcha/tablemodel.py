@@ -32,7 +32,7 @@ from ui.commons import PasteConfirmation
 
 @dataclass(frozen=True)
 class IndexPoint:
-    """Stores exact information about the position inside the table."""
+    """Stores cell index at table and cell level as well as the selected mouse position inside a table."""
 
     row: int
     column: int
