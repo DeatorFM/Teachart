@@ -16,6 +16,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QFrame,
+    QGraphicsItem,
     QMainWindow,
     QMenu,
     QStyledItemDelegate,
@@ -135,6 +136,10 @@ class BaseElementModel(QObject):
     def sizeHint(self, width: int) -> QSize:
         """Height of the element as seen in the table calculated with the cell's width"""
         return QSize(100, 30)
+
+    @abstractmethod
+    def presentable_item(self) -> QGraphicsItem:
+        return QGraphicsItem()
 
     @property
     @abstractmethod

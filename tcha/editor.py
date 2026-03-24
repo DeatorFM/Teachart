@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from pickletools import StackObject
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -17,6 +16,7 @@ from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
+    QGraphicsWidget,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -99,6 +99,8 @@ class Editor(QMainWindow):
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
+        self.presenter_mode = False
+        self.presenter_viewer: PresenterCanvas | None = None
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
@@ -178,6 +180,7 @@ class Editor(QMainWindow):
         self.ui.dt_DateTime.dateTimeChanged.connect(self.set_datetime)
         self.ui.ac_schedule.triggered.connect(self.set_unsaved)
         self.ui.sb_duration.valueChanged.connect(self.set_duration)
+        self.ui.ac_pres_mode.toggled.connect(self.enable_presenter_mode)
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
         self.ui.ac_settings.triggered.connect(
@@ -617,6 +620,12 @@ class Editor(QMainWindow):
             return
         self.ui.table.copy_index(self.ui.table.currentIndex())
 
+    # Presenter Functions
+
+    def enable_presenter_mode(self, enabled: bool) -> None:
+        self.ui.dw_presenter.setEnabled(enabled)
+        self.ui.dw_presenter.setVisible(enabled)
+
     # Dialog opener
 
     def open_course_record(self) -> None:
@@ -683,10 +692,3 @@ class Editor(QMainWindow):
                 ev.ignore()
                 return
         super().closeEvent(ev)
-
-
-class PresenterCanvas(QWidget):
-    def __init__(self, parent: Editor | None = None):
-        super().__init__(parent, Qt.WindowType.Widget)
-        lo = QVBoxLayout()
-        self.setLayout(lo)

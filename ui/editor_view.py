@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementToolset
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.styling import SvgIcon
-from tcha.table import Table
+from tcha.table import PresenterCanvas, Table
 from ui.commons import SearchableComboBox, SwitchAction
 
 
@@ -114,7 +114,36 @@ class Ui_Editor(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        # Dock Widget for notes
+        # Dock Widgets: PresenterCanvas and Notes
+
+        self.dw_presenter = QDockWidget(parent=MainWindow)
+        self.dw_presenter.setEnabled(False)
+        self.dw_presenter.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable
+            | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
+        self.dw_presenter.setAllowedAreas(
+            Qt.DockWidgetArea.LeftDockWidgetArea
+            | Qt.DockWidgetArea.RightDockWidgetArea
+            | Qt.DockWidgetArea.BottomDockWidgetArea
+        )
+        self.dw_presenter.setObjectName("dw_presenter")
+        self.dw_presenter.hide()
+
+        self.widget_dw_contents2 = QWidget()
+        self.widget_dw_contents2.setObjectName("widget_dw_contents2")
+
+        self.dw_lo2 = QVBoxLayout(self.widget_dw_contents2)
+        self.dw_lo2.setObjectName("dw_lo2")
+
+        self.canvas = PresenterCanvas()
+        self.canvas.setObjectName("canvas")
+
+        self.dw_lo2.addWidget(self.canvas)
+        self.dw_presenter.setWidget(self.widget_dw_contents2)
+        MainWindow.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, self.dw_presenter
+        )
 
         self.dw_comment = QDockWidget(parent=MainWindow)
         self.dw_comment.setEnabled(True)
@@ -223,6 +252,8 @@ class Ui_Editor(object):
 
         self.ac_pres_mode = QAction(parent=MainWindow)
         self.ac_pres_mode.setObjectName("ac_pres_mode")
+        self.ac_pres_mode.setCheckable(True)
+        self.ac_pres_mode.setChecked(False)
         icon15 = SvgIcon("resources/icons/ic_present_mode.svg")
         self.ac_pres_mode.setIcon(icon15)
 
@@ -424,6 +455,7 @@ class Ui_Editor(object):
         spa.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.tb_lesson.addWidget(spa)
 
+        self.tb_lesson.addAction(self.ac_pres_mode)
         self.tb_lesson.addAction(self.ac_show_notes)
 
         # Construct Table Tool Bar
@@ -444,6 +476,9 @@ class Ui_Editor(object):
 
         self.retranslateUi(MainWindow)
         self.ac_show_notes.toggled["bool"].connect(self.dw_comment.setVisible)  # type: ignore
+        self.dw_presenter.visibilityChanged["bool"].connect(
+            self.ac_pres_mode.setChecked
+        )
         self.dw_comment.visibilityChanged["bool"].connect(self.ac_show_notes.setChecked)  # type: ignore
         QMetaObject.connectSlotsByName(MainWindow)
 
@@ -457,6 +492,7 @@ class Ui_Editor(object):
         self.menu_opt.setTitle(_translate("MainWindow", "Options"))
         self.menu_debug.setTitle(_translate("MainWindow", "Debugging"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
+        self.dw_presenter.setWindowTitle(_translate("MainWindow", "Presentation View"))
         self.dw_comment.setWindowTitle(_translate("MainWindow", "Notes"))
         self.tb_lesson.setWindowTitle(_translate("MainWindow", "Lesson Details"))
         self.tb_table.setWindowTitle(_translate("MainWindow", "Table Tools"))

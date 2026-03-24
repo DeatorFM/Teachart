@@ -38,6 +38,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
+    QGraphicsTextItem,
     QInputDialog,
     QMenu,
     QMessageBox,
@@ -116,6 +117,11 @@ class TextModel(QTextDocument, BaseElementModel):
 
     def delegate(self, toolset: BaseElementToolset, parent=None) -> TextDelegate:
         return TextDelegate(toolset, parent)
+
+    def presentable_item(self) -> QGraphicsTextItem:
+        item = QGraphicsTextItem()
+        item.setDocument(self.clone())
+        return item
 
     def copy(self) -> TextModel:
         resource_copy = self._resource.copy()

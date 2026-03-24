@@ -27,6 +27,9 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QGraphicsItem,
+    QGraphicsScene,
+    QGraphicsView,
     QHeaderView,
     QInputDialog,
     QLineEdit,
@@ -48,7 +51,6 @@ from tcha.status import StatusButton, StatusLabel
 from tcha.tablemodel import (
     CellItem,
     CellModel,
-    FilteredTableModel,
     IndexPoint,
     TableModel,
 )
@@ -898,12 +900,12 @@ class Table(QTableView):
         self.cellEditorClosed.emit()
 
 
-class PresenterDelegate(CellDelegate): ...
-
-
-class PresenterTable(Table):
-    def __init__(self, model: TableModel, parent=None):
+class PresenterCanvas(QGraphicsView):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        filtered = FilteredTableModel(model)
-        self.setModel(filtered)
-        filtered.set_visible_row(0)
+        scene = QGraphicsScene()
+        self.setScene(scene)
+
+    def change_item(self, item: QGraphicsItem):
+        self.scene().clear()
+        self.scene().addItem(item)
