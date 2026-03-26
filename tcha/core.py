@@ -13,9 +13,12 @@ from PyQt6.QtCore import (
     QDateTime,
     pyqtSignal,
 )
+from PyQt6.QtGui import QScreen
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QApplication,
+    QGraphicsScene,
+    QGraphicsView,
     QInputDialog,
     QMessageBox,
     QWidget,
@@ -37,6 +40,7 @@ from tcha.lfio import LessonFile
 from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
 from tcha.start import OpenFileModel, StartWindow
 from tcha.styling import TchaProxyStyle, make_palette
+from tcha.table import PresenterView
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -119,6 +123,7 @@ class AppCore(QApplication):
         self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
         self._start_dialog: StartWindow | None = None
+        self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
 
         if not self.qsettings.allKeys():
@@ -271,6 +276,9 @@ class AppCore(QApplication):
     def opened_start_dialog(self) -> StartWindow | None:
         return self._start_dialog
 
+    def opened_presenter(self) -> QGraphicsView | None:
+        return self._presenter_view
+
     def create_editor(
         self,
     ) -> None:
@@ -311,6 +319,8 @@ class AppCore(QApplication):
                 editor_window.appActionTriggered[AppAction, QWidget].connect(
                     self.on_app_action
                 )
+                editor_window.presenterActivated.connect(self.open_presenter)
+                editor_window.presenterClosed.connect(self.close_presenter)
                 editor_window.show()
                 editor_window.ui.ac_recent.setMenu(
                     self._file_model.export_recent_as_menu(6)
@@ -400,6 +410,21 @@ class AppCore(QApplication):
             window.show()
         else:
             self.opened_start_dialog().show()
+
+    def open_presenter(self, scene: QGraphicsScene, target_screen: QScreen) -> None:
+        if not self._presenter_view:
+            self._presenter_view = PresenterView(scene)
+            self._presenter_view.show()
+            self._presenter_view.setGeometry(target_screen.geometry())
+            self._presenter_view.showFullScreen()
+            self._presenter_view.rescale()
+        else:
+            self._presenter_view.setScene(scene)
+            self._presenter_view.rescale()
+
+    def close_presenter(self) -> None:
+        self._presenter_view.close()
+        self._presenter_view = None
 
     def db(self) -> QSqlDatabase | None:
         return self._db

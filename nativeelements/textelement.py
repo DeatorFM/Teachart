@@ -486,7 +486,7 @@ class TextEditor(BaseTextElementEditor):
         return False
 
     def open_symbol_dialog(self) -> None:
-        dialog = SymbolDialog(self.cb_Font.currentFont().family())
+        dialog = SymbolDialog(self.currentFont().family())
         dialog.characterClicked.connect(self.insert_symbol)
         dialog.show()
 

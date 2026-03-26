@@ -71,7 +71,7 @@ class OpenFileModel(QAbstractTableModel):
         # Add pinned-only files
         pinned_only = list(filter(lambda x: x not in recent, pinned))
         for path in pinned_only:
-            new_list.append(FileItem(pathobj, False, True))
+            new_list.append(FileItem(Path(path), False, True))
 
         return new_list
 
@@ -143,7 +143,7 @@ class OpenFileModel(QAbstractTableModel):
             item.path.as_posix() for item in filter(lambda x: x.recent, self._data)
         ]
         length = len(filtered)
-        return filtered[:10] if length >= max_size else filtered[: length - 1]
+        return filtered[:10] if length >= max_size else filtered[:length]
 
     def export_recent_as_menu(self, max_size=10) -> QMenu:
         file_list = self.export_recent(max_size)

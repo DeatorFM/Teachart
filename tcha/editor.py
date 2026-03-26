@@ -12,19 +12,18 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtGui import QAction, QCloseEvent, QScreen
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
-    QGraphicsWidget,
+    QGraphicsScene,
     QMainWindow,
     QMenu,
     QMessageBox,
-    QVBoxLayout,
     QWidget,
 )
 
-from nativeelements.baseelement import BaseElementDefinitions
+from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from tcha.consts import AppAction, ResourceFlag
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
@@ -71,6 +70,8 @@ class Editor(QMainWindow):
         [AppAction], [AppAction, Path], [AppAction, QWidget]
     )
     fileSaved = pyqtSignal(Path)
+    presenterActivated = pyqtSignal(QGraphicsScene, QScreen)  # Scene, Target Screen
+    presenterClosed = pyqtSignal()
 
     def __init__(
         self,
@@ -100,7 +101,6 @@ class Editor(QMainWindow):
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
         self.presenter_mode = False
-        self.presenter_viewer: PresenterCanvas | None = None
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
@@ -466,6 +466,7 @@ class Editor(QMainWindow):
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.has_index_copied())
             editor.connect_toolsets(self.toolsets)
+            editor.currentIndexChanged.connect(self.on_current_changed)
             # editor.elementActivated.connect(self.on_element_activated)
 
     def on_cell_closed(self) -> None:
@@ -625,6 +626,11 @@ class Editor(QMainWindow):
     def enable_presenter_mode(self, enabled: bool) -> None:
         self.ui.dw_presenter.setEnabled(enabled)
         self.ui.dw_presenter.setVisible(enabled)
+        self.presenter_mode = enabled
+        if enabled:
+            self.open_presenter()
+        else:
+            self.presenterClosed.emit()
 
     # Dialog opener
 
@@ -636,6 +642,30 @@ class Editor(QMainWindow):
             )
         )
         dialog.open()
+
+    def on_current_changed(self, idx: QModelIndex) -> None:
+        if self.presenter_mode:
+            model: BaseElementModel = idx.data()
+            if model:
+                gr_item = model.presentable_item()
+                self.ui.canvas.change_item(gr_item)
+                # current_screen = self.windowHandle().screen()
+                # other_screens = [
+                #     s for s in current_screen.virtualSiblings() if s != current_screen
+                # ]
+                # if other_screens:
+                #     self.presenterActivated.emit(
+                #         self.ui.canvas.scene(), other_screens[0]
+                #     )
+
+    def open_presenter(self) -> None:
+        if self.presenter_mode:
+            current_screen = self.windowHandle().screen()
+            other_screens = [
+                s for s in current_screen.virtualSiblings() if s != current_screen
+            ]
+            if other_screens:
+                self.presenterActivated.emit(self.ui.canvas.scene(), other_screens[0])
 
     # Debug menus
 

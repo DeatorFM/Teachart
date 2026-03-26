@@ -9,6 +9,7 @@ class AppAction(Enum):
     Settings = 4
     StartDialog = 5
     OpenDialog = 6
+    PresenterView = 7
 
 
 class ResourceFlag(Enum):

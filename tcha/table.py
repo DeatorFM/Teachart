@@ -27,6 +27,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QGraphicsItem,
     QGraphicsScene,
     QGraphicsView,
@@ -39,6 +40,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -59,6 +61,7 @@ from tcha.tablemodel import (
 class CellEditor(QListView):
     geometriesChanged = pyqtSignal()
     elementActivated = pyqtSignal(bool)
+    currentIndexChanged = pyqtSignal(QModelIndex, QModelIndex)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -123,6 +126,10 @@ class CellEditor(QListView):
             self.setCurrentIndex(QModelIndex())
             self.setFocus()
             print("Close complete")
+
+    def currentChanged(self, current: QModelIndex, previous: QModelIndex):
+        super().currentChanged(current, previous)
+        self.currentIndexChanged.emit(current, previous)
 
     def paintEvent(self, e: QPaintEvent | None) -> None:
         # print("painting list")
@@ -909,3 +916,25 @@ class PresenterCanvas(QGraphicsView):
     def change_item(self, item: QGraphicsItem):
         self.scene().clear()
         self.scene().addItem(item)
+        self.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+
+
+class PresenterView(QDialog):
+    def __init__(self, scene: QGraphicsScene, parent=None):
+        super().__init__(parent, Qt.WindowType.Dialog)
+        lo = QVBoxLayout(self)
+        self.view = QGraphicsView(scene)
+        self.setWindowTitle(tr("Presentation View - Teachart"))
+        lo.addWidget(self.view)
+        self.setLayout(lo)
+        self.rescale()
+
+        scene.changed.connect(self.rescale)
+
+    @property
+    def scene(self) -> QGraphicsScene:
+        return self.view.scene()
+
+    def rescale(self) -> None:
+        for item in self.scene.items():
+            self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
