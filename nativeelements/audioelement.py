@@ -218,6 +218,9 @@ class AudioModel(BaseElementModel):
         self._resource.delete_member()
         self._resource = None
 
+    def presentable_item(self) -> None:
+        return None
+
     def copy(self) -> AudioModel:
         model = AudioModel(
             self.resource,

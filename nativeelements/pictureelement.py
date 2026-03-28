@@ -18,7 +18,12 @@ from PyQt6.QtCore import (
     pyqtSlot,
 )
 from PyQt6.QtGui import QImage, QImageReader, QPainter, QPen, QPixmap, QTransform
-from PyQt6.QtWidgets import QFileDialog, QStyle, QStyleOptionViewItem
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QGraphicsPixmapItem,
+    QStyle,
+    QStyleOptionViewItem,
+)
 
 from nativeelements.audioelement import AudioElementDefinitions, AudioModel
 from nativeelements.baseelement import (
@@ -197,6 +202,17 @@ class PictureModel(BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+    def presentable_item(self) -> QGraphicsPixmapItem:
+        pixmap = QPixmap(self.resource.path)
+        if self.rotation > 0:
+            transformation = QTransform()
+            transformation.rotate(float(self.rotation))
+            pixmap = pixmap.transformed(transformation)
+        if self.adjusted:
+            pixmap = pixmap.scaled(self.width, self.height)
+        item = QGraphicsPixmapItem(pixmap)
+        return item
 
     def copy(self):
         model = PictureModel(

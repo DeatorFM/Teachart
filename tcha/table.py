@@ -938,3 +938,6 @@ class PresenterView(QDialog):
     def rescale(self) -> None:
         for item in self.scene.items():
             self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def wheelEvent(self, a0):
+        return super().wheelEvent(a0)

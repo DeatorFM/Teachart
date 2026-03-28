@@ -418,13 +418,20 @@ class AppCore(QApplication):
             self._presenter_view.setGeometry(target_screen.geometry())
             self._presenter_view.showFullScreen()
             self._presenter_view.rescale()
+            self._presenter_view.finished.connect(self._disable_presenter_mode)
         else:
-            self._presenter_view.setScene(scene)
+            self._presenter_view.view.setScene(scene)
             self._presenter_view.rescale()
 
     def close_presenter(self) -> None:
-        self._presenter_view.close()
-        self._presenter_view = None
+        if self._presenter_view:
+            self._presenter_view.view.setScene(None)
+            self._presenter_view.close()
+            self._presenter_view = None
+
+    def _disable_presenter_mode(self) -> None:
+        for editor in self.opened_editors():
+            editor.enable_presenter_mode(False)
 
     def db(self) -> QSqlDatabase | None:
         return self._db

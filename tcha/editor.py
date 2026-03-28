@@ -9,6 +9,7 @@ from PyQt6.QtCore import (
     QRunnable,
     Qt,
     QThreadPool,
+    QTimer,
     pyqtSignal,
     pyqtSlot,
 )
@@ -24,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag
+from tcha.consts import AppAction, DisplayMode, ResourceFlag
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -34,7 +35,14 @@ from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from tcha.table import CellEditor, Table
 from tcha.tablemodel import TableModel
+from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
+
+SDC_TOPOLOGY_INTERNAL = 0x00000001
+SDC_TOPOLOGY_CLONE = 0x00000002  # Duplicate mode
+SDC_TOPOLOGY_EXTEND = 0x00000004  # Extended mode
+SDC_TOPOLOGY_EXTERNAL = 0x00000008
+SDC_APPLY = 0x00000080
 
 
 class SaveWorkerSignals(QObject):
@@ -101,6 +109,8 @@ class Editor(QMainWindow):
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
         self.presenter_mode = False
+        self.init_display_mode = WinApi.get_display_mode()
+        print(f"Initial display mode: {self.init_display_mode}")
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
@@ -217,6 +227,8 @@ class Editor(QMainWindow):
         self.ui.ac_mov_dwn.triggered.connect(self.move_element_down)
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
+        QApplication.instance().screenAdded.connect(self.on_screen_changed)
+        QApplication.instance().screenRemoved.connect(self.on_screen_changed)
 
     def path(self) -> str | None:
         return self.lessonfile.path
@@ -630,6 +642,9 @@ class Editor(QMainWindow):
         if enabled:
             self.open_presenter()
         else:
+            print("Disabling presenter mode.")
+            if self.init_display_mode != DisplayMode.Extended:
+                WinApi.set_display_mode(self.init_display_mode)
             self.presenterClosed.emit()
 
     # Dialog opener
@@ -648,7 +663,8 @@ class Editor(QMainWindow):
             model: BaseElementModel = idx.data()
             if model:
                 gr_item = model.presentable_item()
-                self.ui.canvas.change_item(gr_item)
+                if gr_item:
+                    self.ui.canvas.change_item(gr_item)
                 # current_screen = self.windowHandle().screen()
                 # other_screens = [
                 #     s for s in current_screen.virtualSiblings() if s != current_screen
@@ -659,13 +675,32 @@ class Editor(QMainWindow):
                 #     )
 
     def open_presenter(self) -> None:
-        if self.presenter_mode:
+        def activate_presenter() -> None:
             current_screen = self.windowHandle().screen()
             other_screens = [
                 s for s in current_screen.virtualSiblings() if s != current_screen
             ]
-            if other_screens:
+            scene = self.ui.canvas.scene()
+            if len(scene.views()) == 1 and len(other_screens) >= 1:
                 self.presenterActivated.emit(self.ui.canvas.scene(), other_screens[0])
+
+        if self.presenter_mode:
+            if WinApi.get_display_mode() == DisplayMode.Extended:
+                print("Display is extended")
+                activate_presenter()
+
+            elif WinApi.get_display_mode() == DisplayMode.Duplicated:
+                print("Display is duplicated. Set display mode to extended.")
+                WinApi.set_display_mode(DisplayMode.Extended)
+                QTimer.singleShot(500, lambda: activate_presenter())
+
+    def on_screen_changed(self) -> None:
+        if self.presenter_mode:
+            if WinApi.get_display_mode() == DisplayMode.Single:
+                self.init_display_mode = DisplayMode.Single
+                self.enable_presenter_mode(False)
+            else:
+                self.open_presenter()
 
     # Debug menus
 

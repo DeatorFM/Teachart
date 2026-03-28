@@ -27,3 +27,9 @@ class ResourceType(Enum):
     AUDIO = 3
     DOC = 4
     OTHER = 5
+
+
+class DisplayMode(Enum):
+    Single = 0
+    Extended = 1
+    Duplicated = 2
