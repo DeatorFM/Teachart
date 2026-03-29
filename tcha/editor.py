@@ -227,8 +227,6 @@ class Editor(QMainWindow):
         self.ui.ac_mov_dwn.triggered.connect(self.move_element_down)
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
-        QApplication.instance().screenAdded.connect(self.on_screen_changed)
-        QApplication.instance().screenRemoved.connect(self.on_screen_changed)
 
     def path(self) -> str | None:
         return self.lessonfile.path
@@ -640,11 +638,8 @@ class Editor(QMainWindow):
         self.ui.dw_presenter.setVisible(enabled)
         self.presenter_mode = enabled
         if enabled:
-            self.open_presenter()
+            self.presenterActivated.emit(self.ui.canvas.scene(), self)
         else:
-            print("Disabling presenter mode.")
-            if self.init_display_mode != DisplayMode.Extended:
-                WinApi.set_display_mode(self.init_display_mode)
             self.presenterClosed.emit()
 
     # Dialog opener
@@ -674,33 +669,33 @@ class Editor(QMainWindow):
                 #         self.ui.canvas.scene(), other_screens[0]
                 #     )
 
-    def open_presenter(self) -> None:
-        def activate_presenter() -> None:
-            current_screen = self.windowHandle().screen()
-            other_screens = [
-                s for s in current_screen.virtualSiblings() if s != current_screen
-            ]
-            scene = self.ui.canvas.scene()
-            if len(scene.views()) == 1 and len(other_screens) >= 1:
-                self.presenterActivated.emit(self.ui.canvas.scene(), other_screens[0])
+    # def open_presenter(self) -> None:
+    #     def activate_presenter() -> None:
+    #         current_screen = self.windowHandle().screen()
+    #         other_screens = [
+    #             s for s in current_screen.virtualSiblings() if s != current_screen
+    #         ]
+    #         scene = self.ui.canvas.scene()
+    #         if len(scene.views()) == 1 and len(other_screens) >= 1:
+    #             self.presenterActivated.emit(self.ui.canvas.scene(), other_screens[0])
 
-        if self.presenter_mode:
-            if WinApi.get_display_mode() == DisplayMode.Extended:
-                print("Display is extended")
-                activate_presenter()
+    #     if self.presenter_mode:
+    #         if WinApi.get_display_mode() == DisplayMode.Extended:
+    #             print("Display is extended")
+    #             activate_presenter()
 
-            elif WinApi.get_display_mode() == DisplayMode.Duplicated:
-                print("Display is duplicated. Set display mode to extended.")
-                WinApi.set_display_mode(DisplayMode.Extended)
-                QTimer.singleShot(500, lambda: activate_presenter())
+    #         elif WinApi.get_display_mode() == DisplayMode.Duplicated:
+    #             print("Display is duplicated. Set display mode to extended.")
+    #             WinApi.set_display_mode(DisplayMode.Extended)
+    #             QTimer.singleShot(500, lambda: activate_presenter())
 
-    def on_screen_changed(self) -> None:
-        if self.presenter_mode:
-            if WinApi.get_display_mode() == DisplayMode.Single:
-                self.init_display_mode = DisplayMode.Single
-                self.enable_presenter_mode(False)
-            else:
-                self.open_presenter()
+    # def on_screen_changed(self) -> None:
+    # if self.presenter_mode:
+    #     if WinApi.get_display_mode() == DisplayMode.Single:
+    #         self.init_display_mode = DisplayMode.Single
+    #         self.enable_presenter_mode(False)
+    #     else:
+    #         self.open_presenter()
 
     # Debug menus
 

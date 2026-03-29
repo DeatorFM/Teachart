@@ -9,10 +9,7 @@ from pathlib import Path
 from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import (
-    QDateTime,
-    pyqtSignal,
-)
+from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
@@ -24,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from tcha.consts import AppAction
+from tcha.consts import AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
     CourseModel,
@@ -41,6 +38,7 @@ from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialo
 from tcha.start import OpenFileModel, StartWindow
 from tcha.styling import TchaProxyStyle, make_palette
 from tcha.table import PresenterView
+from tcha.utils import WinApi
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -140,7 +138,12 @@ class AppCore(QApplication):
             self.qsettings.value("Application/pinned", [], list),
         )
 
+        self.init_display_mode = WinApi.get_display_mode()
+        print(f"Initial display mode: {self.init_display_mode}")
+
         self.aboutToQuit.connect(self.on_quitting)
+        self.screenAdded.connect(self.on_screen_changed)
+        self.screenRemoved.connect(self.on_screen_changed)
 
     def _startup_checks(self) -> None:
         keys = self.qsettings.allKeys()
@@ -411,27 +414,50 @@ class AppCore(QApplication):
         else:
             self.opened_start_dialog().show()
 
-    def open_presenter(self, scene: QGraphicsScene, target_screen: QScreen) -> None:
+    def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
         if not self._presenter_view:
-            self._presenter_view = PresenterView(scene)
-            self._presenter_view.show()
-            self._presenter_view.setGeometry(target_screen.geometry())
-            self._presenter_view.showFullScreen()
-            self._presenter_view.rescale()
+            self._presenter_view = PresenterView(scene, editor)
             self._presenter_view.finished.connect(self._disable_presenter_mode)
+            self.show_presenter()
         else:
             self._presenter_view.view.setScene(scene)
+            self._presenter_view.set_current_editor(editor)
             self._presenter_view.rescale()
+
+    def show_presenter(self) -> None:
+        if self._presenter_view:
+            if WinApi.get_display_mode() == DisplayMode.Extended:
+                self._presenter_view.showFullScreen()
+
+            elif WinApi.get_display_mode() == DisplayMode.Duplicated:
+                print("Display is duplicated. Set display mode to extended.")
+                WinApi.set_display_mode(DisplayMode.Extended)
+                QTimer.singleShot(500, lambda: self._presenter_view.showFullScreen())
 
     def close_presenter(self) -> None:
         if self._presenter_view:
             self._presenter_view.view.setScene(None)
             self._presenter_view.close()
             self._presenter_view = None
+            if self.init_display_mode != WinApi.get_display_mode():
+                WinApi.set_display_mode(self.init_display_mode)
 
     def _disable_presenter_mode(self) -> None:
         for editor in self.opened_editors():
             editor.enable_presenter_mode(False)
+
+    def on_screen_changed(self) -> None:
+        if self._presenter_view:
+            if WinApi.get_display_mode() == DisplayMode.Single:
+                self.init_display_mode = DisplayMode.Single
+                self._disable_presenter_mode()
+            else:
+                if self._presenter_view.isHidden():
+                    self.init_display_mode = WinApi.get_display_mode()
+                    self.show_presenter()
+            return
+
+        self.init_display_mode = WinApi.get_display_mode()
 
     def db(self) -> QSqlDatabase | None:
         return self._db

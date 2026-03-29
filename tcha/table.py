@@ -24,6 +24,7 @@ from PyQt6.QtGui import (
     QMouseEvent,
     QPainter,
     QPaintEvent,
+    QScreen,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -920,12 +921,13 @@ class PresenterCanvas(QGraphicsView):
 
 
 class PresenterView(QDialog):
-    def __init__(self, scene: QGraphicsScene, parent=None):
+    def __init__(self, scene: QGraphicsScene, editor: "Editor", parent=None):
         super().__init__(parent, Qt.WindowType.Dialog)
         lo = QVBoxLayout(self)
-        self.view = QGraphicsView(scene)
+        self._view = QGraphicsView(scene)
+        self._my_editor = editor
         self.setWindowTitle(tr("Presentation View - Teachart"))
-        lo.addWidget(self.view)
+        lo.addWidget(self._view)
         self.setLayout(lo)
         self.rescale()
 
@@ -935,9 +937,31 @@ class PresenterView(QDialog):
     def scene(self) -> QGraphicsScene:
         return self.view.scene()
 
+    @property
+    def editor(self) -> "Editor":
+        return self._my_editor
+
+    @property
+    def view(self) -> QGraphicsView:
+        return self._view
+
     def rescale(self) -> None:
         for item in self.scene.items():
             self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def set_current_editor(self, editor: "Editor") -> None:
+        self.my_editor = editor
+
+    def showFullScreen(self):
+        editor_screen: QScreen = self._my_editor.windowHandle().screen()
+        other_screens = [
+            s for s in editor_screen.virtualSiblings() if s != editor_screen
+        ]
+        if other_screens:
+            target_screen = other_screens[0]
+            self.setGeometry(target_screen.geometry())
+            super().showFullScreen()
+            self.rescale()
 
     def wheelEvent(self, a0):
         return super().wheelEvent(a0)
