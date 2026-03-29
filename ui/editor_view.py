@@ -218,7 +218,7 @@ class Ui_Editor(object):
         # self.tb_yellow.setFixedSize(16, 16)
         style3 = tb_style.replace("[color]", "yellow")
         self.tb_yellow.setStyleSheet(style3)
-        self.tb_yellow.setProperty("color", Qt.GlobalColor.yellow)
+        self.tb_yellow.setProperty("color", Qt.GlobalColor.darkYellow)
         self.dw_lo3.addWidget(self.tb_yellow)
         self.bg_colors.addButton(self.tb_yellow)
 

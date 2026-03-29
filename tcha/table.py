@@ -919,7 +919,9 @@ class CanvasItem(QGraphicsPixmapItem):
         super().__init__(parent)
         self.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
         self.setAcceptHoverEvents(True)
-        self.pen = QPen(Qt.GlobalColor.red)
+        self.pen = QPen(
+            Qt.GlobalColor.red, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap
+        )
         self.tool = CanvasTool.Pen
         self._last_point = QPoint()
         self.painting = False
@@ -942,7 +944,18 @@ class CanvasItem(QGraphicsPixmapItem):
             if self.tool == CanvasTool.Pen:
                 painter.setPen(self.pen)
             else:
-                painter.setPen(QPen(Qt.GlobalColor.transparent))
+                # TODO: Radiergummi fixen: Transparente Farbe macht nix
+                painter.setCompositionMode(
+                    QPainter.CompositionMode.CompositionMode_Clear
+                )
+                painter.setPen(
+                    QPen(
+                        Qt.GlobalColor.transparent,
+                        4.0,
+                        Qt.PenStyle.SolidLine,
+                        Qt.PenCapStyle.RoundCap,
+                    )
+                )
 
             if not self._last_point.isNull():
                 painter.drawLine(self._last_point, point)
@@ -965,13 +978,6 @@ class CanvasItem(QGraphicsPixmapItem):
         self.painting = False
         self._last_point = QPoint()
         return super().mouseReleaseEvent(event)
-
-    # def hoverMoveEvent(self, event):
-    #     if self.painting:
-    #         print("Trying to paint")
-    #         self._last_point = event.pos()
-    #         self.update()
-    #     return super().hoverMoveEvent(event)
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None):
         # if self.painting:
