@@ -10,6 +10,7 @@ from PyQt6.QtCore import QCoreApplication, QDateTime, QLocale, QMetaObject, QSiz
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
+    QButtonGroup,
     QDateTimeEdit,
     QDockWidget,
     QHBoxLayout,
@@ -30,8 +31,9 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementToolset
+from tcha.consts import CanvasTool
 from tcha.settings import Locale, Settings, TimeFormat
-from tcha.styling import SvgIcon
+from tcha.styling import Svg, SvgIcon
 from tcha.table import PresenterCanvas, Table
 from ui.commons import SearchableComboBox, SwitchAction
 
@@ -136,6 +138,95 @@ class Ui_Editor(object):
         self.dw_lo2 = QVBoxLayout(self.widget_dw_contents2)
         self.dw_lo2.setObjectName("dw_lo2")
 
+        self.dw_lo3 = QHBoxLayout()
+        self.dw_lo3.setObjectName("dw_lo3")
+
+        self.bg_tools = QButtonGroup()
+
+        self.tb_pen = QToolButton(self.widget_dw_contents2)
+        self.tb_pen.setObjectName("tb_pen")
+        self.tb_pen.setCheckable(True)
+        self.tb_pen.setChecked(True)
+        self.tb_pen.setProperty("tool", CanvasTool.Pen)
+        icon16 = SvgIcon("resources/icons/ic_pen.svg")
+        self.tb_pen.setIcon(icon16)
+        self.dw_lo3.addWidget(self.tb_pen)
+        self.bg_tools.addButton(self.tb_pen)
+
+        self.tb_rubber = QToolButton(self.widget_dw_contents2)
+        self.tb_rubber.setObjectName("rb_rubber")
+        self.tb_rubber.setCheckable(True)
+        self.tb_rubber.setProperty("tool", CanvasTool.Rubber)
+        icon17 = SvgIcon("resources/icons/ic_rubber.svg")
+        self.tb_rubber.setIcon(icon17)
+        self.dw_lo3.addWidget(self.tb_rubber)
+        self.bg_tools.addButton(self.tb_rubber)
+
+        self.dw_lo3.addSpacing(5)
+
+        self.bg_colors = QButtonGroup()
+
+        tb_style = """
+        QToolButton {
+            min-width: 14px;
+            min-height: 14px;
+            max-width: 14px;
+            max-height: 14px;
+            border: 1px solid black;
+            border-radius: 7px; 
+            padding: 0px; 
+            margin: 1px; 
+            background-color: [color];
+            }
+
+        QToolButton:checked, QToolButton:hover {
+            min-width: 16px;
+            min-height: 16px;
+            max-width: 16px;
+            max-height: 16px;
+            border: 1px solid black;
+            border-radius: 8px;
+            padding: 0px;
+            margin: 0px;
+            }
+        """
+
+        self.tb_red = QToolButton(self.widget_dw_contents2)
+        self.tb_red.setObjectName("tb_red")
+        self.tb_red.setCheckable(True)
+        self.tb_red.setChecked(True)
+        # self.tb_red.setFixedSize(16, 16)
+        style1 = tb_style.replace("[color]", "red")
+        self.tb_red.setStyleSheet(style1)
+        self.tb_red.setProperty("color", Qt.GlobalColor.red)
+        self.dw_lo3.addWidget(self.tb_red)
+        self.bg_colors.addButton(self.tb_red)
+
+        self.tb_blue = QToolButton(self.widget_dw_contents2)
+        self.tb_blue.setObjectName("tb_blue")
+        self.tb_blue.setCheckable(True)
+        # self.tb_blue.setFixedSize(16, 16)
+        style2 = tb_style.replace("[color]", "blue")
+        self.tb_blue.setStyleSheet(style2)
+        self.tb_blue.setProperty("color", Qt.GlobalColor.blue)
+        self.dw_lo3.addWidget(self.tb_blue)
+        self.bg_colors.addButton(self.tb_blue)
+
+        self.tb_yellow = QToolButton(self.widget_dw_contents2)
+        self.tb_yellow.setObjectName("tb_yellow")
+        self.tb_yellow.setCheckable(True)
+        # self.tb_yellow.setFixedSize(16, 16)
+        style3 = tb_style.replace("[color]", "yellow")
+        self.tb_yellow.setStyleSheet(style3)
+        self.tb_yellow.setProperty("color", Qt.GlobalColor.yellow)
+        self.dw_lo3.addWidget(self.tb_yellow)
+        self.bg_colors.addButton(self.tb_yellow)
+
+        spa2 = QSpacerItem(100, 18, QSizePolicy.Policy.Expanding)
+        self.dw_lo3.addItem(spa2)
+
+        self.dw_lo2.addLayout(self.dw_lo3)
+
         self.canvas = PresenterCanvas()
         self.canvas.setObjectName("canvas")
 
@@ -166,7 +257,7 @@ class Ui_Editor(object):
         self.dw_lo1.setObjectName("dw_lo1")
 
         self.te_comment = QPlainTextEdit(parent=self.widget_dw_contents)
-        self.te_comment.setMinimumSize(QSize(0, 100))
+        self.te_comment.setMinimumSize(QSize(100, 100))
         self.te_comment.setObjectName("te_comment")
 
         self.dw_lo1.addWidget(self.te_comment)

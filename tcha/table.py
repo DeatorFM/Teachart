@@ -24,12 +24,15 @@ from PyQt6.QtGui import (
     QMouseEvent,
     QPainter,
     QPaintEvent,
+    QPen,
+    QPixmap,
     QScreen,
 )
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QGraphicsItem,
+    QGraphicsPixmapItem,
     QGraphicsScene,
     QGraphicsView,
     QHeaderView,
@@ -39,8 +42,10 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QStyledItemDelegate,
+    QStyleOptionGraphicsItem,
     QStyleOptionViewItem,
     QTableView,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -50,6 +55,7 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
+from tcha.consts import CanvasTool
 from tcha.status import StatusButton, StatusLabel
 from tcha.tablemodel import (
     CellItem,
@@ -308,7 +314,7 @@ class CellDelegate(QStyledItemDelegate):
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
                         else:
-                            print("No intersection")
+                            pass
                         delegate.paint(painter, sub_option, cmodel.index(i, 0), False)
                         y_offset += delegate_size.height()
                         # print("This model", model, "painted from", sub_option.rect.x(), sub_option.rect.y(), "To", sub_option.rect.x(), sub_option.rect.y() + sub_option.rect.height())
@@ -908,16 +914,109 @@ class Table(QTableView):
         self.cellEditorClosed.emit()
 
 
+class CanvasItem(QGraphicsPixmapItem):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
+        self.setAcceptHoverEvents(True)
+        self.pen = QPen(Qt.GlobalColor.red)
+        self.tool = CanvasTool.Pen
+        self._last_point = QPoint()
+        self.painting = False
+
+    def setParentItem(self, parent):
+        super().setParentItem(parent)
+        if parent:
+            rect = parent.boundingRect()
+            pixmap = QPixmap(int(rect.width()), int(rect.height()))
+            pixmap.fill(Qt.GlobalColor.transparent)
+            self.setPixmap(pixmap)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            print("Trying to paint")
+            point = self.mapFromScene(event.scenePos())
+
+            pixmap = self.pixmap()
+            painter = QPainter(pixmap)
+            if self.tool == CanvasTool.Pen:
+                painter.setPen(self.pen)
+            else:
+                painter.setPen(QPen(Qt.GlobalColor.transparent))
+
+            if not self._last_point.isNull():
+                painter.drawLine(self._last_point, point)
+            else:
+                painter.drawPoint(point)
+
+            painter.end()
+
+            self.setPixmap(pixmap)
+            self._last_point = point
+            self.update()
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            self.painting = True
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.painting = False
+        self._last_point = QPoint()
+        return super().mouseReleaseEvent(event)
+
+    # def hoverMoveEvent(self, event):
+    #     if self.painting:
+    #         print("Trying to paint")
+    #         self._last_point = event.pos()
+    #         self.update()
+    #     return super().hoverMoveEvent(event)
+
+    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None):
+        # if self.painting:
+
+        #     if self.tool == CanvasTool.Pen:
+        #         painter.setPen(self.pen)
+        #     else:
+        #         painter.setPen(QPen(Qt.GlobalColor.transparent))
+        #     painter.drawPoint(self._last_point)
+        super().paint(painter, option, widget)
+
+    def boundingRect(self):
+        return self.parentItem().boundingRect()
+
+
 class PresenterCanvas(QGraphicsView):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         scene = QGraphicsScene()
         self.setScene(scene)
+        self.canvas = CanvasItem()
 
     def change_item(self, item: QGraphicsItem):
         self.scene().clear()
         self.scene().addItem(item)
         self.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+
+        self.canvas = CanvasItem()
+        self.canvas.setParentItem(item)
+        self.scene().addItem(self.canvas)
+        # self.fitInView(self.canvas, Qt.AspectRatioMode.KeepAspectRatio)
+        self.canvas.grabMouse()
+        self.canvas.setZValue(100)
+
+    def rescale(self) -> None:
+        for item in self.scene.items():
+            self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def set_color(self, button: QToolButton) -> None:
+        color: Qt.GlobalColor = button.property("color")
+        self.canvas.pen.setColor(color)
+
+    def set_tool(self, button: QToolButton) -> None:
+        tool: CanvasTool = button.property("tool")
+        self.canvas.tool = tool
 
 
 class PresenterView(QDialog):

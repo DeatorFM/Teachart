@@ -33,3 +33,8 @@ class DisplayMode(Enum):
     Single = 0
     Extended = 1
     Duplicated = 2
+
+
+class CanvasTool(Enum):
+    Pen = 1
+    Rubber = 2

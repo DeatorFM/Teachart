@@ -9,7 +9,6 @@ from PyQt6.QtCore import (
     QRunnable,
     Qt,
     QThreadPool,
-    QTimer,
     pyqtSignal,
     pyqtSlot,
 )
@@ -25,7 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, DisplayMode, ResourceFlag
+from tcha.consts import AppAction, ResourceFlag
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -225,6 +224,9 @@ class Editor(QMainWindow):
         self.ui.ac_del_element.triggered.connect(self.remove_element)
         self.ui.ac_mov_up.triggered.connect(self.move_element_up)
         self.ui.ac_mov_dwn.triggered.connect(self.move_element_down)
+
+        self.ui.bg_tools.buttonClicked.connect(self.ui.canvas.set_tool)
+        self.ui.bg_colors.buttonClicked.connect(self.ui.canvas.set_color)
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 
@@ -638,6 +640,26 @@ class Editor(QMainWindow):
         self.ui.dw_presenter.setVisible(enabled)
         self.presenter_mode = enabled
         if enabled:
+            self.ui.dw_comment.setVisible(False)
+            self.ui.canvas.set_color(self.ui.bg_colors.checkedButton())
+            self.ui.canvas.set_tool(self.ui.bg_tools.checkedButton())
+            dwa = self.dockWidgetArea(self.ui.dw_presenter)
+            orientation = (
+                Qt.Orientation.Horizontal
+                if dwa == Qt.DockWidgetArea.LeftDockWidgetArea
+                or dwa == Qt.DockWidgetArea.RightDockWidgetArea
+                else Qt.Orientation.Vertical
+            )
+            size = (
+                self.width() // 2 - 50
+                if orientation == Qt.Orientation.Horizontal
+                else self.table.height() // 2
+            )
+            self.resizeDocks(
+                [self.ui.dw_presenter],
+                [size],
+                orientation,
+            )
             self.presenterActivated.emit(self.ui.canvas.scene(), self)
         else:
             self.presenterClosed.emit()
@@ -660,42 +682,6 @@ class Editor(QMainWindow):
                 gr_item = model.presentable_item()
                 if gr_item:
                     self.ui.canvas.change_item(gr_item)
-                # current_screen = self.windowHandle().screen()
-                # other_screens = [
-                #     s for s in current_screen.virtualSiblings() if s != current_screen
-                # ]
-                # if other_screens:
-                #     self.presenterActivated.emit(
-                #         self.ui.canvas.scene(), other_screens[0]
-                #     )
-
-    # def open_presenter(self) -> None:
-    #     def activate_presenter() -> None:
-    #         current_screen = self.windowHandle().screen()
-    #         other_screens = [
-    #             s for s in current_screen.virtualSiblings() if s != current_screen
-    #         ]
-    #         scene = self.ui.canvas.scene()
-    #         if len(scene.views()) == 1 and len(other_screens) >= 1:
-    #             self.presenterActivated.emit(self.ui.canvas.scene(), other_screens[0])
-
-    #     if self.presenter_mode:
-    #         if WinApi.get_display_mode() == DisplayMode.Extended:
-    #             print("Display is extended")
-    #             activate_presenter()
-
-    #         elif WinApi.get_display_mode() == DisplayMode.Duplicated:
-    #             print("Display is duplicated. Set display mode to extended.")
-    #             WinApi.set_display_mode(DisplayMode.Extended)
-    #             QTimer.singleShot(500, lambda: activate_presenter())
-
-    # def on_screen_changed(self) -> None:
-    # if self.presenter_mode:
-    #     if WinApi.get_display_mode() == DisplayMode.Single:
-    #         self.init_display_mode = DisplayMode.Single
-    #         self.enable_presenter_mode(False)
-    #     else:
-    #         self.open_presenter()
 
     # Debug menus
 
@@ -751,4 +737,6 @@ class Editor(QMainWindow):
             else:
                 ev.ignore()
                 return
+        if self.presenter_mode:
+            self.presenterClosed.emit()
         super().closeEvent(ev)
