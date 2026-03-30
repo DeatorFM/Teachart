@@ -10,6 +10,7 @@ from PyQt6.QtCore import (
     QObject,
     QPoint,
     QRect,
+    QRectF,
     QSize,
     Qt,
     pyqtSignal,
@@ -23,17 +24,17 @@ from PyQt6.QtGui import (
     QKeyEvent,
     QMouseEvent,
     QPainter,
+    QPainterPath,
     QPaintEvent,
     QPen,
-    QPixmap,
     QScreen,
 )
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QGraphicsItem,
-    QGraphicsPixmapItem,
     QGraphicsScene,
+    QGraphicsSceneMouseEvent,
     QGraphicsView,
     QHeaderView,
     QInputDialog,
@@ -42,7 +43,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QStyledItemDelegate,
-    QStyleOptionGraphicsItem,
     QStyleOptionViewItem,
     QTableView,
     QToolButton,
@@ -914,115 +914,99 @@ class Table(QTableView):
         self.cellEditorClosed.emit()
 
 
-class CanvasItem(QGraphicsPixmapItem):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
-        self.setAcceptHoverEvents(True)
-        self.pen = QPen(
-            Qt.GlobalColor.red, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap
-        )
+class FormattedPainterPath(QPainterPath):
+    def __init__(self):
+        super().__init__()
+        self.pen = QPen()
+
+
+class CanvasScene(QGraphicsScene):
+    def __init__(self):
+        super().__init__()
+        self._ppaths: list[FormattedPainterPath] = []
+        self.pen = QPen()
         self.tool = CanvasTool.Pen
-        self._last_point = QPoint()
-        self.painting = False
 
-    def setParentItem(self, parent):
-        super().setParentItem(parent)
-        if parent:
-            rect = parent.boundingRect()
-            pixmap = QPixmap(int(rect.width()), int(rect.height()))
-            pixmap.fill(Qt.GlobalColor.transparent)
-            self.setPixmap(pixmap)
+        self._painting = False
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    @property
+    def ppaths(self) -> list[FormattedPainterPath]:
+        return self._ppaths
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
             print("Trying to paint")
-            point = self.mapFromScene(event.scenePos())
+            if self._painting:
+                pointf = event.scenePos()
 
-            pixmap = self.pixmap()
-            painter = QPainter(pixmap)
-            if self.tool == CanvasTool.Pen:
-                painter.setPen(self.pen)
-            else:
-                # TODO: Radiergummi fixen: Transparente Farbe macht nix
-                painter.setCompositionMode(
-                    QPainter.CompositionMode.CompositionMode_Clear
-                )
-                painter.setPen(
-                    QPen(
-                        Qt.GlobalColor.transparent,
-                        4.0,
-                        Qt.PenStyle.SolidLine,
-                        Qt.PenCapStyle.RoundCap,
-                    )
-                )
+                if self._ppaths:
+                    self._ppaths[-1].lineTo(pointf)
+                    self.update()
+        event.accept()
 
-            if not self._last_point.isNull():
-                painter.drawLine(self._last_point, point)
-            else:
-                painter.drawPoint(point)
-
-            painter.end()
-
-            self.setPixmap(pixmap)
-            self._last_point = point
-            self.update()
-        super().mouseMoveEvent(event)
-
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self.painting = True
-        super().mousePressEvent(event)
+            if self.tool == CanvasTool.Pen:
+                self._painting = True
+                new_path = FormattedPainterPath()
+                new_path.pen = QPen(self.pen)
+                self._ppaths.append(new_path)
+                pointf = event.scenePos()
+                new_path.moveTo(pointf)
+            else:
+                pointf = event.scenePos()
+                for i, path in enumerate(self._ppaths):
+                    if path.contains(pointf):
+                        del self._ppaths[i]
+                        self.update()
+                        break
 
-    def mouseReleaseEvent(self, event):
-        self.painting = False
-        self._last_point = QPoint()
-        return super().mouseReleaseEvent(event)
+        event.accept()
 
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None):
-        # if self.painting:
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
+        self._painting = False
+        event.accept()
 
-        #     if self.tool == CanvasTool.Pen:
-        #         painter.setPen(self.pen)
-        #     else:
-        #         painter.setPen(QPen(Qt.GlobalColor.transparent))
-        #     painter.drawPoint(self._last_point)
-        super().paint(painter, option, widget)
-
-    def boundingRect(self):
-        return self.parentItem().boundingRect()
+    def drawForeground(self, painter: QPainter, rect: QRectF):
+        for path in self._ppaths:
+            painter.setPen(path.pen)
+            painter.drawPath(path)
 
 
 class PresenterCanvas(QGraphicsView):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        scene = QGraphicsScene()
+        scene = CanvasScene()
         self.setScene(scene)
-        self.canvas = CanvasItem()
+
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
+        self.setOptimizationFlag(
+            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, True
+        )
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
 
     def change_item(self, item: QGraphicsItem):
+        self.scene().ppaths.clear()
         self.scene().clear()
         self.scene().addItem(item)
-        self.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
 
-        self.canvas = CanvasItem()
-        self.canvas.setParentItem(item)
-        self.scene().addItem(self.canvas)
-        # self.fitInView(self.canvas, Qt.AspectRatioMode.KeepAspectRatio)
-        self.canvas.grabMouse()
-        self.canvas.setZValue(100)
+        self.rescale()
+
+        print(f"Current items: {self.scene().items()}")
 
     def rescale(self) -> None:
-        for item in self.scene.items():
-            self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
+        for item in self.scene().items():
+            self.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
 
     def set_color(self, button: QToolButton) -> None:
         color: Qt.GlobalColor = button.property("color")
-        self.canvas.pen.setColor(color)
+        self.scene().pen.setColor(color)
 
     def set_tool(self, button: QToolButton) -> None:
         tool: CanvasTool = button.property("tool")
-        self.canvas.tool = tool
+        self.scene().tool = tool
 
 
 class PresenterView(QDialog):
@@ -1035,6 +1019,14 @@ class PresenterView(QDialog):
         lo.addWidget(self._view)
         self.setLayout(lo)
         self.rescale()
+
+        self._view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self._view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        self._view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        self._view.setViewportUpdateMode(
+            QGraphicsView.ViewportUpdateMode.SmartViewportUpdate
+        )
+        self._view.setInteractive(False)
 
         scene.changed.connect(self.rescale)
 

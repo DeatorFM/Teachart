@@ -193,12 +193,6 @@ class PictureModel(BaseElementModel):
         else:
             raise ValueError("Number must be a multiple of 90.")
 
-        # def expected_size(self, width: int) -> QSize:
-        #     # Account for 2px left + 2px right padding
-        #     content_width = width - 4
-        #     if self.adjusted:
-        #         return QSize(width, self.height)\n        return QSize(width, round(self._height * (content_width / self._width)))
-
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
@@ -212,6 +206,7 @@ class PictureModel(BaseElementModel):
         if self.adjusted:
             pixmap = pixmap.scaled(self.width, self.height)
         item = QGraphicsPixmapItem(pixmap)
+        item.setCacheMode(QGraphicsPixmapItem.CacheMode.DeviceCoordinateCache)
         return item
 
     def copy(self):

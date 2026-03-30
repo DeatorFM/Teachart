@@ -8,8 +8,12 @@ from typing import Self, Type
 from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
+    QBuffer,
+    QByteArray,
     QModelIndex,
     QPoint,
+    QPointF,
+    QRectF,
     QSize,
     Qt,
     QXmlStreamAttributes,
@@ -35,6 +39,8 @@ from PyQt6.QtGui import (
     QTextOption,
     QTextTableFormat,
 )
+from PyQt6.QtSvg import QSvgGenerator, QSvgRenderer
+from PyQt6.QtSvgWidgets import QGraphicsSvgItem
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -119,8 +125,21 @@ class TextModel(QTextDocument, BaseElementModel):
         return TextDelegate(toolset, parent)
 
     def presentable_item(self) -> QGraphicsTextItem:
-        item = QGraphicsTextItem()
-        item.setDocument(self.clone())
+        # item = QGraphicsTextItem()
+        bytearr = QByteArray()
+        buffer = QBuffer()
+        buffer.setBuffer(bytearr)
+        svg_gen = QSvgGenerator()
+        svg_gen.setOutputDevice(buffer)
+        painter = QPainter(svg_gen)
+        # item.setDocument(self.clone())
+        # item.setCacheMode(QGraphicsTextItem.CacheMode.DeviceCoordinateCache)
+        self.drawContents(painter, QRectF(QPointF(0, 0), self.size()))
+        painter.end()
+        renderer = QSvgRenderer(bytearr)
+        item = QGraphicsSvgItem()
+        item.setSharedRenderer(renderer)
+        item.setZValue(0.0)
         return item
 
     def copy(self) -> TextModel:
