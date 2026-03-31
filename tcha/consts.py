@@ -38,3 +38,4 @@ class DisplayMode(Enum):
 class CanvasTool(Enum):
     Pen = 1
     Rubber = 2
+    Arrow = 3

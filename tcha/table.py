@@ -1,3 +1,5 @@
+from math import sqrt
+
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractItemModel,
@@ -9,6 +11,7 @@ from PyQt6.QtCore import (
     QModelIndex,
     QObject,
     QPoint,
+    QPointF,
     QRect,
     QRectF,
     QSize,
@@ -27,6 +30,7 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPaintEvent,
     QPen,
+    QPolygonF,
     QScreen,
 )
 from PyQt6.QtWidgets import (
@@ -914,24 +918,47 @@ class Table(QTableView):
         self.cellEditorClosed.emit()
 
 
-class FormattedPainterPath(QPainterPath):
+class ArrowPath(QPainterPath):
+    def __init__(self, p1: QPointF, p2: QPointF):
+        super().__init__()
+        # Prerequisites
+        pm = (p1.y() - p2.y()) / (p1.x() / p2.x())
+        pb = p1.y() - pm * p1.x()  # -> y = pm*x + b | x = -pb / m
+
+        self.moveTo(p1)
+        self.lineTo(p2)
+        ha = self.length() * 0.25  # Arrow head height
+        side = 2 * ha / sqrt(3)
+
+        # Get length
+        p_middle = QPointF(
+            p2.x() - 0.25 * (p2.x() - p1.x()), p2.y() - 0.25 * (p2.y() - p1.y())
+        )
+
+
+class FormattedLine(QPolygonF):
     def __init__(self):
         super().__init__()
         self.pen = QPen()
+        self.mode = QPainter.CompositionMode.CompositionMode_SourceOver
 
 
 class CanvasScene(QGraphicsScene):
     def __init__(self):
         super().__init__()
-        self._ppaths: list[FormattedPainterPath] = []
+        self._lines: list[FormattedLine] = []
+        self._eraser_line: QPolygonF | None = None
+
         self.pen = QPen()
+        self.pen.setWidthF(3.0)
+        self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         self.tool = CanvasTool.Pen
 
         self._painting = False
 
     @property
-    def ppaths(self) -> list[FormattedPainterPath]:
-        return self._ppaths
+    def lines(self) -> list[QPolygonF]:
+        return self._lines
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
@@ -939,38 +966,41 @@ class CanvasScene(QGraphicsScene):
             if self._painting:
                 pointf = event.scenePos()
 
-                if self._ppaths:
-                    self._ppaths[-1].lineTo(pointf)
+                if self.tool == CanvasTool.Pen and self._lines:
+                    self._lines[-1].append(pointf)
                     self.update()
+                elif self.tool == CanvasTool.Rubber:
+                    for i, line in enumerate(self._lines):
+                        if line.containsPoint(pointf, Qt.FillRule.OddEvenFill):
+                            del self._lines[i]
+                            break
+
+                    self.update()
+
         event.accept()
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
+            self._painting = True
             if self.tool == CanvasTool.Pen:
-                self._painting = True
-                new_path = FormattedPainterPath()
-                new_path.pen = QPen(self.pen)
-                self._ppaths.append(new_path)
+                new_line = FormattedLine()
+                new_line.pen = QPen(self.pen)
+                self._lines.append(new_line)
                 pointf = event.scenePos()
-                new_path.moveTo(pointf)
-            else:
-                pointf = event.scenePos()
-                for i, path in enumerate(self._ppaths):
-                    if path.contains(pointf):
-                        del self._ppaths[i]
-                        self.update()
-                        break
+                new_line.append(pointf)
 
         event.accept()
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
         self._painting = False
+        self._eraser_path = None
         event.accept()
 
     def drawForeground(self, painter: QPainter, rect: QRectF):
-        for path in self._ppaths:
-            painter.setPen(path.pen)
-            painter.drawPath(path)
+        for line in self._lines:
+            painter.setPen(line.pen)
+            painter.setCompositionMode(line.mode)
+            painter.drawPolyline(line)
 
 
 class PresenterCanvas(QGraphicsView):
@@ -988,13 +1018,16 @@ class PresenterCanvas(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
 
     def change_item(self, item: QGraphicsItem):
-        self.scene().ppaths.clear()
+        self.scene().lines.clear()
         self.scene().clear()
         self.scene().addItem(item)
 
         self.rescale()
 
         print(f"Current items: {self.scene().items()}")
+
+    def clear(self) -> None:
+        self.scene().clear()
 
     def rescale(self) -> None:
         for item in self.scene().items():
@@ -1007,6 +1040,10 @@ class PresenterCanvas(QGraphicsView):
     def set_tool(self, button: QToolButton) -> None:
         tool: CanvasTool = button.property("tool")
         self.scene().tool = tool
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.rescale()
 
 
 class PresenterView(QDialog):
@@ -1027,6 +1064,9 @@ class PresenterView(QDialog):
             QGraphicsView.ViewportUpdateMode.SmartViewportUpdate
         )
         self._view.setInteractive(False)
+
+        self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scene.changed.connect(self.rescale)
 

@@ -662,6 +662,7 @@ class Editor(QMainWindow):
             )
             self.presenterActivated.emit(self.ui.canvas.scene(), self)
         else:
+            self.ui.canvas.clear()
             self.presenterClosed.emit()
 
     # Dialog opener

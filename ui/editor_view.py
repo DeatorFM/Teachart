@@ -229,6 +229,7 @@ class Ui_Editor(object):
 
         self.canvas = PresenterCanvas()
         self.canvas.setObjectName("canvas")
+        self.canvas.setCursor(Qt.CursorShape.CrossCursor)
 
         self.dw_lo2.addWidget(self.canvas)
         self.dw_presenter.setWidget(self.widget_dw_contents2)
