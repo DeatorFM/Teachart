@@ -21,6 +21,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QAction,
+    QBrush,
     QDrag,
     QDropEvent,
     QIcon,
@@ -919,21 +920,60 @@ class Table(QTableView):
 
 
 class ArrowPath(QPainterPath):
-    def __init__(self, p1: QPointF, p2: QPointF):
+    def __init__(self, p1: QPointF, p2: QPointF, pen: QPen = QPen()):
         super().__init__()
-        # Prerequisites
-        pm = (p1.y() - p2.y()) / (p1.x() / p2.x())
-        pb = p1.y() - pm * p1.x()  # -> y = pm*x + b | x = -pb / m
+        self.pen = pen
+        self.pen.setWidthF(1.0)
+        self.brush = QBrush(Qt.BrushStyle.SolidPattern)
+        self.brush.setColor(self.pen.color())
+        self.mode = QPainter.CompositionMode.CompositionMode_SourceOver
 
+        # Sorry I'm bad at maths so I made an AI write the vector calculations for me
+
+        # Draw line from p1 to p2
         self.moveTo(p1)
         self.lineTo(p2)
-        ha = self.length() * 0.25  # Arrow head height
-        side = 2 * ha / sqrt(3)
 
-        # Get length
-        p_middle = QPointF(
-            p2.x() - 0.25 * (p2.x() - p1.x()), p2.y() - 0.25 * (p2.y() - p1.y())
-        )
+        # Calculate direction vector from p1 to p2
+        dx = p2.x() - p1.x()
+        dy = p2.y() - p1.y()
+        length = sqrt(dx**2 + dy**2)
+
+        # If points are the same, just return (no arrow to draw)
+        if length == 0:
+            return
+
+        # Normalize direction vector
+        dx_norm = dx / length
+        dy_norm = dy / length
+
+        # Arrow head height (0.25 of the line length)
+        arrow_height = length * 0.25
+
+        # For equilateral triangle: side = 2 * height / sqrt(3)
+        side_length = 2 * arrow_height / sqrt(3)
+
+        # Calculate base center point (0.25 length back from p2)
+        base_x = p2.x() - arrow_height * dx_norm
+        base_y = p2.y() - arrow_height * dy_norm
+
+        # Perpendicular vector (rotated 90 degrees counter-clockwise)
+        perp_x = -dy_norm
+        perp_y = dx_norm
+
+        # Two base points of the triangle (half side length on each side)
+        half_side = side_length / 2
+        a1 = QPointF(base_x + half_side * perp_x, base_y + half_side * perp_y)
+        a2 = QPointF(base_x - half_side * perp_x, base_y - half_side * perp_y)
+
+        # Create equilateral triangle with p2 as the apex
+        head = QPolygonF()
+        head.append(p2)
+        head.append(a1)
+        head.append(a2)
+        head.append(p2)
+
+        self.addPolygon(head)
 
 
 class FormattedLine(QPolygonF):
@@ -942,17 +982,23 @@ class FormattedLine(QPolygonF):
         self.pen = QPen()
         self.mode = QPainter.CompositionMode.CompositionMode_SourceOver
 
+    def contains(self, value: QPointF):
+        return self.containsPoint(value, Qt.FillRule.OddEvenFill)
+
 
 class CanvasScene(QGraphicsScene):
     def __init__(self):
         super().__init__()
-        self._lines: list[FormattedLine] = []
+        self._lines: list[FormattedLine | ArrowPath] = []
         self._eraser_line: QPolygonF | None = None
 
         self.pen = QPen()
         self.pen.setWidthF(3.0)
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         self.tool = CanvasTool.Pen
+
+        self._start = QPointF(0.0, 0.0)
+        self._end = QPointF(0.0, 0.0)
 
         self._painting = False
 
@@ -971,7 +1017,7 @@ class CanvasScene(QGraphicsScene):
                     self.update()
                 elif self.tool == CanvasTool.Rubber:
                     for i, line in enumerate(self._lines):
-                        if line.containsPoint(pointf, Qt.FillRule.OddEvenFill):
+                        if line.contains(pointf):
                             del self._lines[i]
                             break
 
@@ -988,19 +1034,32 @@ class CanvasScene(QGraphicsScene):
                 self._lines.append(new_line)
                 pointf = event.scenePos()
                 new_line.append(pointf)
+            elif self.tool == CanvasTool.Arrow:
+                self._start = event.scenePos()
 
         event.accept()
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
         self._painting = False
         self._eraser_path = None
+        if self._start != event.scenePos():
+            self._end = event.scenePos()
+            if self.tool == CanvasTool.Arrow:
+                path = ArrowPath(self._start, self._end, QPen(self.pen))
+                self._lines.append(path)
+                print("Added Arrow")
+                self.update()
         event.accept()
 
     def drawForeground(self, painter: QPainter, rect: QRectF):
         for line in self._lines:
             painter.setPen(line.pen)
             painter.setCompositionMode(line.mode)
-            painter.drawPolyline(line)
+            if isinstance(line, QPolygonF):
+                painter.drawPolyline(line)
+                continue
+            painter.setBrush(line.brush)
+            painter.drawPath(line)
 
 
 class PresenterCanvas(QGraphicsView):

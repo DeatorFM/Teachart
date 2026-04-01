@@ -154,13 +154,22 @@ class Ui_Editor(object):
         self.bg_tools.addButton(self.tb_pen)
 
         self.tb_rubber = QToolButton(self.widget_dw_contents2)
-        self.tb_rubber.setObjectName("rb_rubber")
+        self.tb_rubber.setObjectName("tb_rubber")
         self.tb_rubber.setCheckable(True)
         self.tb_rubber.setProperty("tool", CanvasTool.Rubber)
         icon17 = SvgIcon("resources/icons/ic_rubber.svg")
         self.tb_rubber.setIcon(icon17)
         self.dw_lo3.addWidget(self.tb_rubber)
         self.bg_tools.addButton(self.tb_rubber)
+
+        self.tb_arrow = QToolButton(self.widget_dw_contents2)
+        self.tb_arrow.setObjectName("tb_arrow")
+        self.tb_arrow.setCheckable(True)
+        self.tb_arrow.setProperty("tool", CanvasTool.Arrow)
+        icon18 = SvgIcon("resources/icons/ic_arrowTool.svg")
+        self.tb_arrow.setIcon(icon18)
+        self.dw_lo3.addWidget(self.tb_arrow)
+        self.bg_tools.addButton(self.tb_arrow)
 
         self.dw_lo3.addSpacing(5)
 
@@ -626,6 +635,18 @@ class Ui_Editor(object):
         self.ac_mov_dwn.setToolTip(_translate("MainWindow", "Move Down"))
         self.ac_del_element.setText(_translate("MainWindow", "Delete Element"))
         self.ac_clear_cell.setText(_translate("MainWindow", "Clear Cell"))
+
+        self.tb_arrow.setToolTip(
+            _translate(
+                "MainWindow",
+                "Draw Arrow - Drag the cursor while holding the mouse button and release for the arrow tip",
+            )
+        )
+        self.tb_rubber.setToolTip(_translate("MainWindow", "Rubber"))
+        self.tb_pen.setToolTip(_translate("MainWindow", "Pen"))
+        self.tb_red.setToolTip(_translate("MainWindow", "Red"))
+        self.tb_blue.setToolTip(_translate("MainWindow", "Blue"))
+        self.tb_yellowsetToolTip(_translate("MainWindow", "Dark yellow"))
 
         self.lb_course.setText(_translate("MainWindow", "Course"))
         self.lb_date_time.setText(_translate("MainWindow", "Date/Time"))
