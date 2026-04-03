@@ -365,9 +365,9 @@ class AudioToolsetView:
     def setUi(self, agent: QToolBar):
         agent.setObjectName("AudioToolset")
 
-        icon1 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
-        icon2 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause)
-        self.ac_play_pause = SwitchAction(icon1, icon2, agent)
+        self.icon1 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        self.icon2 = agent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause)
+        self.ac_play_pause = SwitchAction(self.icon1, self.icon2, agent)
         agent.addAction(self.ac_play_pause)
 
         self.hs_PlayTime = QSlider(agent)

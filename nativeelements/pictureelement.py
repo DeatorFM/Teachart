@@ -255,7 +255,10 @@ class PictureEditor(BaseElementEditor):
 
     @property
     def max_width(self) -> int:
-        return self._max_width
+        return self._max_width  #
+
+    def enable_presenter_mode(self, enabled):
+        return None
 
     def set_width(self, width: int, keep_aspect_ratio: bool = False) -> None:
         if keep_aspect_ratio:
@@ -393,6 +396,7 @@ class PictureDelegate(BaseElementDelegate):
 
     def setEditorData(self, editor, index):
         self._toolset.connect_editor(editor)
+        self._toolset.enable_presenter_mode(self.pres_mode)
 
     def updateEditorGeometry(self, editor, option, index):
         # Apply 2px padding for element editor with extra right spacing
@@ -455,6 +459,9 @@ class PictureToolset(BaseElementToolset):
         self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
         self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
         self.ui.ac_keep_aspect_ratio.toggled.connect(self.on_keep_aspect_ratio_toggled)
+
+    def enable_presenter_mode(self, enabled: bool):
+        self.setVisible(not enabled)
 
     def close_(self):
         signals = (

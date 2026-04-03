@@ -143,6 +143,16 @@ class Ui_Editor(object):
 
         self.bg_tools = QButtonGroup()
 
+        # self.tb_pointer = QToolButton(self.widget_dw_contents2)
+        # self.tb_pointer.setObjectName("tb_pointer")
+        # self.tb_pointer.setCheckable(True)
+        # self.tb_pointer.setChecked(True)
+        # self.tb_pointer.setProperty("tool", CanvasTool.Pointer)
+        # icon19 = SvgIcon("resources/icons/ic_pointer.svg")
+        # self.tb_pointer.setIcon(icon19)
+        # self.dw_lo3.addWidget(self.tb_pointer)
+        # self.bg_tools.addButton(self.tb_pointer)
+
         self.tb_pen = QToolButton(self.widget_dw_contents2)
         self.tb_pen.setObjectName("tb_pen")
         self.tb_pen.setCheckable(True)
@@ -153,15 +163,6 @@ class Ui_Editor(object):
         self.dw_lo3.addWidget(self.tb_pen)
         self.bg_tools.addButton(self.tb_pen)
 
-        self.tb_rubber = QToolButton(self.widget_dw_contents2)
-        self.tb_rubber.setObjectName("tb_rubber")
-        self.tb_rubber.setCheckable(True)
-        self.tb_rubber.setProperty("tool", CanvasTool.Rubber)
-        icon17 = SvgIcon("resources/icons/ic_rubber.svg")
-        self.tb_rubber.setIcon(icon17)
-        self.dw_lo3.addWidget(self.tb_rubber)
-        self.bg_tools.addButton(self.tb_rubber)
-
         self.tb_arrow = QToolButton(self.widget_dw_contents2)
         self.tb_arrow.setObjectName("tb_arrow")
         self.tb_arrow.setCheckable(True)
@@ -170,6 +171,15 @@ class Ui_Editor(object):
         self.tb_arrow.setIcon(icon18)
         self.dw_lo3.addWidget(self.tb_arrow)
         self.bg_tools.addButton(self.tb_arrow)
+
+        self.tb_rubber = QToolButton(self.widget_dw_contents2)
+        self.tb_rubber.setObjectName("tb_rubber")
+        self.tb_rubber.setCheckable(True)
+        self.tb_rubber.setProperty("tool", CanvasTool.Rubber)
+        icon17 = SvgIcon("resources/icons/ic_rubber.svg")
+        self.tb_rubber.setIcon(icon17)
+        self.dw_lo3.addWidget(self.tb_rubber)
+        self.bg_tools.addButton(self.tb_rubber)
 
         self.dw_lo3.addSpacing(5)
 
@@ -646,7 +656,7 @@ class Ui_Editor(object):
         self.tb_pen.setToolTip(_translate("MainWindow", "Pen"))
         self.tb_red.setToolTip(_translate("MainWindow", "Red"))
         self.tb_blue.setToolTip(_translate("MainWindow", "Blue"))
-        self.tb_yellowsetToolTip(_translate("MainWindow", "Dark yellow"))
+        self.tb_yellow.setToolTip(_translate("MainWindow", "Dark yellow"))
 
         self.lb_course.setText(_translate("MainWindow", "Course"))
         self.lb_date_time.setText(_translate("MainWindow", "Date/Time"))
@@ -676,6 +686,5 @@ class Ui_Editor(object):
         return d
 
     def on_element_toolbar_visibilty_changed(self, open: bool) -> None:
-        print("Element activated", open)
         self.tb_cell.setVisible(open)
         self.tb_table.setVisible(not open)

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from turtle import isvisible
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -24,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag
+from tcha.consts import AppAction, EditingLevel, ResourceFlag
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -638,7 +639,9 @@ class Editor(QMainWindow):
     def enable_presenter_mode(self, enabled: bool) -> None:
         self.ui.dw_presenter.setEnabled(enabled)
         self.ui.dw_presenter.setVisible(enabled)
+        self.ui.tb_table.setEnabled(not enabled)
         self.presenter_mode = enabled
+
         if enabled:
             self.ui.dw_comment.setVisible(False)
             self.ui.canvas.set_color(self.ui.bg_colors.checkedButton())
@@ -664,6 +667,8 @@ class Editor(QMainWindow):
         else:
             self.ui.canvas.clear()
             self.presenterClosed.emit()
+
+        self.ui.table.enable_presenter_mode(enabled)
 
     # Dialog opener
 

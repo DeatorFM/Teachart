@@ -800,10 +800,12 @@ class TextDelegate(BaseElementDelegate):
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
         editor.installEventFilter(parent)
         editor.setFocus()
+        editor.enable_presenter_mode(self.pres_mode)
         return editor
 
     def setEditorData(self, editor: TextEditor | None, index: QModelIndex) -> None:
         self._toolset.connect_editor(editor)
+        self._toolset.enable_presenter_mode(self.pres_mode)
         print("Connected TextEditor")
 
     def updateEditorGeometry(
@@ -922,6 +924,9 @@ class TextToolset(BaseElementToolset):
             lambda: self.on_color_set(self.current_color())
         )
         self.ui.color_menu.colorChanged.connect(self.on_color_set)
+
+    def enable_presenter_mode(self, enabled: bool):
+        self.setVisible(not enabled)
 
     @pyqtSlot(bool)
     def set_table_tools_visible(self, visible: bool):

@@ -317,6 +317,9 @@ class AudioEditor(BaseElementEditor):
         self.player.playbackStateChanged.connect(self.on_playback_state_changed)
         self.player.mediaStatusChanged.connect(self.on_media_status_changed)
 
+    def enable_presenter_mode(self, enabled):
+        return None
+
     def setup_player(self, model: AudioModel) -> QMediaPlayer:
         self.player.setAudioOutput(self.aoutput)
         self.player.setSourceDevice(model.resource.qfile())
@@ -335,9 +338,9 @@ class AudioEditor(BaseElementEditor):
             self.player.stop()
             self.ui.swi_PlayPause.changeState(1)
         elif state == QMediaPlayer.PlaybackState.PlayingState:
-            self.player.play()
-            self.ui.swi_PlayPause.changeState(2)
-            print("Let's play")
+            if self.player.hasAudio():
+                self.player.play()
+                self.ui.swi_PlayPause.changeState(2)
         elif state == QMediaPlayer.PlaybackState.PausedState:
             self.player.pause()
             self.ui.swi_PlayPause.changeState(1)
@@ -517,6 +520,7 @@ class AudioDelegate(BaseElementDelegate):
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
             print("Media status: ", status)
             self._toolset.connect_editor(self._cached_editor)
+            self._toolset.enable_presenter_mode(self.pres_mode)
             self._cached_editor.player.mediaStatusChanged.disconnect(
                 self.on_media_status_changed
             )
@@ -532,7 +536,7 @@ class AudioDelegate(BaseElementDelegate):
     def destroyEditor(self, editor: AudioEditor, index: QModelIndex) -> None:
         """Disconnects signals and destroys the editor."""
         print("Destroying AudioElement")
-        editor.player.stop()
+        editor.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
         editor.player.setSourceDevice(None)
         self._toolset.close_()
 
@@ -624,6 +628,12 @@ class AudioToolset(BaseElementToolset):
                 pass
         self.ui.hs_PlayTime.setSliderPosition(0)
         super().close_()
+
+    def enable_presenter_mode(self, enabled: bool):
+        self.ui.sb_RepeatTimes.setEnabled(not enabled)
+        self.ui.sb_PauseLength.setEnabled(not enabled)
+        self.ui.te_StartTime.setEnabled(not enabled)
+        self.ui.te_EndTime.setEnabled(not enabled)
 
     def set_attributes(self, model: AudioModel) -> None:
         self.ui.ac_repeat.setChecked(model.is_repeating)

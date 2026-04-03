@@ -41,8 +41,6 @@ class BaseElementToolset(QToolBar):
         self.setFloatable(False)
         self.setMovable(False)
         self.setIconSize(QSize(22, 22))
-        # self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        # print(f"Size Hint: {self.sizeHint().width()} {self.sizeHint().height()}")
 
     @property
     @abstractmethod
@@ -56,6 +54,9 @@ class BaseElementToolset(QToolBar):
         Editor must be made visible and emit called in this method."""
         return
 
+    @abstractmethod
+    def enable_presenter_mode(self, enabled: bool) -> None: ...
+
     def close_(self) -> None:
         self.setVisible(False)
 
@@ -64,6 +65,7 @@ class BaseElementDelegate(QStyledItemDelegate):
     def __init__(self, toolset: BaseElementToolset | None, parent=None):
         super().__init__(parent)
         self._toolset = toolset
+        self.pres_mode = False
 
     def eventFilter(self, object: QObject, event: QEvent):
         if event.type() == QEvent.Type.FocusOut:
@@ -166,6 +168,9 @@ class BaseElementEditor(QFrame):
     def model(self) -> BaseElementModel:
         return BaseElementModel
 
+    @abstractmethod
+    def enable_presenter_mode(self, enabled: bool) -> None: ...
+
     def focusOutEvent(self, a0):
         return
 
@@ -178,6 +183,9 @@ class BaseTextElementEditor(QTextEdit):
     @abstractmethod
     def model(self) -> BaseElementModel:
         return BaseElementModel
+
+    def enable_presenter_mode(self, enabled: bool) -> None:
+        self.setReadOnly(enabled)
 
     def focusOutEvent(self, e):
         return

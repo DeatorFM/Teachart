@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, Flag
 
 
 class AppAction(Enum):
@@ -39,3 +39,10 @@ class CanvasTool(Enum):
     Pen = 1
     Rubber = 2
     Arrow = 3
+    Pointer = 4
+
+
+class EditingLevel(Flag):
+    NoEditing = 0
+    CellEditing = 1
+    ElementEditing = 2

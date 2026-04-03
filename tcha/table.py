@@ -60,7 +60,7 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
-from tcha.consts import CanvasTool
+from tcha.consts import CanvasTool, EditingLevel
 from tcha.status import StatusButton, StatusLabel
 from tcha.tablemodel import (
     CellItem,
@@ -97,6 +97,7 @@ class CellEditor(QListView):
 
         self._editor_just_destroyed = False
         self._drag_start_position: QPoint | None = None
+        self._pres_mode = False
 
         self.activated.connect(lambda: self.elementActivated.emit(True))
 
@@ -157,7 +158,7 @@ class CellEditor(QListView):
             mime_data = self.model().mimeData([index])
             clipboard.setMimeData(mime_data)
 
-    def copied_index(self) -> QModelIndex | None:
+    def copied_index(self) -> QModelIndex:
         clipboard = QApplication.clipboard()
         if clipboard:
             if "application/x-teachart" in clipboard.mimeData().formats():
@@ -175,6 +176,11 @@ class CellEditor(QListView):
                         idx = model.index_for_num(model_num)
                         return idx
         return QModelIndex()
+
+    def enable_presenter_mode(self, enabled: bool):
+        self._pres_mode = enabled
+        current = self.currentIndex()
+        self.change_index(current)
 
     def keyPressEvent(self, e: QKeyEvent):
         print("Cell Editor got key press")
@@ -205,6 +211,11 @@ class CellEditor(QListView):
                 event.accept()
                 return
         super().mousePressEvent(event)
+
+    def change_index(self, new_idx: QModelIndex) -> None:
+        self.setCurrentIndex(QModelIndex())
+        if new_idx.isValid():
+            self.setCurrentIndex(new_idx)
 
     def mouseMoveEvent(self, event):
         if not (event.buttons() & Qt.MouseButton.LeftButton):
@@ -256,6 +267,7 @@ class CellEditor(QListView):
             delegate.commitData.connect(self.commitData)
             delegate.closeEditor.connect(self.closeEditor)
             delegate.sizeHintChanged.connect(self.update_list_geometry)
+            delegate.pres_mode = self._pres_mode
 
             return delegate
         else:
@@ -486,6 +498,7 @@ class Table(QTableView):
         self._painting = True
         self._editor: CellEditor | None = None
 
+        # TODO: Delete!
         self._size_status = StatusLabel("")
         self._current_status = StatusLabel("")
         self._goto_status = StatusButton(tr("Go to Row"), True)
@@ -526,6 +539,7 @@ class Table(QTableView):
         self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._can_close_editor = True
+        self._pres_mode = False
 
     @property
     def editor(self) -> CellEditor | None:
@@ -536,6 +550,18 @@ class Table(QTableView):
 
     def enable_painting(self, painting: bool) -> None:
         self._painting = painting
+
+    def enable_presenter_mode(self, enabled: bool) -> None:
+        self._pres_mode = enabled
+        if self._editor:
+            self._editor.enable_presenter_mode(enabled)
+
+    def editing_level(self) -> EditingLevel:
+        if self._editor:
+            if self._editor.state() == QListView.State.EditingState:
+                return EditingLevel.CellEditing | EditingLevel.ElementEditing
+            return EditingLevel.CellEditing
+        return EditingLevel.NoEditing
 
     def model(self) -> TableModel:
         return super().model()
@@ -645,6 +671,7 @@ class Table(QTableView):
         print("Editor opened", editor)
         if editor:
             self._editor = editor
+            self._editor.enable_presenter_mode(self._pres_mode)
             self.cellEditorOpened.emit(self._editor)
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
@@ -986,19 +1013,26 @@ class FormattedLine(QPolygonF):
         return self.containsPoint(value, Qt.FillRule.OddEvenFill)
 
 
+class PointerPen(QPen):
+    def __init__(self):
+        super().__init__()
+        self.setWidthF(2.0)
+        self.setColor(Qt.GlobalColor.red)
+
+
 class CanvasScene(QGraphicsScene):
     def __init__(self):
         super().__init__()
         self._lines: list[FormattedLine | ArrowPath] = []
-        self._eraser_line: QPolygonF | None = None
 
         self.pen = QPen()
         self.pen.setWidthF(3.0)
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        self.tool = CanvasTool.Pen
+        self.tool = CanvasTool.Pointer
 
         self._start = QPointF(0.0, 0.0)
         self._end = QPointF(0.0, 0.0)
+        self._current_pos = QPointF(0.0, 0.0)
 
         self._painting = False
 
@@ -1007,6 +1041,8 @@ class CanvasScene(QGraphicsScene):
         return self._lines
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+        # self._current_pos == event.scenePos()
+
         if event.buttons() == Qt.MouseButton.LeftButton:
             print("Trying to paint")
             if self._painting:
@@ -1061,6 +1097,10 @@ class CanvasScene(QGraphicsScene):
             painter.setBrush(line.brush)
             painter.drawPath(line)
 
+        if self.tool == CanvasTool.Pointer:
+            painter.setPen(PointerPen())
+            painter.drawEllipse(self._current_pos, 2.0, 2.0)
+
 
 class PresenterCanvas(QGraphicsView):
     def __init__(self, parent: QWidget | None = None):
@@ -1075,6 +1115,7 @@ class PresenterCanvas(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
+        # self.setMouseTracking(True)
 
     def change_item(self, item: QGraphicsItem):
         self.scene().lines.clear()
