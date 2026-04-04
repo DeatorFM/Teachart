@@ -1,4 +1,5 @@
 import os.path as osp
+from pathlib import Path
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -20,9 +21,12 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QDateEdit,
     QDockWidget,
+    QLabel,
     QListView,
     QMainWindow,
+    QProgressBar,
     QSizePolicy,
+    QStatusBar,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionButton,
@@ -166,6 +170,29 @@ class Ui_StartWindow(object):
         self.tb_file_actions.addAction(self.ac_course_mng)
         self.tb_file_actions.addAction(self.ac_settings)
 
+        self.status_bar = QStatusBar(start_window)
+        self.status_bar.setMaximumHeight(25)
+        start_window.setStatusBar(self.status_bar)
+
+        # progress_widget = QWidget(start_window)
+        # pw_lo = QHBoxLayout(progress_widget)
+
+        self.progress_label = QLabel(start_window)
+        self.progress_label.setVisible(False)
+        self.progress_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
+        # pw_lo.addWidget(self.progress_label)
+        # pw_lo.setContentsMargins(0, 0, 0, 0)
+        self.status_bar.addPermanentWidget(self.progress_label)
+
+        self.loading_bar = QProgressBar(start_window)
+        self.loading_bar.setFixedWidth(80)
+        # pw_lo.addWidget(self.loading_bar)
+        self.status_bar.addPermanentWidget(self.loading_bar)
+
+        # self.status_bar.addWidget(progress_widget)
+
         self.retranslateUi(start_window)
         self.file_tabs.setCurrentIndex(0)
 
@@ -290,7 +317,7 @@ class ScheduledFileDelegate(QStyledItemDelegate):
         option.rect = option.rect.adjusted(0, 15, 0, 15)
 
         painter.setFont(self.PATH_FONT)
-        painter.drawText(option.rect, 0, path_idx.data().name)
+        painter.drawText(option.rect, 0, Path(path_idx.data()).name)
 
         painter.restore()
 

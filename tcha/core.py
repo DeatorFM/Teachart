@@ -312,6 +312,10 @@ class AppCore(QApplication):
             try:
                 lf = LessonFile()
                 lf.open("r", str(path))
+
+                if self._start_dialog:
+                    self._start_dialog.set_progress_logger(Path(lf.path), lf.progress)
+
                 editor_window = Editor(
                     self._course_model, self._schedule_model, self._edefinitions, lf
                 )
@@ -352,6 +356,7 @@ class AppCore(QApplication):
                 )
 
                 if self._start_dialog:
+                    self._start_dialog.reset_progress()
                     self._start_dialog.close()
                     self._start_dialog = None
                 self._file_model.append_file(str(path))

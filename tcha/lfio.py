@@ -10,10 +10,12 @@ from PyQt6.QtCore import (
     QByteArray,
     QDateTime,
     QFile,
+    QObject,
     QSize,
     Qt,
     QXmlStreamReader,
     QXmlStreamWriter,
+    pyqtSignal,
     qChecksum,
 )
 
@@ -21,9 +23,25 @@ from tcha.elements import get_definitions
 from tcha.error import ErrorLogger, LFExceptions, QtError
 from tcha.lesson import Lesson
 from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
-from tcha.tablemodel import CellModel, HeaderDataItem, TableData, TableModel
+from tcha.tablemodel import TableModel  # CellModel, HeaderDataItem, TableData,
 
 CURRENT_VERSION: int = 1
+
+
+class ProgressLogger(QObject):
+    progressChanged = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__(None)
+        self._progress = 0.0
+
+    def raise_progress(self, by: float) -> None:
+        self._progress += by
+        self.progressChanged.emit(int(self._progress))
+
+    @property
+    def progress(self) -> float:
+        return self._progress
 
 
 class LessonFile:
@@ -34,6 +52,11 @@ class LessonFile:
         self._tempdir: tempfile.TemporaryDirectory | None = None
         self._last_saved = None
         self._metadata = {"version": None, "file_id": None}
+        self._progress = ProgressLogger()
+
+    @property
+    def progress(self) -> ProgressLogger:
+        return self._progress
 
     def open(self, mode: Literal["r", "w"], path: str | None = None) -> bool:
         if mode == "r" and path:
@@ -176,17 +199,25 @@ class LessonFile:
 
             container = ResourceContainer(parent)
             reader = QXmlStreamReader(qfile)
+            count = 25
+            factor = 1.0
 
             while not reader.atEnd():
                 token = reader.readNext()
 
                 if token == QXmlStreamReader.TokenType.StartElement:
+                    if reader.name() == "resources":
+                        attrs = reader.attributes()
+                        count = int(attrs.value("count"))
+                        factor = count / 25
+
                     if reader.name() == "res":
                         attrs = reader.attributes()
                         path: str = osp.join(
                             self.temppath, "resources", str(attrs.value("file"))
                         )
                         container.save(ResourceType[str(attrs.value("type"))], path)
+                        self._progress.raise_progress(factor)
 
             if reader.error().value:
                 self._error_handler.log(
@@ -195,6 +226,7 @@ class LessonFile:
                 )
             qfile.close()
             return container
+            # Total: 25%
 
         except (ValueError, KeyError) as e:
             e.critical = True
@@ -220,8 +252,12 @@ class LessonFile:
                 rescont,
                 osp.join(self.temppath, "resources"),
                 self._error_handler,
+                self._progress,
             )
+            remaining = 100 - self._progress.progress
+            self._progress.raise_progress(remaining)
             qfile.close()
+
             return table
 
         except FileNotFoundError as e:
@@ -240,8 +276,9 @@ class LessonFile:
     def get_lesson(self, default: Lesson | None = None) -> Lesson | None:
         """Returns Lesson model if file is loaded and could be read otherwise returns the default value."""
         try:
+            self._progress.raise_progress(5.0)  # Total: 30%
             qfile = self.xml()
-            model = XmlReader.read_lesson(qfile, self._error_handler)
+            model = XmlReader.read_lesson(qfile, self._error_handler, self._progress)
             qfile.close()
             return model
 
@@ -418,7 +455,11 @@ class XmlWriter:
 
 class XmlReader:
     @staticmethod
-    def read_lesson(xml_file: QFile, error_handler: ErrorLogger) -> Lesson | None:
+    def read_lesson(
+        xml_file: QFile,
+        error_handler: ErrorLogger,
+        progress_logger: ProgressLogger = ProgressLogger(),
+    ) -> Lesson | None:
         reader = QXmlStreamReader(xml_file)
 
         while not reader.atEnd():
@@ -428,6 +469,7 @@ class XmlReader:
                 if reader.name() == "lesson":
                     try:
                         model = Lesson.read(reader)
+                        progress_logger.raise_progress(5.0)
                         return model
 
                     except LFExceptions.ModelReadError as e:
@@ -444,6 +486,7 @@ class XmlReader:
         rescont: ResourceContainer,
         res_path: str,
         error_handler: ErrorLogger,
+        progress_logger: ProgressLogger = ProgressLogger(),
     ) -> TableModel:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
         reader = QXmlStreamReader(xml_file)
@@ -453,6 +496,9 @@ class XmlReader:
         def_row_count = 0
         def_column_count = 0
         header = 0
+
+        total_progress = 70
+        factor = 70 / total_progress  # Total: 70 %
 
         in_table = False
         writing_row = False
@@ -477,15 +523,19 @@ class XmlReader:
                             raise ValueError
 
                         tmodel = TableModel.new(def_row_count, def_column_count)
+
+                        total_progress = def_row_count + def_column_count * 2
+                        factor = 70 / total_progress
+
+                        progress_logger.raise_progress(factor * column)
                         in_table = True
 
                     except ValueError as e:
-                        if error_handler:
-                            e.critical = True
-                            error_handler.log(
-                                e,
-                                "Invalid value for row or column number. Value is not a number or values are 0.",
-                            )
+                        e.critical = True
+                        error_handler.log(
+                            e,
+                            "Invalid value for row or column number. Value is not a number or values are 0.",
+                        )
                         return TableModel.new(0, 0)
                     continue
 
@@ -604,11 +654,13 @@ class XmlReader:
                         row += 1
                         writing_row = False
                         column = 0
+                        progress_logger.raise_progress(factor)
                         continue
 
                     case "cell" if writing_cell:
                         column += 1
                         writing_cell = False
+                        progress_logger.raise_progress(factor)
                         continue
 
                     case "table":
@@ -620,6 +672,7 @@ class XmlReader:
                             "The number of parsed rows does not match the actual number. Some rows' content might be missing.",
                         )
                         in_table = False
+
                         break
 
         return tmodel

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os.path as osp
 from dataclasses import dataclass
+from email import message
 from pathlib import Path
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
@@ -17,6 +18,7 @@ from PyQt6.QtWidgets import QFileDialog, QHeaderView, QMainWindow, QMenu, QWidge
 
 from tcha.consts import AppAction
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
+from tcha.lfio import ProgressLogger
 from ui.start_view import Ui_StartWindow
 
 
@@ -212,6 +214,7 @@ class StartWindow(QMainWindow):
         self.ui.tv_pinned.setHeaderHidden(True)
 
         self.connect_signals()
+        self.update_schedule_message()
 
     def connect_signals(self) -> None:
         self.ui.ac_new.triggered.connect(
@@ -259,3 +262,31 @@ class StartWindow(QMainWindow):
 
     def on_date_changed(self, date: QDate) -> None:
         self._schedule_model.set_exclusive_date(date)
+        self.update_schedule_message()
+
+    def update_schedule_message(self) -> None:
+        count = self._schedule_model.rowCount()
+        if count == 0:
+            message = tr("No upcoming lessons today.")
+        else:
+            translated = tr("upcoming lessons today")
+            message = "{} {}".format(count, translated)
+
+        self.ui.status_bar.showMessage(message)
+
+    def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
+        translated_label = tr("Loading")
+        status_label = "{} {}".format(translated_label, file_name.name)
+        self.ui.status_bar.showMessage(status_label)
+        # self.ui.progress_label.setText(status_label)
+        # self.ui.progress_label.setVisible(True)
+        # self.ui.progress_label.adjustSize()
+        self.ui.loading_bar.setVisible(True)
+        logger.progressChanged.connect(self.ui.loading_bar.setValue)
+
+    def reset_progress(self) -> None:
+        self.ui.status_bar.clearMessage()
+        self.ui.progress_label.setVisible(False)
+        self.ui.loading_bar.setVisible(False)
+        self.ui.loading_bar.setValue(0)
+        self.update_schedule_message()
