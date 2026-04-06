@@ -11,24 +11,20 @@ from PyQt6.QtCore import (
     QDateTime,
     QLocale,
     QMetaObject,
-    QMimeData,
     QSize,
     Qt,
-    QUrl,
 )
-from PyQt6.QtGui import QAction, QActionGroup, QFont, QTextCharFormat
+from PyQt6.QtGui import QAction, QActionGroup, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QButtonGroup,
     QDateTimeEdit,
     QDockWidget,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QMainWindow,
     QMenu,
     QMenuBar,
-    QPlainTextEdit,
     QSizePolicy,
     QSpacerItem,
     QSpinBox,
@@ -333,9 +329,11 @@ class Ui_Editor(object):
 
         self.ac_new_doc = QAction(parent=MainWindow)
         self.ac_new_doc.setObjectName("ac_new_doc")
+        self.ac_new_doc.setShortcut(QKeySequence.StandardKey.New)
         self.ac_open_doc = QAction(parent=MainWindow)
         self.ac_open_doc.setObjectName("ac_open_doc")
         self.ac_open_doc.setIcon(icon10)
+        self.ac_open_doc.setShortcut(QKeySequence.StandardKey.Open)
         self.ac_recent = QAction(parent=MainWindow)
         self.ac_recent.setObjectName("ac_recent")
         self.ac_scheduledf = QAction(parent=MainWindow)  # Unused
@@ -343,10 +341,13 @@ class Ui_Editor(object):
         self.ac_save = QAction(parent=MainWindow)
         self.ac_save.setObjectName("ac_save")
         self.ac_save.setIcon(icon9)
+        self.ac_save.setShortcut(QKeySequence.StandardKey.Save)
         self.ac_save_as = QAction(parent=MainWindow)
         self.ac_save_as.setObjectName("ac_save_as")
+        self.ac_save_as.setShortcut(QKeySequence.StandardKey.SaveAs)
         self.ac_close = QAction(parent=MainWindow)
         self.ac_close.setObjectName("ac_close")
+        self.ac_close.setShortcut(QKeySequence.StandardKey.Close)
 
         # Course Actions
 
@@ -403,15 +404,17 @@ class Ui_Editor(object):
 
         # Table Actions
 
-        self.ac_new_table = QAction(parent=MainWindow)
-        self.ac_new_table.setObjectName("ac_new_table")
+        # self.ac_new_table = QAction(parent=MainWindow)
+        # self.ac_new_table.setObjectName("ac_new_table")
 
         self.ac_copy = QAction(parent=MainWindow)
         self.ac_copy.setObjectName("ac_copy")
         self.ac_copy.setDisabled(True)
+        self.ac_copy.setShortcut(QKeySequence.StandardKey.Copy)
         self.ac_paste = QAction(parent=MainWindow)
         self.ac_paste.setObjectName("ac_paste")
         self.ac_paste.setDisabled(True)
+        self.ac_paste.setShortcut(QKeySequence.StandardKey.Paste)
 
         self.table_group = QActionGroup(MainWindow)
 
@@ -494,8 +497,8 @@ class Ui_Editor(object):
         self.menu_file.addAction(self.ac_close)
         self.menu_file.addSeparator()
 
-        self.menu_edit.addAction(self.ac_new_table)
-        self.menu_edit.addSeparator()
+        # self.menu_edit.addAction(self.ac_new_table)
+        # self.menu_edit.addSeparator()
         self.menu_edit.addMenu(self.menu_elements)
         self.menu_edit.addAction(self.ac_copy)
         self.menu_edit.addAction(self.ac_paste)
@@ -637,10 +640,10 @@ class Ui_Editor(object):
         self.ac_save.setText(_translate("MainWindow", "Save"))
         self.ac_save_as.setText(_translate("MainWindow", "Save as"))
         self.ac_close.setText(_translate("MainWindow", "Close"))
-        self.ac_new_table.setText(_translate("MainWindow", "New Table"))
-        self.ac_new_table.setToolTip(
-            _translate("MainWindow", "Reset and create a new table")
-        )
+        # self.ac_new_table.setText(_translate("MainWindow", "New Table"))
+        # self.ac_new_table.setToolTip(
+        #     _translate("MainWindow", "Reset and create a new table")
+        # )
         self.ac_pres_mode.setText(_translate("MainWindow", "Presentation Mode"))
         self.ac_settings.setText(_translate("MainWindow", "Settings"))
         self.ac_course_exp.setText(_translate("MainWindow", "Course Explorer"))

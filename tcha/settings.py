@@ -1,11 +1,14 @@
 from dataclasses import asdict, dataclass, field, fields, make_dataclass
 from enum import Enum, Flag, IntEnum, StrEnum
 from os.path import abspath, dirname, exists
+from pathlib import Path
+from re import L
 from typing import Any, Callable, Self
 
 import PyQt6.uic as uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QLocale, QSettings, Qt
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -13,6 +16,8 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QMessageBox,
+    QPlainTextEdit,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -92,6 +97,9 @@ class SettingsDialog(QDialog):
             "always_schedule": self._tick_always_schedule,
             "dbpath": self._set_dblocation,
         }
+        self.ui.pb_edit_ini.setVisible(
+            qsettings.value("Application/debug", False, bool)
+        )
         self._import_options()
         self._set_ui_for_values()
         self.connect_signals()
@@ -106,6 +114,7 @@ class SettingsDialog(QDialog):
         self.ui.pb_new_database.clicked.connect(self.create_new_db)
         self.ui.pb_reset_database.clicked.connect(self.reset_db)
         self.ui.settings_buttonbox.clicked.connect(self._handle_button)
+        self.ui.pb_edit_ini.clicked.connect(self.open_ini)
 
     def _handle_button(self, button: QDialogButtonBox.StandardButton) -> None:
         if (
@@ -252,6 +261,45 @@ class SettingsDialog(QDialog):
         self.settings.dbpath = dbpath
         self._set_ui_for_values()
         self._return_flag |= ReturnFlags.Restart
+
+    # Debug options
+
+    def open_ini(self) -> None:
+        dialog = IniEditor(self.qsettings.fileName(), self)
+        dialog.exec()
+        self.qsettings = Settings.qsettings()
+        self.settings = Settings.read_settings(self.qsettings)
+        self._set_ui_for_values()
+        self._return_flag |= ReturnFlags.Restart
+
+
+class IniEditor(QDialog):
+    def __init__(self, ini_path: str, parent=None):
+        super().__init__(parent)
+
+        self.setWindowFlag(Qt.WindowType.Tool, True)
+        self.setWindowTitle(tr("Edit Ini-File"))
+
+        self.pte = QPlainTextEdit(self)
+        lo = QVBoxLayout(self)
+        lo.addWidget(self.pte)
+        self.resize(500, 400)
+
+        self.ini = Path(ini_path)
+        self._text_changed = False
+
+        text = self.ini.read_text("utf-8")
+        self.pte.insertPlainText(text)
+
+        self.pte.textChanged.connect(self.on_text_changed)
+
+    def on_text_changed(self):
+        self._text_changed = True
+
+    def closeEvent(self, ev: QCloseEvent):
+        if self._text_changed:
+            self.ini.write_text(self.pte.toPlainText(), "utf-8")
+        super().closeEvent(ev)
 
 
 # Settings object classes

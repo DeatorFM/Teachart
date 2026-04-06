@@ -2,7 +2,6 @@ from PyQt6.QtCore import (
     QCoreApplication,
     QEvent,
     QRegularExpression,
-    QSize,
     Qt,
     pyqtSignal,
     pyqtSlot,
@@ -11,6 +10,7 @@ from PyQt6.QtGui import (
     QActionGroup,
     QColor,
     QEnterEvent,
+    QKeySequence,
     QMouseEvent,
     QRegularExpressionValidator,
 )
@@ -60,14 +60,17 @@ class TextToolsetView:
         icon1 = SvgIcon("resources/icons/ic_bold.svg")
         self.ac_bold = agent.addAction(icon1, None)
         self.ac_bold.setCheckable(True)
+        self.ac_bold.setShortcut(QKeySequence.StandardKey.Bold)
 
         icon2 = SvgIcon("resources/icons/ic_italic.svg")
         self.ac_italic = agent.addAction(icon2, None)
         self.ac_italic.setCheckable(True)
+        self.ac_italic.setShortcut(QKeySequence.StandardKey.Italic)
 
         icon3 = SvgIcon("resources/icons/ic_underline.svg")
         self.ac_underline = agent.addAction(icon3, None)
         self.ac_underline.setCheckable(True)
+        self.ac_underline.setShortcut(QKeySequence.StandardKey.Underline)
 
         icon4 = SvgIcon("resources/icons/ic_textColor.svg")
         self.ac_textcolor = agent.addAction(icon4, None)

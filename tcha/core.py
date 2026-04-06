@@ -10,7 +10,7 @@ from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmapCache
+from PyQt6.QtGui import QIcon, QPixmapCache
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QApplication,
@@ -118,6 +118,7 @@ class AppCore(QApplication):
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
         self.setApplicationVersion(Defaults.AppInfo.app_ver)
+        self.setWindowIcon((QIcon("resources/placeholder_logo.svg")))
 
         self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
@@ -430,6 +431,7 @@ class AppCore(QApplication):
                 return
         dialog = AboutDialog()
         dialog.open()
+        dialog.finished.connect(dialog.deleteLater)
 
     def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
         if not self._presenter_view:
