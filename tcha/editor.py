@@ -191,6 +191,9 @@ class Editor(QMainWindow):
         self.ui.ac_schedule.triggered.connect(self.set_unsaved)
         self.ui.sb_duration.valueChanged.connect(self.set_duration)
         self.ui.ac_pres_mode.toggled.connect(self.enable_presenter_mode)
+        self.ui.ac_about.triggered.connect(
+            lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
+        )
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
         self.ui.ac_settings.triggered.connect(
@@ -294,7 +297,7 @@ class Editor(QMainWindow):
 
             self.ui.dt_DateTime.setDateTime(lesson.datetime)
             self.ui.sb_duration.setValue(lesson.duration)
-            self.ui.te_comment.setPlainText(lesson.comment)
+            self.ui.te_comment.document().setHtml(lesson.comment)
             self.lesson = lesson
         else:
             raise ValueError
@@ -317,7 +320,7 @@ class Editor(QMainWindow):
             return True
         else:
             path, _ = QFileDialog.getSaveFileName(
-                self, tr("Save lesson chart"), "", tr("Lesson file (*.lesson)")
+                self, tr("Save lesson chart"), "", tr("Teachart document (*.tch)")
             )
             if path:
                 save(path)
@@ -331,14 +334,13 @@ class Editor(QMainWindow):
             if Settings.qsettings().value("Application/debug", False, bool)
             else ""
         )
-        print("Save successfull")
         self.ui.ac_save.setEnabled(True)
         self.ui.tb_save.setEnabled(True)
         self.setWindowTitle(
             f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
         )
         self.changes_unsaved = False
-        self.statusBar().showMessage(tr("Saving finished!"))
+        self.statusBar().showMessage(tr("Saving finished!"), 3000)
         self.schedule()
         self.ui.ac_xml_insp.setEnabled(True)
         self.fileSaved.emit(Path(self.lessonfile.path))
@@ -446,7 +448,7 @@ class Editor(QMainWindow):
         self.print_lesson()
 
     def set_comment(self) -> None:
-        self.lesson.set_comment(self.ui.te_comment.toPlainText())
+        self.lesson.set_comment(self.ui.te_comment.document().toHtml())
         self.changes_unsaved = True
         self.print_lesson()
 

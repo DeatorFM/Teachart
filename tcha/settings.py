@@ -365,7 +365,7 @@ class DefaultValue:
 class Defaults(object):
     @dataclass(frozen=True)
     class AppInfo:
-        app_ver: str = "0.1"
+        app_ver: str = "1.0.0-a.1"
         db_ver: str = "1"
 
     @dataclass(frozen=True)
@@ -376,7 +376,7 @@ class Defaults(object):
         always_schedule: bool = False
         dbpath: str = "NoDB"
 
-    @dataclass
+    @dataclass(frozen=True)
     class Application:
         pinned: list[str] = field(default_factory=[])
         recent: list[str] = field(default_factory=[])

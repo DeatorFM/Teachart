@@ -295,9 +295,6 @@ class Ui_Editor(object):
         self.te_comment = NoteEdit(parent=self.widget_dw_contents)
         self.te_comment.setMinimumSize(QSize(100, 100))
         self.te_comment.setObjectName("te_comment")
-        font = QFont()
-        font.setPointSize(12)
-        self.te_comment.setFont(font)
 
         self.dw_lo1.addWidget(self.te_comment)
         self.dw_comment.setWidget(self.widget_dw_contents)
@@ -384,6 +381,7 @@ class Ui_Editor(object):
         self.ac_pres_mode.setObjectName("ac_pres_mode")
         self.ac_pres_mode.setCheckable(True)
         self.ac_pres_mode.setChecked(False)
+        self.ac_pres_mode.setShortcut(Qt.Key.Key_F11)
         icon15 = SvgIcon("resources/icons/ic_present_mode.svg")
         self.ac_pres_mode.setIcon(icon15)
 
@@ -480,6 +478,8 @@ class Ui_Editor(object):
 
         self.ac_about = QAction(parent=MainWindow)
         self.ac_about.setObjectName("ac_about")
+        icon19 = SvgIcon("resources/icons/ic_about.svg")
+        self.ac_about.setIcon(icon19)
 
         # Menu Definitions
 

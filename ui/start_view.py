@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QDateEdit,
     QDockWidget,
-    QLabel,
     QListView,
     QMainWindow,
     QProgressBar,
@@ -33,6 +32,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
     QTabWidget,
     QToolBar,
+    QToolButton,
     QTreeView,
     QVBoxLayout,
     QWidget,
@@ -174,24 +174,17 @@ class Ui_StartWindow(object):
         self.status_bar.setMaximumHeight(25)
         start_window.setStatusBar(self.status_bar)
 
-        # progress_widget = QWidget(start_window)
-        # pw_lo = QHBoxLayout(progress_widget)
-
-        self.progress_label = QLabel(start_window)
-        self.progress_label.setVisible(False)
-        self.progress_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
-        )
-        # pw_lo.addWidget(self.progress_label)
-        # pw_lo.setContentsMargins(0, 0, 0, 0)
-        self.status_bar.addPermanentWidget(self.progress_label)
-
         self.loading_bar = QProgressBar(start_window)
         self.loading_bar.setFixedWidth(80)
-        # pw_lo.addWidget(self.loading_bar)
+        self.loading_bar.setVisible(False)
         self.status_bar.addPermanentWidget(self.loading_bar)
 
-        # self.status_bar.addWidget(progress_widget)
+        self.tb_about = QToolButton(self.status_bar)
+        self.tb_about.setObjectName("tb_about")
+        icon5 = SvgIcon("resources/icons/ic_about.svg")
+        self.tb_about.setIcon(icon5)
+        self.tb_about.setIconSize(QSize(22, 22))
+        self.status_bar.addPermanentWidget(self.tb_about)
 
         self.retranslateUi(start_window)
         self.file_tabs.setCurrentIndex(0)
@@ -215,6 +208,7 @@ class Ui_StartWindow(object):
         self.ac_open.setText(_translate("start_window", "Browse"))
         self.ac_new.setText(_translate("start_window", "New Sheet"))
         self.ac_course_mng.setText(_translate("start_window", "Course Explorer"))
+        self.tb_about.setToolTip(_translate("start_window", "About Teachart"))
 
 
 class LessonCalendar(QCalendarWidget):

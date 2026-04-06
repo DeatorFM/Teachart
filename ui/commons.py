@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QEvent, QMimeData, QObject, QPoint, QSize, Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import (
@@ -5,6 +7,7 @@ from PyQt6.QtGui import (
     QColor,
     QCursor,
     QDesktopServices,
+    QFont,
     QIcon,
     QMouseEvent,
     QPixmap,
@@ -338,6 +341,10 @@ class NoteEdit(QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
+        self._default_font = QFont()
+        self._default_font.setPointSize(10)
+
+        self.setFont(self._default_font)
 
     def canInsertFromMimeData(self, source: QMimeData):
         if source.hasUrls():
@@ -347,38 +354,55 @@ class NoteEdit(QPlainTextEdit):
     def insertFromMimeData(self, source: QMimeData):
         print("Pasting Data")
         if source.hasUrls():
+            old_fmt = self.currentCharFormat()
             print("Pasting Urls")
             cur = self.textCursor()
             urls = source.urls()
+            cur.insertBlock()
             for url in urls:
                 fmt = QTextCharFormat()
+                fmt.setForeground(QColor("#4673ee"))
                 fmt.setFontUnderline(True)
                 fmt.setAnchor(True)
                 if url.isLocalFile():
-                    fmt.setAnchorHref(url.url(QUrl.UrlFormattingOption.PreferLocalFile))
+                    fmt.setAnchorHref(url.toString())
                     cur.insertText(url.fileName(), fmt)
                     cur.insertBlock()
+                    cur.setCharFormat(old_fmt)
+            self.setFont(self._default_font)
             return
 
         if source.hasText() and source.text().startswith(
             ("https://", "http://", "www.")
         ):
+            old_fmt = self.currentCharFormat()
             link = source.text()
             if link.startswith("www."):
                 link = "http://" + link
             fmt = QTextCharFormat()
+            fmt.setForeground(QColor("#4673ee"))
             fmt.setFontUnderline(True)
             fmt.setAnchor(True)
             fmt.setAnchorHref(link)
             cur = self.textCursor()
-            url_text = QInputDialog.getText(
-                self, tr("Enter url text"), None, QLineEdit.EchoMode.Normal, link
+            url_text, ok = QInputDialog.getText(
+                self.parent(),
+                tr("Insert URL"),
+                tr("Type in link text:"),
+                QLineEdit.EchoMode.Normal,
+                link,
             )
-            if url_text:
-                cur.insertText(url_text, fmt)
+            if ok:
+                cur.insertBlock()
+                if url_text:
+                    cur.insertText(url_text, fmt)
+                else:
+                    cur.insertText(link, fmt)
             else:
-                cur.insertText(link, fmt)
+                return
             cur.insertBlock()
+            cur.setCharFormat(old_fmt)
+            self.setFont(self._default_font)
             return
 
         super().insertFromMimeData(source)
@@ -394,10 +418,19 @@ class NoteEdit(QPlainTextEdit):
 
     def open_hyperlink(self, pos: QPoint) -> None:
         anchor = self.anchorAt(pos)
-        if anchor.startswith("file:///"):
-            QDesktopServices.openUrl(QUrl.fromLocalFile(anchor))
-        else:
-            QDesktopServices.openUrl(QUrl(anchor))
+        url = QUrl(anchor)
+        print(f"Clicked on link: {anchor}")
+        result = QDesktopServices.openUrl(url)
+        if not result:
+            QMessageBox.critical(
+                self,
+                tr("File not found"),
+                "{} '{}' {}".format(
+                    tr("The file at"),
+                    url.toLocalFile(),
+                    tr("could not be found."),
+                ),
+            )
 
     def has_hyperlink(self, pos: QPoint) -> bool:
         anchor = self.anchorAt(pos)

@@ -1,24 +1,35 @@
 from __future__ import annotations
 
 import os.path as osp
+import platform
 from dataclasses import dataclass
-from email import message
 from pathlib import Path
 
+from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractTableModel,
+    QCoreApplication,
     QDate,
+    QLibraryInfo,
     QModelIndex,
     QSortFilterProxyModel,
     Qt,
     pyqtSignal,
 )
-from PyQt6.QtWidgets import QFileDialog, QHeaderView, QMainWindow, QMenu, QWidget
+from PyQt6.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QHeaderView,
+    QMainWindow,
+    QMenu,
+    QWidget,
+)
 
 from tcha.consts import AppAction
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.lfio import ProgressLogger
+from tcha.settings import Defaults
 from ui.start_view import Ui_StartWindow
 
 
@@ -238,6 +249,9 @@ class StartWindow(QMainWindow):
         self.ui.cb_show_past_schedules.checkStateChanged.connect(
             self.set_past_schedules_visible
         )
+        self.ui.tb_about.clicked.connect(
+            lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
+        )
 
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:
@@ -250,7 +264,7 @@ class StartWindow(QMainWindow):
 
     def open_file_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, tr("Open File Dialog"), filter="*.lesson *.tch"
+            self, tr("Open File Dialog"), filter=tr("Teachart document (*.tch)")
         )
         self.appActionTriggered.emit(AppAction.OpenFile, Path(path))
 
@@ -275,6 +289,7 @@ class StartWindow(QMainWindow):
         self.ui.status_bar.showMessage(message)
 
     def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
+        self.ui.loading_bar.setVisible(True)
         translated_label = tr("Loading")
         status_label = "{} {}".format(translated_label, file_name.name)
         self.ui.status_bar.showMessage(status_label)
@@ -286,7 +301,25 @@ class StartWindow(QMainWindow):
 
     def reset_progress(self) -> None:
         self.ui.status_bar.clearMessage()
-        self.ui.progress_label.setVisible(False)
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
         self.update_schedule_message()
+
+
+class AboutDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent, Qt.WindowType.Dialog)
+        self.ui = uic.loadUi("ui/about_view.ui", self)
+
+        self.setWindowModality(Qt.WindowModality.NonModal)
+        self.resize(750, 380)
+        self.set_text()
+
+    def set_text(self) -> None:
+        path = Path("resources/about.html")
+        if path.exists():
+            html = path.read_text("utf-8")
+            html = html.replace("[Version]", QCoreApplication.applicationVersion())
+            html = html.replace("[Python]", platform.python_version())
+            html = html.replace("[Qt]", QLibraryInfo.version().toString())
+            self.ui.lb_description.setText(html)

@@ -35,7 +35,7 @@ from tcha.elements import get_all_definitions
 from tcha.error import CriticalError, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
-from tcha.start import OpenFileModel, StartWindow
+from tcha.start import AboutDialog, OpenFileModel, StartWindow
 from tcha.styling import TchaProxyStyle, make_palette
 from tcha.table import PresenterView
 from tcha.utils import WinApi
@@ -117,6 +117,7 @@ class AppCore(QApplication):
 
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
+        self.setApplicationVersion(Defaults.AppInfo.app_ver)
 
         self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
@@ -261,6 +262,8 @@ class AppCore(QApplication):
                 self.open_start_dialog(True)
             case AppAction.CourseExplorer:
                 self.open_course_exp(value)
+            case AppAction.AboutTeachart:
+                self.open_about_dialog()
 
     def startup_window(self, argv=None) -> QWidget:
         # TODO: Implement argument evaluation on application start
@@ -420,6 +423,13 @@ class AppCore(QApplication):
             window.show()
         else:
             self.opened_start_dialog().show()
+
+    def open_about_dialog(self) -> None:
+        for widget in self.topLevelWidgets():
+            if isinstance(widget, AboutDialog):
+                return
+        dialog = AboutDialog()
+        dialog.open()
 
     def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
         if not self._presenter_view:
