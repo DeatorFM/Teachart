@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from copy import deepcopy
+from email.charset import QP
 from pathlib import Path
 from typing import Self, Type
 
@@ -17,7 +17,15 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QImage, QImageReader, QPainter, QPen, QPixmap, QTransform
+from PyQt6.QtGui import (
+    QImage,
+    QImageReader,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPixmapCache,
+    QTransform,
+)
 from PyQt6.QtWidgets import (
     QFileDialog,
     QGraphicsPixmapItem,
@@ -65,6 +73,8 @@ class PictureModel(BaseElementModel):
         self._rotation = rotation
         self._adjusted = adjusted  # If sizes have been adjusted by the user
 
+        self._pixmap = QPixmap.fromImageReader(reader)
+
         self._item_size = QSize(size.width(), self._height)
 
         self._original_aspect_ratio: float = size.height() / size.width()
@@ -98,10 +108,6 @@ class PictureModel(BaseElementModel):
         except (ValueError, TypeError):
             raise LFExceptions.ModelReadError(False)
 
-    # @staticmethod
-    # def restype() -> ResourceType:
-    #     return ResourceType.IMAGE
-
     @property
     def name(self) -> str:
         return "PictureElement"
@@ -126,6 +132,10 @@ class PictureModel(BaseElementModel):
             self.set_size(width, h)
             self._item_size = QSize(width, h)
             self.set_adjusted(False)
+
+    @property
+    def pixmap(self) -> QPixmap:
+        return self._pixmap
 
     @property
     def width(self) -> int:
@@ -156,10 +166,6 @@ class PictureModel(BaseElementModel):
     def current_aspect_ratio(self) -> float:
         """Aspect ratio based on current width and height values"""
         return self.height / self.width
-
-    # @property
-    # def last_size(self) -> QSize:
-    #     return self._last_size
 
     def editable(self) -> bool:
         return False
@@ -346,9 +352,7 @@ class PictureDelegate(BaseElementDelegate):
         )
 
         model: PictureModel = index.data()
-        reader = QImageReader()
-        reader.setDevice(model.resource.qfile())
-        pixmap = QPixmap.fromImageReader(reader)
+        pixmap = model.pixmap
 
         if model.rotation % 360 > 0:
             pixmap = pixmap.transformed(QTransform().rotate(model.rotation))

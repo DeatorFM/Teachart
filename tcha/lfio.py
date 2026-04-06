@@ -443,6 +443,7 @@ class XmlWriter:
 
         writer.writeStartDocument()
         writer.writeStartElement("resources")
+        writer.writeAttribute("count", str(len(rescont)))
 
         for resobj in rescont.contents():
             writer.writeEmptyElement("res")

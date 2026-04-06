@@ -1,17 +1,28 @@
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QEvent, QObject, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QColor, QCursor, QIcon, QMouseEvent, QPixmap
+from PyQt6.QtCore import QEvent, QMimeData, QObject, QPoint, QSize, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QCursor,
+    QDesktopServices,
+    QIcon,
+    QMouseEvent,
+    QPixmap,
+    QTextCharFormat,
+)
 from PyQt6.QtWidgets import (
     QColorDialog,
     QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListView,
     QMenu,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QToolButton,
     QWidget,
@@ -321,3 +332,78 @@ class PasteConfirmation(QMessageBox):
         if self.clickedButton() == self.pb_append:
             return 2
         return 0
+
+
+class NoteEdit(QPlainTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+
+    def canInsertFromMimeData(self, source: QMimeData):
+        if source.hasUrls():
+            return True
+        return super().canInsertFromMimeData(source)
+
+    def insertFromMimeData(self, source: QMimeData):
+        print("Pasting Data")
+        if source.hasUrls():
+            print("Pasting Urls")
+            cur = self.textCursor()
+            urls = source.urls()
+            for url in urls:
+                fmt = QTextCharFormat()
+                fmt.setFontUnderline(True)
+                fmt.setAnchor(True)
+                if url.isLocalFile():
+                    fmt.setAnchorHref(url.url(QUrl.UrlFormattingOption.PreferLocalFile))
+                    cur.insertText(url.fileName(), fmt)
+                    cur.insertBlock()
+            return
+
+        if source.hasText() and source.text().startswith(
+            ("https://", "http://", "www.")
+        ):
+            link = source.text()
+            if link.startswith("www."):
+                link = "http://" + link
+            fmt = QTextCharFormat()
+            fmt.setFontUnderline(True)
+            fmt.setAnchor(True)
+            fmt.setAnchorHref(link)
+            cur = self.textCursor()
+            url_text = QInputDialog.getText(
+                self, tr("Enter url text"), None, QLineEdit.EchoMode.Normal, link
+            )
+            if url_text:
+                cur.insertText(url_text, fmt)
+            else:
+                cur.insertText(link, fmt)
+            cur.insertBlock()
+            return
+
+        super().insertFromMimeData(source)
+
+    def mousePressEvent(self, e: QMouseEvent) -> None:
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.open_hyperlink(e.pos())
+        super().mousePressEvent(e)
+
+    def mouseMoveEvent(self, e: QMouseEvent) -> None:
+        self.has_hyperlink(e.pos())
+        super().mouseMoveEvent(e)
+
+    def open_hyperlink(self, pos: QPoint) -> None:
+        anchor = self.anchorAt(pos)
+        if anchor.startswith("file:///"):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(anchor))
+        else:
+            QDesktopServices.openUrl(QUrl(anchor))
+
+    def has_hyperlink(self, pos: QPoint) -> bool:
+        anchor = self.anchorAt(pos)
+        if anchor:
+            self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+            return True
+        else:
+            self.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+            return False

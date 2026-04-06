@@ -1063,7 +1063,7 @@ class CanvasScene(QGraphicsScene):
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self._painting = True
+            self._painting = True if self.items() else False
             if self.tool == CanvasTool.Pen:
                 new_line = FormattedLine()
                 new_line.pen = QPen(self.pen)

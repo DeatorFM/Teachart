@@ -10,7 +10,7 @@ from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
-from PyQt6.QtGui import QScreen
+from PyQt6.QtGui import QPixmapCache
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QApplication,
@@ -140,6 +140,7 @@ class AppCore(QApplication):
 
         self.init_display_mode = WinApi.get_display_mode()
         print(f"Initial display mode: {self.init_display_mode}")
+        QPixmapCache.setCacheLimit(50000)
 
         self.aboutToQuit.connect(self.on_quitting)
         self.screenAdded.connect(self.on_screen_changed)
@@ -294,7 +295,8 @@ class AppCore(QApplication):
         editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
         editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
         editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
-        # editor_window.fileSaved.connect()
+        editor_window.presenterActivated.connect(self.open_presenter)
+        editor_window.presenterClosed.connect(self.close_presenter)
         editor_window.show()
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
 
