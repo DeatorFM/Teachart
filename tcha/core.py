@@ -430,8 +430,8 @@ class AppCore(QApplication):
             if isinstance(widget, AboutDialog):
                 return
         dialog = AboutDialog()
-        dialog.open()
-        dialog.finished.connect(dialog.deleteLater)
+        dialog.exec()
+        dialog.deleteLater()
 
     def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
         if not self._presenter_view:

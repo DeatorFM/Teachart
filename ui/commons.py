@@ -420,17 +420,18 @@ class NoteEdit(QPlainTextEdit):
         anchor = self.anchorAt(pos)
         url = QUrl(anchor)
         print(f"Clicked on link: {anchor}")
-        result = QDesktopServices.openUrl(url)
-        if not result:
-            QMessageBox.critical(
-                self,
-                tr("File not found"),
-                "{} '{}' {}".format(
-                    tr("The file at"),
-                    url.toLocalFile(),
-                    tr("could not be found."),
-                ),
-            )
+        if anchor:
+            result = QDesktopServices.openUrl(url)
+            if not result:
+                QMessageBox.critical(
+                    self,
+                    tr("File not found"),
+                    "{} '{}' {}".format(
+                        tr("The file at"),
+                        url.toLocalFile(),
+                        tr("could not be found."),
+                    ),
+                )
 
     def has_hyperlink(self, pos: QPoint) -> bool:
         anchor = self.anchorAt(pos)

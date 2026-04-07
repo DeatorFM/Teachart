@@ -7,6 +7,7 @@ from PyQt6.QtCore import (
     QDataStream,
     QEvent,
     QIODevice,
+    QMargins,
     QMimeData,
     QModelIndex,
     QObject,
@@ -47,6 +48,7 @@ from PyQt6.QtWidgets import (
     QListView,
     QMenu,
     QMessageBox,
+    QSizePolicy,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -487,6 +489,13 @@ class HeaderView(QHeaderView):
         self._state = self.saveState()
 
 
+class TableViewport(QWidget):
+    def sizeHint(self):
+        size = super().sizeHint()
+        size.setHeight(size.height() + 500)
+        return size
+
+
 class Table(QTableView):
     changeMade = pyqtSignal()
     cellEditorOpened = pyqtSignal(CellEditor)
@@ -533,6 +542,26 @@ class Table(QTableView):
         )
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
+
+        self.verticalScrollBar().sliderMoved.connect(
+            lambda: print(f"V Slider Value: {self.verticalScrollBar().value()}")
+        )
+        self.verticalScrollBar().rangeChanged.connect(
+            lambda: print(
+                f"V Slider Range: {self.verticalScrollBar().minimum()} -> {self.verticalScrollBar().maximum()}"
+            )
+        )
+
+        self.horizontalScrollBar().sliderMoved.connect(
+            lambda: print(f"V Slider Value: {self.horizontalScrollBar().value()}")
+        )
+        self.horizontalScrollBar().rangeChanged.connect(
+            lambda: print(
+                f"V Slider Range: {self.horizontalScrollBar().minimum()} -> {self.horizontalScrollBar().maximum()}"
+            )
+        )
+        # self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
+        self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
 
         self._goto_status.clicked.connect(self.focus_row)
 
@@ -599,6 +628,20 @@ class Table(QTableView):
     def on_model_changed(self) -> None:
         self.changeMade.emit()
         self.update_status()
+
+    def on_vslider_range_changed(self, min: int, max: int) -> None:
+        if not min == max:
+            self.verticalScrollBar().blockSignals(True)
+            self.verticalScrollBar().setMaximum(max + 200)
+            print(f"VSlider: Adjusted max {max + 200}")
+            self.verticalScrollBar().blockSignals(False)
+
+    # def on_hslider_range_changed(self, min: int, max: int) -> None:
+    #     if not min == max:
+    #         self.horizontalScrollBar().blockSignals(True)
+    #         self.horizontalScrollBar().setMaximum(max + 200)
+    #         print(f"HSlider: Adjusted max {max + 200}")
+    #         self.horizontalScrollBar().blockSignals(False)
 
     def update_status(self) -> None:
         self._size_status.setText(self.size_status())
