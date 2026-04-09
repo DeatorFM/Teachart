@@ -120,6 +120,17 @@ class Ui_Editor(object):
 
         self.statusbar = QStatusBar(parent=MainWindow)
         self.statusbar.setObjectName("statusbar")
+        self.statusbar.setMaximumHeight(25)
+
+        self.lb_row = QLabel(parent=MainWindow)
+        self.lb_row.setObjectName("lb_row")
+        self.statusbar.addWidget(self.lb_row)
+
+        self.row_list = self.table.row_list
+        self.row_list.setStyleSheet(
+            """padding: 0 0 0 2px; min-height: 1.1em; border: none"""
+        )
+        self.statusbar.addWidget(self.row_list)
         MainWindow.setStatusBar(self.statusbar)
 
         # Dock Widgets: PresenterCanvas and Notes
@@ -683,6 +694,7 @@ class Ui_Editor(object):
         self.lb_course.setText(_translate("MainWindow", "Course"))
         self.lb_date_time.setText(_translate("MainWindow", "Date/Time"))
         self.lb_duration.setText(_translate("MainWindow", "Duration"))
+        self.lb_row.setText(_translate("MainWindow", "Top row"))
 
         self.sb_duration.setSuffix(_translate("MainWindow", " min"))
 

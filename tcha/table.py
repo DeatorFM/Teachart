@@ -7,7 +7,6 @@ from PyQt6.QtCore import (
     QDataStream,
     QEvent,
     QIODevice,
-    QMargins,
     QMimeData,
     QModelIndex,
     QObject,
@@ -25,7 +24,6 @@ from PyQt6.QtGui import (
     QBrush,
     QDrag,
     QDropEvent,
-    QIcon,
     QKeyEvent,
     QMouseEvent,
     QPainter,
@@ -37,6 +35,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QGraphicsItem,
     QGraphicsScene,
@@ -48,7 +47,6 @@ from PyQt6.QtWidgets import (
     QListView,
     QMenu,
     QMessageBox,
-    QSizePolicy,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -56,6 +54,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDelegate,
@@ -507,12 +506,6 @@ class Table(QTableView):
         self._painting = True
         self._editor: CellEditor | None = None
 
-        # TODO: Delete!
-        self._size_status = StatusLabel("")
-        self._current_status = StatusLabel("")
-        self._goto_status = StatusButton(tr("Go to Row"), True)
-        self._goto_status.setIcon(QIcon("resources/icons/ic_goto.svg"))
-
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
         self.setDragDropMode(QTableView.DragDropMode.DragDrop)
@@ -543,9 +536,7 @@ class Table(QTableView):
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
 
-        self.verticalScrollBar().sliderMoved.connect(
-            lambda: print(f"V Slider Value: {self.verticalScrollBar().value()}")
-        )
+        self.verticalScrollBar().valueChanged.connect(self.on_vscrolled)
         self.verticalScrollBar().rangeChanged.connect(
             lambda: print(
                 f"V Slider Range: {self.verticalScrollBar().minimum()} -> {self.verticalScrollBar().maximum()}"
@@ -563,7 +554,7 @@ class Table(QTableView):
         # self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
         self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
 
-        self._goto_status.clicked.connect(self.focus_row)
+        self.row_list = QComboBox()
 
         self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
@@ -610,7 +601,9 @@ class Table(QTableView):
             self.model().modelChanged.connect(self.on_model_changed)
             self.model().columnsMoved.connect(self.update_row_geometries)
             self.model().rowsMoved.connect(self.update_row_geometries)
-            self.selectionModel().selectionChanged.connect(self.update_status)
+            self.model().rowsInserted.connect(self.update_row_list)
+            self.model().rowsRemoved.connect(self.update_row_list)
+
             for column in range(self.model().columnCount()):
                 size = (
                     self.model()
@@ -621,20 +614,31 @@ class Table(QTableView):
                 )
                 self.horizontalHeader().resizeSection(column, size)
             self.update_row_geometries()
-            self.update_status()
+            self.update_row_list()
+            self.on_vscrolled()
             return True
         return False
 
     def on_model_changed(self) -> None:
         self.changeMade.emit()
-        self.update_status()
 
     def on_vslider_range_changed(self, min: int, max: int) -> None:
-        if not min == max:
+        if not min == max and self.model():
             self.verticalScrollBar().blockSignals(True)
-            self.verticalScrollBar().setMaximum(max + 200)
-            print(f"VSlider: Adjusted max {max + 200}")
+            last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
+            added_height = self.height() - last_row_height
+            if added_height > 0:
+                self.verticalScrollBar().setMaximum(max + added_height - 30)
+                print(f"VSlider: Adjusted max {max + added_height}")
             self.verticalScrollBar().blockSignals(False)
+
+    def on_vscrolled(self) -> None:
+        top_idx = self.indexAt(QPoint(0, 0))
+        if top_idx.isValid():
+            try:
+                self.row_list.setCurrentIndex(top_idx.row())
+            except IndexError:
+                pass
 
     # def on_hslider_range_changed(self, min: int, max: int) -> None:
     #     if not min == max:
@@ -642,16 +646,6 @@ class Table(QTableView):
     #         self.horizontalScrollBar().setMaximum(max + 200)
     #         print(f"HSlider: Adjusted max {max + 200}")
     #         self.horizontalScrollBar().blockSignals(False)
-
-    def update_status(self) -> None:
-        self._size_status.setText(self.size_status())
-        self._current_status.setText(self.selection_status())
-
-    def size_status(self) -> str:
-        rows, columns = self.model().rowCount(), self.model().columnCount()
-        tr_rows = tr("Rows:")
-        tr_columns = tr("Columns")
-        return f"{tr_rows} {rows} | {tr_columns} {columns}"
 
     def selection_status(self) -> str:
         if self.selectionModel().currentIndex().isValid():
@@ -707,6 +701,19 @@ class Table(QTableView):
         if self._editor:
             self._editor.disconnect()
             self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
+
+    def update_row_list(self) -> None:
+        if self.row_list.count() < self.model().rowCount():
+            add_count = self.model().rowCount() - self.row_list.count()
+            for _ in range(add_count):
+                self.row_list.addItem(
+                    str(self.row_list.count() + 1), self.row_list.count()
+                )
+
+        elif self.row_list.count() > self.model().rowCount():
+            sub_count = self.row_list.count() - self.model().rowCount()
+            for _ in range(sub_count):
+                self.row_list.removeItem(self.row_list.count() - 1)
 
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
