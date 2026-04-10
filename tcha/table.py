@@ -555,6 +555,7 @@ class Table(QTableView):
         self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
 
         self.row_list = QComboBox()
+        self.row_list.activated.connect(self.scroll_to_index)
 
         self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
@@ -616,6 +617,7 @@ class Table(QTableView):
             self.update_row_geometries()
             self.update_row_list()
             self.on_vscrolled()
+            self.row_list.setCurrentIndex(0)
             return True
         return False
 
@@ -639,6 +641,22 @@ class Table(QTableView):
                 self.row_list.setCurrentIndex(top_idx.row())
             except IndexError:
                 pass
+
+    def scroll_to_index(self, idx: int) -> None:
+        model_index = self.model().index(idx, 0)
+        hvalue = self.horizontalScrollBar().value()
+        self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+        self.horizontalScrollBar().setValue(hvalue)
+
+    def scroll_by(self, incr=1) -> None:
+        print("Triggered")
+        current = (
+            self.row_list.currentIndex() if self.row_list.currentIndex() > -1 else 0
+        )
+        to = current + incr
+        print(current, incr, to)
+        if to >= 0 and to < self.row_list.count():
+            self.scroll_to_index(to)
 
     # def on_hslider_range_changed(self, min: int, max: int) -> None:
     #     if not min == max:

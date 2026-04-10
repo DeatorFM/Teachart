@@ -232,6 +232,9 @@ class Editor(QMainWindow):
         self.ui.bg_tools.buttonClicked.connect(self.ui.canvas.set_tool)
         self.ui.bg_colors.buttonClicked.connect(self.ui.canvas.set_color)
 
+        self.ui.tb_row_up.clicked.connect(lambda: self.table.scroll_by(-1))
+        self.ui.tb_row_down.clicked.connect(lambda: self.table.scroll_by())
+
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 
     def path(self) -> str | None:

@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QButtonGroup,
     QDateTimeEdit,
     QDockWidget,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -128,9 +129,36 @@ class Ui_Editor(object):
 
         self.row_list = self.table.row_list
         self.row_list.setStyleSheet(
-            """padding: 0 0 0 2px; min-height: 1.1em; border: none"""
+            """QComboBox {
+                padding: 0 0 0 2px; 
+                min-height: 1.1em; 
+                border: 1px
+                }
+                
+                QComboBox::down-arrow {image: none}"""
         )
+        self.row_list.setMaximumWidth(35)
+        self.row_list.view().setFixedWidth(50)
         self.statusbar.addWidget(self.row_list)
+
+        self.tb_row_down = QToolButton(self.statusbar)
+        self.tb_row_down.setObjectName("tb_row_down")
+        icon20 = SvgIcon("resources/icons/ic_down.svg")
+        self.tb_row_down.setIcon(icon20)
+        self.statusbar.addWidget(self.tb_row_down)
+
+        self.tb_row_up = QToolButton(self.statusbar)
+        self.tb_row_up.setObjectName("tb_row_up")
+        icon21 = SvgIcon("resources/icons/ic_up.svg")
+        self.tb_row_up.setIcon(icon21)
+        self.statusbar.addWidget(self.tb_row_up)
+
+        line1 = QFrame(parent=MainWindow)
+        line1.setFrameShape(QFrame.Shape.VLine)
+        line1.setFrameShadow(QFrame.Shadow.Plain)
+        line1.setObjectName("line1")
+        self.statusbar.addWidget(line1)
+
         MainWindow.setStatusBar(self.statusbar)
 
         # Dock Widgets: PresenterCanvas and Notes
