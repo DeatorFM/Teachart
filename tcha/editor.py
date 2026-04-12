@@ -5,6 +5,7 @@ from turtle import isvisible
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QDateTime,
+    QEvent,
     QModelIndex,
     QObject,
     QRunnable,
@@ -13,7 +14,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QCloseEvent, QScreen
+from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QScreen
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -25,7 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, EditingLevel, ResourceFlag
+from tcha.consts import AppAction, ResourceFlag
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -37,12 +38,6 @@ from tcha.table import CellEditor, Table
 from tcha.tablemodel import TableModel
 from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
-
-SDC_TOPOLOGY_INTERNAL = 0x00000001
-SDC_TOPOLOGY_CLONE = 0x00000002  # Duplicate mode
-SDC_TOPOLOGY_EXTEND = 0x00000004  # Extended mode
-SDC_TOPOLOGY_EXTERNAL = 0x00000008
-SDC_APPLY = 0x00000080
 
 
 class SaveWorkerSignals(QObject):
@@ -233,7 +228,7 @@ class Editor(QMainWindow):
         self.ui.bg_colors.buttonClicked.connect(self.ui.canvas.set_color)
 
         self.ui.tb_row_up.clicked.connect(lambda: self.table.scroll_by(-1))
-        self.ui.tb_row_down.clicked.connect(lambda: self.table.scroll_by())
+        self.ui.tb_row_down.clicked.connect(lambda: self.table.scroll_by(1))
 
         QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 

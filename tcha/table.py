@@ -31,6 +31,7 @@ from PyQt6.QtGui import (
     QPaintEvent,
     QPen,
     QPolygonF,
+    QResizeEvent,
     QScreen,
 )
 from PyQt6.QtWidgets import (
@@ -43,6 +44,7 @@ from PyQt6.QtWidgets import (
     QGraphicsView,
     QHeaderView,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QListView,
     QMenu,
@@ -54,7 +56,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDelegate,
@@ -62,10 +63,10 @@ from nativeelements.baseelement import (
     BaseElementToolset,
 )
 from tcha.consts import CanvasTool, EditingLevel
-from tcha.status import StatusButton, StatusLabel
 from tcha.tablemodel import (
     CellItem,
     CellModel,
+    IndexModel,
     IndexPoint,
     TableModel,
 )
@@ -488,13 +489,6 @@ class HeaderView(QHeaderView):
         self._state = self.saveState()
 
 
-class TableViewport(QWidget):
-    def sizeHint(self):
-        size = super().sizeHint()
-        size.setHeight(size.height() + 500)
-        return size
-
-
 class Table(QTableView):
     changeMade = pyqtSignal()
     cellEditorOpened = pyqtSignal(CellEditor)
@@ -502,9 +496,9 @@ class Table(QTableView):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._model_just_set = False
         self._painting = True
         self._editor: CellEditor | None = None
+        self._top_idx = QModelIndex()
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -514,10 +508,11 @@ class Table(QTableView):
         self.setCornerButtonEnabled(False)
 
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
-
-        self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
         self.setItemDelegate(CellDelegate(self))
         self.itemDelegate().sizeHintChanged.connect(self.update_row_geometries)
@@ -537,25 +532,15 @@ class Table(QTableView):
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
 
         self.verticalScrollBar().valueChanged.connect(self.on_vscrolled)
-        self.verticalScrollBar().rangeChanged.connect(
-            lambda: print(
-                f"V Slider Range: {self.verticalScrollBar().minimum()} -> {self.verticalScrollBar().maximum()}"
-            )
-        )
-
-        self.horizontalScrollBar().sliderMoved.connect(
-            lambda: print(f"V Slider Value: {self.horizontalScrollBar().value()}")
-        )
-        self.horizontalScrollBar().rangeChanged.connect(
-            lambda: print(
-                f"V Slider Range: {self.horizontalScrollBar().minimum()} -> {self.horizontalScrollBar().maximum()}"
-            )
-        )
-        # self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
         self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
 
+        self.horizontalScrollBar().valueChanged.connect(self.on_hscrolled)
+        self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
+
         self.row_list = QComboBox()
-        self.row_list.activated.connect(self.scroll_to_index)
+        self.row_list.activated.connect(lambda row: self.scroll_to_index(row, -1))
+
+        self.count_label = QLabel()
 
         self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
@@ -565,9 +550,6 @@ class Table(QTableView):
     @property
     def editor(self) -> CellEditor | None:
         return self._editor
-
-    def status(self) -> tuple[QWidget]:
-        return self._size_status, self._current_status, self._goto_status
 
     def enable_painting(self, painting: bool) -> None:
         self._painting = painting
@@ -591,19 +573,22 @@ class Table(QTableView):
         if model:
             super().setModel(model)
             self.setCurrentIndex(QModelIndex())
+
             self.horizontalHeader().setModel(model)
             self.verticalHeader().setSectionResizeMode(
                 QHeaderView.ResizeMode.ResizeToContents
             )
             self.verticalHeader().setModel(model)
-            self._model_just_set = True
+
             self.model().dataChanged.connect(self.set_extra_emit)
             self.model().dataChanged.connect(self.update_row_geometries)
             self.model().modelChanged.connect(self.on_model_changed)
             self.model().columnsMoved.connect(self.update_row_geometries)
             self.model().rowsMoved.connect(self.update_row_geometries)
-            self.model().rowsInserted.connect(self.update_row_list)
-            self.model().rowsRemoved.connect(self.update_row_list)
+            self.model().rowsInserted.connect(self.update_count_label)
+            self.model().rowsRemoved.connect(self.update_count_label)
+            self.model().columnsInserted.connect(self.update_count_label)
+            self.model().columnsRemoved.connect(self.update_count_label)
 
             for column in range(self.model().columnCount()):
                 size = (
@@ -614,56 +599,111 @@ class Table(QTableView):
                     .width()
                 )
                 self.horizontalHeader().resizeSection(column, size)
+
             self.update_row_geometries()
-            self.update_row_list()
             self.on_vscrolled()
+            self.on_hscrolled()
             self.row_list.setCurrentIndex(0)
+            self.row_list.setModel(IndexModel(model))
+            self.update_count_label()
+
             return True
+
         return False
 
     def on_model_changed(self) -> None:
         self.changeMade.emit()
 
     def on_vslider_range_changed(self, min: int, max: int) -> None:
-        if not min == max and self.model():
-            self.verticalScrollBar().blockSignals(True)
-            last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
-            added_height = self.height() - last_row_height
-            if added_height > 0:
-                self.verticalScrollBar().setMaximum(max + added_height - 30)
-                print(f"VSlider: Adjusted max {max + added_height}")
-            self.verticalScrollBar().blockSignals(False)
+        if self.model():
+            if not min == max and self.model():
+                self.verticalScrollBar().blockSignals(True)
+                last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
+                added_height = self.height() - last_row_height
+                if added_height > 0:
+                    self.verticalScrollBar().setMaximum(max + added_height)
+                else:
+                    self.verticalScrollBar().setMaximum(max + 200)
+                print(f"VSlider: Adjusted max from {max} to {max + added_height}")
+                self.verticalScrollBar().blockSignals(False)
+            else:
+                self.verticalScrollBar().blockSignals(True)
+                last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
+                self.verticalScrollBar().setMaximum(last_row_height)
+                self.verticalScrollBar().blockSignals(False)
 
     def on_vscrolled(self) -> None:
-        top_idx = self.indexAt(QPoint(0, 0))
-        if top_idx.isValid():
+        self._top_idx = self.indexAt(QPoint(0, 0))
+        if self._top_idx.isValid():
             try:
-                self.row_list.setCurrentIndex(top_idx.row())
+                self.row_list.blockSignals(True)
+                self.row_list.setCurrentIndex(self._top_idx.row())
+                self.row_list.blockSignals(False)
             except IndexError:
                 pass
 
-    def scroll_to_index(self, idx: int) -> None:
-        model_index = self.model().index(idx, 0)
-        hvalue = self.horizontalScrollBar().value()
-        self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
-        self.horizontalScrollBar().setValue(hvalue)
+    def on_hscrolled(self) -> None:
+        self._top_idx = self.indexAt(QPoint(0, 0))
 
-    def scroll_by(self, incr=1) -> None:
-        print("Triggered")
-        current = (
+    def on_hslider_range_changed(self, min: int, max: int) -> None:
+        if self.model():
+            if not min == max:
+                self.horizontalScrollBar().blockSignals(True)
+                last_col_width = self.sizeHintForColumn(self.model().columnCount() - 1)
+                added_width = self.width() - last_col_width
+                if added_width > 0:
+                    self.horizontalScrollBar().setMaximum(max + added_width - 30)
+                else:
+                    self.horizontalScrollBar().setMaximum(max + 200)
+                    print(f"HSlider: Adjusted max from {max} to {max + added_width}")
+                self.horizontalScrollBar().blockSignals(False)
+            else:
+                self.horizontalScrollBar().blockSignals(True)
+                pos = sum(
+                    self.columnWidth(col)
+                    for col in range(self.model().columnCount() - 1)
+                )
+                self.horizontalScrollBar().setMaximum(pos)
+                self.horizontalScrollBar().blockSignals(False)
+
+    def scroll_to_index(self, row: int, column: int) -> None:
+        idx_row = row if row >= 0 else 0
+        idx_col = column if column >= 0 else 0
+        model_index = self.model().index(idx_row, idx_col)
+        print(f"Go to index {idx_row} | {idx_col}")
+
+        if column == -1 and row >= 0:
+            hvalue = self.horizontalScrollBar().value()
+            self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+            self.horizontalScrollBar().setValue(hvalue)
+        elif row == -1 and column >= 0:
+            vvalue = self.verticalScrollBar().value()
+            position = sum(self.columnWidth(col) for col in range(idx_col))
+            self.horizontalScrollBar().setValue(position)
+            # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
+            self.verticalScrollBar().setValue(vvalue)
+        else:
+            self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+
+    def scroll_by(self, row_incr: int, column_incr=0) -> None:
+        current_row = (
             self.row_list.currentIndex() if self.row_list.currentIndex() > -1 else 0
         )
-        to = current + incr
-        print(current, incr, to)
-        if to >= 0 and to < self.row_list.count():
-            self.scroll_to_index(to)
 
-    # def on_hslider_range_changed(self, min: int, max: int) -> None:
-    #     if not min == max:
-    #         self.horizontalScrollBar().blockSignals(True)
-    #         self.horizontalScrollBar().setMaximum(max + 200)
-    #         print(f"HSlider: Adjusted max {max + 200}")
-    #         self.horizontalScrollBar().blockSignals(False)
+        dest_row = current_row + row_incr
+        dest_column = self._top_idx.column() + column_incr
+        print("Scrolled", current_row, row_incr, dest_row)
+
+        if dest_row >= 0 and dest_row < self.row_list.count() and column_incr == 0:
+            self.scroll_to_index(dest_row, -1)
+        elif (
+            dest_column >= 0
+            and dest_column < self.model().columnCount()
+            and row_incr == 0
+        ):
+            self.scroll_to_index(-1, dest_column)
+        elif row_incr != 0 and column_incr != 0:
+            self.scroll_to_index(dest_row, dest_column)
 
     def selection_status(self) -> str:
         if self.selectionModel().currentIndex().isValid():
@@ -720,18 +760,12 @@ class Table(QTableView):
             self._editor.disconnect()
             self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
 
-    def update_row_list(self) -> None:
-        if self.row_list.count() < self.model().rowCount():
-            add_count = self.model().rowCount() - self.row_list.count()
-            for _ in range(add_count):
-                self.row_list.addItem(
-                    str(self.row_list.count() + 1), self.row_list.count()
-                )
-
-        elif self.row_list.count() > self.model().rowCount():
-            sub_count = self.row_list.count() - self.model().rowCount()
-            for _ in range(sub_count):
-                self.row_list.removeItem(self.row_list.count() - 1)
+    def update_count_label(self) -> None:
+        translated1 = tr("R")
+        translated2 = tr("C")
+        self.count_label.setText(
+            f"{translated1} {self.model().rowCount()} | {translated2} {self.model().columnCount()}"
+        )
 
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
@@ -744,9 +778,6 @@ class Table(QTableView):
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
-
-    # def on_selection_changed(self, selected, deselected) -> None:
-    #     print("Changed selection")
 
     def add_row(self, row: int = -1) -> None:
         if row == -1:
@@ -820,6 +851,10 @@ class Table(QTableView):
         self.itemDelegate().element_selection = enable
         print(f"Mouse tracking {enable}")
         self.setMouseTracking(enable)
+        self.update()
+
+    def resizeEvent(self, ev: QResizeEvent):
+        return super().resizeEvent(ev)
 
     def keyPressEvent(self, e: QKeyEvent):
         print("Table got key press")
@@ -836,8 +871,24 @@ class Table(QTableView):
                 return
             elif e.key() == Qt.Key.Key_V:
                 self.paste_index(QApplication.clipboard().mimeData())
+            elif e.key() == Qt.Key.Key_Down:
+                self.scroll_by(1)
+                e.accept()
+                return
+            elif e.key() == Qt.Key.Key_Up:
+                self.scroll_by(-1)
+                e.accept()
+                return
+            elif e.key() == Qt.Key.Key_Right:
+                self.scroll_by(0, 1)
+                e.accept()
+                return
+            elif e.key() == Qt.Key.Key_Left:
+                self.scroll_by(0, -1)
+                e.accept()
+                return
 
-        return super().keyPressEvent(e)
+        super().keyPressEvent(e)
 
     def keyReleaseEvent(self, ev: QKeyEvent):
         if ev.key() == Qt.Key.Key_Control:

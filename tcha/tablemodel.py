@@ -24,6 +24,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from PyQt6.QtGui import QFont
+from shiboken6 import isValid
 
 from nativeelements.baseelement import BaseElementModel
 from tcha.settings import Settings
@@ -682,15 +683,16 @@ class TableModel(QAbstractTableModel):
 
         # Write source info
         index = indexes[0]
-        stream.writeInt64(id(self))  # Model pointer
-        stream.writeInt8(0)  # Level
-        stream.writeInt32(index.data().num)  # CellItem number
-        stream.writeInt32(0)  # Model number
-        print(
-            f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
-        )
+        if index.isValid():
+            stream.writeInt64(id(self))  # Model pointer
+            stream.writeInt8(0)  # Level
+            stream.writeInt32(index.data().num)  # CellItem number
+            stream.writeInt32(0)  # Model number
+            print(
+                f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
+            )
 
-        mimedata.setData("application/x-teachart", encoded_data)
+            mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
 
     def canDropMimeData(
@@ -929,3 +931,19 @@ class FilteredTableModel(QSortFilterProxyModel):
         if source_row == self._visible_row:
             return True
         return False
+
+
+class IndexModel(QSortFilterProxyModel):
+    """Model to only display the row indices."""
+
+    def __init__(self, tmodel: TableModel, parent=None):
+        super().__init__(parent)
+        self.setSourceModel(tmodel)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 1
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            return str(index.row() + 1)
+        return None

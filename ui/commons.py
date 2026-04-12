@@ -254,13 +254,13 @@ class LabeledWidget(QWidget):
 
 class StrongLineEdit(QLineEdit):
     def keyPressEvent(self, a0):
-        print("Has key press")
         self.setFocus()
         return super().keyPressEvent(a0)
 
     def focusOutEvent(self, e: QEvent):
         if e.reason() == Qt.FocusReason.PopupFocusReason:
             self.setFocus()
+            e.ignore()
             return
         print("Other focus out reason: ", e.reason())
         return super().focusOutEvent(e)

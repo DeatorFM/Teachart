@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementToolset
 from tcha.consts import CanvasTool
 from tcha.settings import Locale, Settings, TimeFormat
-from tcha.styling import Svg, SvgIcon
+from tcha.styling import SvgIcon
 from tcha.table import PresenterCanvas, Table
 from ui.commons import NoteEdit, SearchableComboBox, SwitchAction
 
@@ -56,6 +56,8 @@ class Ui_Editor(object):
             | QMainWindow.DockOption.ForceTabbedDocks
             | QMainWindow.DockOption.VerticalTabs
         )
+        # MainWindow.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         self.centralwidget = QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.vl2 = QVBoxLayout(self.centralwidget)
@@ -123,6 +125,15 @@ class Ui_Editor(object):
         self.statusbar.setObjectName("statusbar")
         self.statusbar.setMaximumHeight(25)
 
+        self.lb_counts = self.table.count_label
+        self.statusbar.addWidget(self.lb_counts)
+
+        line1 = QFrame(parent=MainWindow)
+        line1.setFrameShape(QFrame.Shape.VLine)
+        line1.setFrameShadow(QFrame.Shadow.Plain)
+        line1.setObjectName("line1")
+        self.statusbar.addWidget(line1)
+
         self.lb_row = QLabel(parent=MainWindow)
         self.lb_row.setObjectName("lb_row")
         self.statusbar.addWidget(self.lb_row)
@@ -132,7 +143,9 @@ class Ui_Editor(object):
             """QComboBox {
                 padding: 0 0 0 2px; 
                 min-height: 1.1em; 
-                border: 1px
+                border: 1px;
+                border-radius: 4px;
+                background-color: white;
                 }
                 
                 QComboBox::down-arrow {image: none}"""
@@ -141,23 +154,27 @@ class Ui_Editor(object):
         self.row_list.view().setFixedWidth(50)
         self.statusbar.addWidget(self.row_list)
 
-        self.tb_row_down = QToolButton(self.statusbar)
-        self.tb_row_down.setObjectName("tb_row_down")
         icon20 = SvgIcon("resources/icons/ic_down.svg")
-        self.tb_row_down.setIcon(icon20)
+        self.ac_row_down = MainWindow.addAction(None)
+        self.ac_row_down.setIcon(icon20)
+        self.ac_row_down.setShortcut(QKeySequence(Qt.Key.Key_Control, Qt.Key.Key_Down))
+        self.ac_row_down.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+
+        self.tb_row_down = QToolButton(self.statusbar)
+        self.tb_row_down.setDefaultAction(self.ac_row_down)
+        self.tb_row_down.setObjectName("tb_row_down")
         self.statusbar.addWidget(self.tb_row_down)
+
+        icon21 = SvgIcon("resources/icons/ic_up.svg")
+        self.ac_row_up = MainWindow.addAction(None)
+        self.ac_row_up.setIcon(icon21)
+        self.ac_row_up.setShortcut(QKeySequence(Qt.Key.Key_Control, Qt.Key.Key_Up))
+        self.ac_row_up.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
 
         self.tb_row_up = QToolButton(self.statusbar)
         self.tb_row_up.setObjectName("tb_row_up")
-        icon21 = SvgIcon("resources/icons/ic_up.svg")
-        self.tb_row_up.setIcon(icon21)
+        self.tb_row_up.setDefaultAction(self.ac_row_up)
         self.statusbar.addWidget(self.tb_row_up)
-
-        line1 = QFrame(parent=MainWindow)
-        line1.setFrameShape(QFrame.Shape.VLine)
-        line1.setFrameShadow(QFrame.Shadow.Plain)
-        line1.setObjectName("line1")
-        self.statusbar.addWidget(line1)
 
         MainWindow.setStatusBar(self.statusbar)
 
@@ -723,6 +740,9 @@ class Ui_Editor(object):
         self.lb_date_time.setText(_translate("MainWindow", "Date/Time"))
         self.lb_duration.setText(_translate("MainWindow", "Duration"))
         self.lb_row.setText(_translate("MainWindow", "Top row"))
+        self.lb_counts.setToolTip(
+            _translate("MainWindow", "Number of rows | Number of columns")
+        )
 
         self.sb_duration.setSuffix(_translate("MainWindow", " min"))
 
