@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMenuBar,
+    QProgressBar,
     QSizePolicy,
     QSpacerItem,
     QSpinBox,
@@ -175,6 +176,11 @@ class Ui_Editor(object):
         self.tb_row_up.setObjectName("tb_row_up")
         self.tb_row_up.setDefaultAction(self.ac_row_up)
         self.statusbar.addWidget(self.tb_row_up)
+
+        self.loading_bar = QProgressBar(MainWindow)
+        self.loading_bar.setFixedWidth(80)
+        self.loading_bar.setVisible(False)
+        self.statusbar.addPermanentWidget(self.loading_bar)
 
         MainWindow.setStatusBar(self.statusbar)
 

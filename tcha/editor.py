@@ -1,11 +1,10 @@
 import os
 from pathlib import Path
-from turtle import isvisible
+from time import sleep
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QDateTime,
-    QEvent,
     QModelIndex,
     QObject,
     QRunnable,
@@ -14,7 +13,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QScreen
+from PyQt6.QtGui import QAction, QCloseEvent, QScreen
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -31,7 +30,7 @@ from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.lesson import Lesson
-from tcha.lfio import LessonFile
+from tcha.lfio import LessonFile, ProgressLogger
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from tcha.table import CellEditor, Table
@@ -99,6 +98,7 @@ class Editor(QMainWindow):
         self.initialise_editor()
 
         # Attributes
+        self._caller = False
         self.changes_unsaved = False if lessonfile.mode == "r" else True
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
@@ -235,6 +235,13 @@ class Editor(QMainWindow):
     def path(self) -> str | None:
         return self.lessonfile.path
 
+    @property
+    def is_caller(self) -> bool:
+        return self._caller
+
+    def unset_caller(self) -> None:
+        self._caller = False
+
     # File Methods
 
     def set_recent_files(self, menu: QMenu) -> None:
@@ -251,6 +258,7 @@ class Editor(QMainWindow):
             self, tr("Open Sheet"), None, "*.lesson *.tch"
         )
         if path:
+            self._caller = True
             self.appActionTriggered[AppAction, Path].emit(
                 AppAction.OpenFile, Path(path)
             )
@@ -688,6 +696,21 @@ class Editor(QMainWindow):
                 gr_item = model.presentable_item()
                 if gr_item:
                     self.ui.canvas.change_item(gr_item)
+
+    # Other controls
+
+    def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
+        self.ui.loading_bar.setVisible(True)
+        translated_label = tr("Loading")
+        status_label = "{} {}".format(translated_label, file_name.name)
+        self.ui.statusbar.showMessage(status_label)
+        self.ui.loading_bar.setVisible(True)
+        logger.progressChanged.connect(self.ui.loading_bar.setValue)
+
+    def reset_progress(self) -> None:
+        self.ui.statusbar.clearMessage()
+        self.ui.loading_bar.setVisible(False)
+        self.ui.loading_bar.setValue(0)
 
     # Debug menus
 

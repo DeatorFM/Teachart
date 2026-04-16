@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QInputDialog,
+    QMainWindow,
     QMessageBox,
     QWidget,
 )
@@ -287,6 +288,14 @@ class AppCore(QApplication):
     def opened_presenter(self) -> QGraphicsView | None:
         return self._presenter_view
 
+    def caller(self) -> Editor | StartWindow | None:
+        for top_level in filter(
+            lambda x: isinstance(x, QMainWindow), self.topLevelWidgets()
+        ):
+            if top_level.is_caller:
+                return top_level
+        return None
+
     def create_editor(
         self,
     ) -> None:
@@ -314,13 +323,16 @@ class AppCore(QApplication):
             and path.exists()
             and str(path) not in [editor.path for editor in self.opened_editors()]
         ):
+            caller = self.caller()
             editor_window = None
+
             try:
                 lf = LessonFile()
                 lf.open("r", str(path))
 
-                if self._start_dialog:
-                    self._start_dialog.set_progress_logger(Path(lf.path), lf.progress)
+                if caller:
+                    caller.set_progress_logger(Path(lf.path), lf.progress)
+                    caller.unset_caller()
 
                 editor_window = Editor(
                     self._course_model, self._schedule_model, self._edefinitions, lf
@@ -361,8 +373,8 @@ class AppCore(QApplication):
                     ),
                 )
 
+                caller.reset_progress()
                 if self._start_dialog:
-                    self._start_dialog.reset_progress()
                     self._start_dialog.close()
                     self._start_dialog = None
                 self._file_model.append_file(str(path))

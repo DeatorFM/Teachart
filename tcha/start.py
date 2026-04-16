@@ -29,7 +29,6 @@ from PyQt6.QtWidgets import (
 from tcha.consts import AppAction
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.lfio import ProgressLogger
-from tcha.settings import Defaults
 from ui.start_view import Ui_StartWindow
 
 
@@ -224,6 +223,8 @@ class StartWindow(QMainWindow):
         self.ui.tv_pinned.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.ui.tv_pinned.setHeaderHidden(True)
 
+        self._caller = False
+
         self.connect_signals()
         self.update_schedule_message()
 
@@ -253,8 +254,16 @@ class StartWindow(QMainWindow):
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )
 
+    @property
+    def is_caller(self) -> bool:
+        return self._caller
+
+    def unset_caller(self) -> None:
+        self._caller = False
+
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:
+            self._caller = True
             self.appActionTriggered.emit(AppAction.OpenFile, index.data())
 
     def open_scheduled(self, index: QModelIndex) -> None:
@@ -293,9 +302,6 @@ class StartWindow(QMainWindow):
         translated_label = tr("Loading")
         status_label = "{} {}".format(translated_label, file_name.name)
         self.ui.status_bar.showMessage(status_label)
-        # self.ui.progress_label.setText(status_label)
-        # self.ui.progress_label.setVisible(True)
-        # self.ui.progress_label.adjustSize()
         self.ui.loading_bar.setVisible(True)
         logger.progressChanged.connect(self.ui.loading_bar.setValue)
 
