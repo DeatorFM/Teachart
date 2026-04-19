@@ -31,7 +31,6 @@ from PyQt6.QtGui import (
     QPaintEvent,
     QPen,
     QPolygonF,
-    QResizeEvent,
     QScreen,
 )
 from PyQt6.QtWidgets import (
@@ -62,7 +61,7 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
-from tcha.consts import CanvasTool, EditingLevel
+from tcha.consts import CanvasTool, EditingLevel, TableViewMode
 from tcha.tablemodel import (
     CellItem,
     CellModel,
@@ -499,6 +498,8 @@ class Table(QTableView):
         self._painting = True
         self._editor: CellEditor | None = None
         self._top_idx = QModelIndex()
+        self._view_mode = TableViewMode.Table
+        self._visible_row = -1
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -614,8 +615,10 @@ class Table(QTableView):
     def on_model_changed(self) -> None:
         self.changeMade.emit()
 
+    # Scrolling behaviour
+
     def on_vslider_range_changed(self, min: int, max: int) -> None:
-        if self.model():
+        if self.model() and self._view_mode == TableViewMode.Table:
             if not min == max and self.model():
                 self.verticalScrollBar().blockSignals(True)
                 last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
@@ -672,18 +675,45 @@ class Table(QTableView):
         model_index = self.model().index(idx_row, idx_col)
         print(f"Go to index {idx_row} | {idx_col}")
 
-        if column == -1 and row >= 0:
-            hvalue = self.horizontalScrollBar().value()
-            self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
-            self.horizontalScrollBar().setValue(hvalue)
-        elif row == -1 and column >= 0:
-            vvalue = self.verticalScrollBar().value()
-            position = sum(self.columnWidth(col) for col in range(idx_col))
-            self.horizontalScrollBar().setValue(position)
-            # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
-            self.verticalScrollBar().setValue(vvalue)
-        else:
-            self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+        if self._view_mode == TableViewMode.Table:
+            if column == -1 and row >= 0:
+                hvalue = self.horizontalScrollBar().value()
+                self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+                self.horizontalScrollBar().setValue(hvalue)
+            elif row == -1 and column >= 0:
+                vvalue = self.verticalScrollBar().value()
+                position = sum(self.columnWidth(col) for col in range(idx_col))
+                self.horizontalScrollBar().setValue(position)
+                # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
+                self.verticalScrollBar().setValue(vvalue)
+            else:
+                self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+
+        elif self._view_mode == TableViewMode.SingleRow:
+            if row == -1 and column >= 0:
+                vvalue = self.verticalScrollBar().value()
+                position = sum(self.columnWidth(col) for col in range(idx_col))
+                self.horizontalScrollBar().setValue(position)
+                # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
+                self.verticalScrollBar().setValue(vvalue)
+                return
+
+            if self._visible_row >= 0:
+                self.verticalHeader().setSectionHidden(self._visible_row, True)
+
+            self._visible_row = model_index.row()
+            self.verticalHeader().setSectionHidden(self._visible_row, False)
+
+            self.row_list.setCurrentIndex(model_index.row())
+
+            if (
+                self.currentIndex().isValid()
+                and self.currentIndex().row() != self._visible_row
+            ):
+                self.setCurrentIndex(QModelIndex())
+
+            self.scheduleDelayedItemsLayout()
+            self.viewport().update()
 
     def scroll_by(self, row_incr: int, column_incr=0) -> None:
         current_row = (
@@ -704,6 +734,42 @@ class Table(QTableView):
             self.scroll_to_index(-1, dest_column)
         elif row_incr != 0 and column_incr != 0:
             self.scroll_to_index(dest_row, dest_column)
+
+    # View mode handling
+
+    def set_view_mode(self, mode: TableViewMode) -> None:
+        print(f"Change view mode to {mode}")
+        if mode == TableViewMode.Table:
+            self._visible_row = -1
+            for row in range(self.model().rowCount()):
+                self.verticalHeader().setSectionHidden(row, False)
+            self.scheduleDelayedItemsLayout()
+            self.viewport().update()
+            self._view_mode = mode
+            self.on_vscrolled()
+
+        elif mode == TableViewMode.SingleRow:
+            if self._top_idx.isValid():
+                self._visible_row = self._top_idx.row()
+            else:
+                self._visible_row = 0
+
+            self._view_mode = mode
+
+            for row in range(self.model().rowCount()):
+                self.verticalHeader().setSectionHidden(row, row != self._visible_row)
+
+            if (
+                self.currentIndex().isValid()
+                and self.currentIndex().row() != self._visible_row
+            ):
+                self.setCurrentIndex(QModelIndex())
+
+            self.scheduleDelayedItemsLayout()
+            self.viewport().update()
+
+    def isIndexHidden(self, index: QModelIndex) -> bool:
+        return index.row() != self._visible_row and self._visible_row >= 0
 
     def selection_status(self) -> str:
         if self.selectionModel().currentIndex().isValid():
@@ -853,9 +919,6 @@ class Table(QTableView):
         self.setMouseTracking(enable)
         self.update()
 
-    def resizeEvent(self, ev: QResizeEvent):
-        return super().resizeEvent(ev)
-
     def keyPressEvent(self, e: QKeyEvent):
         print("Table got key press")
         if e.key() == Qt.Key.Key_Control:
@@ -944,6 +1007,8 @@ class Table(QTableView):
                 e.accept()
                 return
         super().mousePressEvent(e)
+
+    # Copy/Paste Methods
 
     def copy_index(self, index: QModelIndex) -> None:
         if index.isValid():

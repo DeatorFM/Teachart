@@ -47,3 +47,7 @@ class EditingLevel(Flag):
     NoEditing = 0
     CellEditing = 1
     ElementEditing = 2
+
+class TableViewMode(Enum):
+    Table = 0
+    SingleRow = 1

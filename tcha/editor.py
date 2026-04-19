@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag
+from tcha.consts import AppAction, ResourceFlag, TableViewMode
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -186,6 +186,12 @@ class Editor(QMainWindow):
         self.ui.ac_schedule.triggered.connect(self.set_unsaved)
         self.ui.sb_duration.valueChanged.connect(self.set_duration)
         self.ui.ac_pres_mode.toggled.connect(self.enable_presenter_mode)
+        self.ui.ac_vmode_table.toggled.connect(
+            lambda: self.table.set_view_mode(TableViewMode.Table)
+        )
+        self.ui.ac_vmode_row.toggled.connect(
+            lambda: self.table.set_view_mode(TableViewMode.SingleRow)
+        )
         self.ui.ac_about.triggered.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )

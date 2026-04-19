@@ -452,6 +452,30 @@ class Ui_Editor(object):
         self.ac_show_ttbar.setCheckable(True)
         self.ac_show_ttbar.setObjectName("ac_show_ttbar")
 
+        self.view_mode_group = QActionGroup(MainWindow)
+        self.view_mode_group.setObjectName("view_mode_group")
+
+        self.ac_vmode_table = QAction(parent=MainWindow)
+        self.ac_vmode_table.setCheckable(True)
+        self.ac_vmode_table.setChecked(True)
+        self.ac_vmode_table.setObjectName("ac_vmode_table")
+        icon22 = SvgIcon("resources/icons/ic_table.svg")
+        self.ac_vmode_table.setIcon(icon22)
+        self.ac_vmode_table.setIconVisibleInMenu(False)
+
+        self.ac_vmode_row = QAction(parent=MainWindow)
+        self.ac_vmode_row.setCheckable(True)
+        self.ac_vmode_row.setObjectName("ac_vmode_row")
+        icon23 = SvgIcon("resources/icons/ic_row.svg")
+        self.ac_vmode_row.setIcon(icon23)
+        self.ac_vmode_row.setIconVisibleInMenu(False)
+
+        self.view_mode_group.addAction(self.ac_vmode_table)
+        self.view_mode_group.addAction(self.ac_vmode_row)
+
+        self.ac_goto_active = QAction(parent=MainWindow)
+        self.ac_goto_active.setObjectName("ac_goto_active")
+
         # Debugging actions
 
         self.ac_file_insp = QAction(parent=MainWindow)
@@ -577,6 +601,11 @@ class Ui_Editor(object):
         self.menu_view.addAction(self.ac_pres_mode)
         self.menu_view.addSeparator()
         self.menu_view.addAction(self.ac_show_notes)
+        self.menu_view.addSeparator()
+        self.menu_view.addAction(self.ac_vmode_table)
+        self.menu_view.addAction(self.ac_vmode_row)
+        self.menu_view.addSeparator()
+        self.menu_view.addAction(self.ac_goto_active)
         # self.menu_view.addAction(self.ac_show_ttbar)
 
         self.menu_opt.addAction(self.ac_settings)
@@ -677,6 +706,21 @@ class Ui_Editor(object):
         self.dw_comment.visibilityChanged["bool"].connect(self.ac_show_notes.setChecked)  # type: ignore
         QMetaObject.connectSlotsByName(MainWindow)
 
+        self.tb_view_mode_group = QButtonGroup()
+        self.tb_view_mode_group.setObjectName("tb_view_mode_group")
+
+        self.tb_vmode_table = QToolButton(self.statusbar)
+        self.tb_vmode_table.setObjectName("tb_vmode_table")
+        self.tb_vmode_table.setDefaultAction(self.ac_vmode_table)
+        self.tb_vmode_table.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.statusbar.addPermanentWidget(self.tb_vmode_table)
+
+        self.tb_vmode_row = QToolButton(self.statusbar)
+        self.tb_vmode_row.setObjectName("tb_vmode_row")
+        self.tb_vmode_row.setDefaultAction(self.ac_vmode_row)
+        self.tb_vmode_row.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.statusbar.addPermanentWidget(self.tb_vmode_row)
+
     def retranslateUi(self, MainWindow):
         _translate = QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
@@ -707,6 +751,9 @@ class Ui_Editor(object):
         #     _translate("MainWindow", "Reset and create a new table")
         # )
         self.ac_pres_mode.setText(_translate("MainWindow", "Presentation Mode"))
+        self.ac_vmode_table.setText(_translate("MainWindow", "Show entire table"))
+        self.ac_vmode_row.setText(_translate("MainWindow", "Show single row"))
+        self.ac_goto_active.setText(_translate("MainWindow", "Go to selected cell"))
         self.ac_settings.setText(_translate("MainWindow", "Settings"))
         self.ac_course_exp.setText(_translate("MainWindow", "Course Explorer"))
         self.ac_course_rec.setText(_translate("MainWindow", "View Course Record"))
