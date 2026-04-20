@@ -192,6 +192,7 @@ class Editor(QMainWindow):
         self.ui.ac_vmode_row.toggled.connect(
             lambda: self.table.set_view_mode(TableViewMode.SingleRow)
         )
+        self.ui.ac_goto_active.triggered(self.table.scroll_to_current())
         self.ui.ac_about.triggered.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )
