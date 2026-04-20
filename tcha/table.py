@@ -735,6 +735,10 @@ class Table(QTableView):
         elif row_incr != 0 and column_incr != 0:
             self.scroll_to_index(dest_row, dest_column)
 
+    def scroll_to_current(self) -> None:
+        if self.currentIndex().isValid():
+            self.scroll_to_index(self.currentIndex().row(), self.currentIndex().column())
+
     # View mode handling
 
     def set_view_mode(self, mode: TableViewMode) -> None:
