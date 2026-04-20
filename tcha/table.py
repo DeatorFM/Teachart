@@ -487,6 +487,9 @@ class HeaderView(QHeaderView):
         print("State stored")
         self._state = self.saveState()
 
+    def setSectionHidden(self, logicalIndex: int, hide: bool):
+        super().setSectionHidden(self.logicalIndex(logicalIndex), hide)
+
 
 class Table(QTableView):
     changeMade = pyqtSignal()
