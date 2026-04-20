@@ -9,8 +9,8 @@ from pathlib import Path
 from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QPixmapCache
+from PyQt6.QtCore import QDateTime, QPersistentModelIndex, QTimer, pyqtSignal
+from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QApplication,
@@ -126,6 +126,7 @@ class AppCore(QApplication):
         self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
+        self._global_idx = QPersistentModelIndex()
 
         if not self.qsettings.allKeys():
             print("Empty Settings: First initialisation")
@@ -143,7 +144,6 @@ class AppCore(QApplication):
 
         self.init_display_mode = WinApi.get_display_mode()
         print(f"Initial display mode: {self.init_display_mode}")
-        QPixmapCache.setCacheLimit(50000)
 
         self.aboutToQuit.connect(self.on_quitting)
         self.screenAdded.connect(self.on_screen_changed)
@@ -489,6 +489,21 @@ class AppCore(QApplication):
             return
 
         self.init_display_mode = WinApi.get_display_mode()
+
+    @staticmethod
+    def set_global_index(idx: QPersistentModelIndex) -> bool:
+        """Sets a global index that can be accessed by all children."""
+        inst: AppCore = AppCore.instance()
+        if inst:
+            inst._global_idx = idx
+            return True
+        return False
+
+    @staticmethod
+    def global_index() -> QPersistentModelIndex:
+        inst: AppCore = AppCore.instance()
+        if inst:
+            return inst._global_idx
 
     def db(self) -> QSqlDatabase | None:
         return self._db

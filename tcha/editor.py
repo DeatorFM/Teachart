@@ -7,6 +7,7 @@ from PyQt6.QtCore import (
     QDateTime,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QRunnable,
     Qt,
     QThreadPool,
@@ -72,6 +73,7 @@ class Editor(QMainWindow):
         [AppAction], [AppAction, Path], [AppAction, QWidget]
     )
     fileSaved = pyqtSignal(Path)
+    indexCopied = pyqtSignal(QPersistentModelIndex)
     presenterActivated = pyqtSignal(QGraphicsScene, QScreen)  # Scene, Target Screen
     presenterClosed = pyqtSignal()
 
@@ -192,7 +194,7 @@ class Editor(QMainWindow):
         self.ui.ac_vmode_row.toggled.connect(
             lambda: self.table.set_view_mode(TableViewMode.SingleRow)
         )
-        self.ui.ac_goto_active.triggered(self.table.scroll_to_current())
+        self.ui.ac_goto_active.triggered.connect(self.table.scroll_to_current)
         self.ui.ac_about.triggered.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )

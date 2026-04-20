@@ -14,6 +14,7 @@ from PyQt6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QPoint,
     QSize,
     QSortFilterProxyModel,
