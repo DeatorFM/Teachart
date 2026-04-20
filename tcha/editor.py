@@ -192,6 +192,7 @@ class Editor(QMainWindow):
         self.ui.ac_vmode_row.toggled.connect(
             lambda: self.table.set_view_mode(TableViewMode.SingleRow)
         )
+        self.ui.ac_goto_active.triggered(self.table.scroll_to_current())
         self.ui.ac_about.triggered.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )
@@ -492,6 +493,7 @@ class Editor(QMainWindow):
             self.ui.menu_elements.setEnabled(True)
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.has_index_copied())
+            self.ui.ac_goto_active.setEnabled(True)
             editor.connect_toolsets(self.toolsets)
             editor.currentIndexChanged.connect(self.on_current_changed)
             # editor.elementActivated.connect(self.on_element_activated)
@@ -501,6 +503,7 @@ class Editor(QMainWindow):
         self.ui.menu_elements.setDisabled(True)
         self.ui.ac_copy.setEnabled(False)
         self.ui.ac_paste.setEnabled(False)
+        self.ui.ac_goto_active.setEnabled(False)
         for toolset in self.toolsets.values():
             toolset.setVisible(False)
 
