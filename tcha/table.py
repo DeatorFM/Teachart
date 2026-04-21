@@ -32,6 +32,7 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
     QScreen,
+    QWheelEvent,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -1086,6 +1087,14 @@ class Table(QTableView):
         super().dropEvent(event)
         self.setCurrentIndex(QModelIndex())
 
+    def wheelEvent(self, ev: QWheelEvent):
+        if self._view_mode == TableViewMode.SingleRow:
+            if ev.angleDelta() >= 15:
+                self.scrollBy(-1)
+            elif ev.angleDelta() <= -15:
+                self.scrollBy(1)
+        super().wheelEvent(ev)
+
     def show_context_menu(self, position):
         index = self.indexAt(position)
         if not index.isValid():
@@ -1392,6 +1401,3 @@ class PresenterView(QDialog):
             self.setGeometry(target_screen.geometry())
             super().showFullScreen()
             self.rescale()
-
-    def wheelEvent(self, a0):
-        return super().wheelEvent(a0)
