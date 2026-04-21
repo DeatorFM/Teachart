@@ -740,7 +740,9 @@ class Table(QTableView):
 
     def scroll_to_current(self) -> None:
         if self.currentIndex().isValid():
-            self.scroll_to_index(self.currentIndex().row(), self.currentIndex().column())
+            self.scroll_to_index(
+                self.currentIndex().row(), self.currentIndex().column()
+            )
 
     # View mode handling
 

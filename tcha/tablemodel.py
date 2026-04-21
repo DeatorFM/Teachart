@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import enum
 from copy import deepcopy
 from dataclasses import dataclass, field
+from random import getrandbits
 from typing import Any, Self, Sequence
 
 from PyQt6.QtCore import (
@@ -28,6 +28,7 @@ from PyQt6.QtGui import QFont
 from shiboken6 import isValid
 
 from nativeelements.baseelement import BaseElementModel
+from tcha.core import AppCore
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
 
@@ -243,9 +244,9 @@ class CellModel(QAbstractListModel):
 
         # Write source info
         index = indexes[0]
-        stream.writeInt64(id(self.cell_index.model()))  # Source model
+        AppCore.set_shared_index(QPersistentModelIndex(self.cell_index))
+        stream.writeInt16(self.cell_index.model().model_id)  # Source model
         stream.writeInt8(1)  # Source Level
-        stream.writeInt32(self.cell_index.data().num)  # Cell item number
         stream.writeInt32(index.data().number)  # Model number
         stream.writeInt8(0)  # Delete source?
         print(
@@ -255,6 +256,25 @@ class CellModel(QAbstractListModel):
         mimedata.setData("application/x-teachart", encoded_data)
         return mimedata
 
+    def canDropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ):
+        if action == Qt.DropAction.IgnoreAction:
+            return False
+
+        if not data.hasFormat("application/x-teachart"):
+            return False
+
+        if not parent.isValid():
+            return False
+
+        return True
+
     def dropMimeData(
         self,
         data: QMimeData,
@@ -263,25 +283,21 @@ class CellModel(QAbstractListModel):
         column: int,
         parent: QModelIndex,
     ):
-        if not data.hasFormat("application/x-qabstractitemmodeldatalist"):
+        if not data.hasFormat("application/x-teachart"):
             return False
 
-        encoded_data = data.data("application/x-qabstractitemmodeldatalist")
+        encoded_data = data.data("application/x-teachart")
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-        source_table_row = stream.readInt32()
-        source_table_column = stream.readInt32()
-        source_item_row = stream.readInt32()
-        source_type = stream.readQString()
+        model_id = stream.readInt64()  # Source model must have the same pointer
+        source_lvl = stream.readInt8()  # Level
+        source_model_num = stream.readInt32()  # Model number
 
-        print(source_type)
-        if source_type != "CellEditor":
+        if source_lvl != 1:
             return False
 
-        # Handle internal moves
-        if (source_table_row, source_table_column) == self.cell_index:
-            print("Dropped from", source_item_row, "to", row)
-            return self.moveRows(QModelIndex(), source_item_row, 1, QModelIndex(), row)
+        if action == Qt.DropAction.MoveAction:
+            return True
 
         return False
 
@@ -387,11 +403,18 @@ class TableModel(QAbstractTableModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._internal_counter = 0
+        self._model_id = int(getrandbits(16))
         self._data: list[list[CellItem]] = []
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
             Qt.Orientation.Vertical: [],
         }
+
+        print(f"Model has id: {self._model_id}")
+
+    @property
+    def model_id(self) -> int:
+        return self._model_id
 
     def is_valid(self) -> bool:
         return (
@@ -684,11 +707,10 @@ class TableModel(QAbstractTableModel):
 
         # Write source info
         index = indexes[0]
+        AppCore.set_shared_index(QPersistentModelIndex(index))
         if index.isValid():
-            stream.writeInt64(id(self))  # Model pointer
+            stream.writeInt16(self._model_id)  # Model id
             stream.writeInt8(0)  # Level
-            stream.writeInt32(index.data().num)  # CellItem number
-            stream.writeInt32(0)  # Model number
             print(
                 f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
             )
@@ -738,33 +760,39 @@ class TableModel(QAbstractTableModel):
             encoded_data = data.data("application/x-teachart")
             stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-            model_ptr = stream.readInt64()  # Source model must have the same pointer
+            model_id = stream.readInt64()  # Source model must have the same pointer
             source_lvl = stream.readInt8()  # Level
-            source_item_num = stream.readInt32()
-            source_model_num = stream.readInt32()
+            source_model_num = stream.readInt32()  # Model number
 
-            if model_ptr != id(self):
+            shared_idx = AppCore.shared_index()
+            if not shared_idx.isValid():
                 return False
+            print(
+                f"Found shared index from model {model_id} with row {shared_idx.row()} and column {shared_idx.column()}"
+            )
 
             if action == Qt.DropAction.MoveAction:
                 if source_lvl == 0:  # Cell has been moved
                     # Handle cell swapping
-                    source_index = self.index_for_num(source_item_num)
-                    self.swap_items(source_index, parent)
-                    return True
+                    if model_id == self.model_id:
+                        self.swap_items(shared_idx, parent)
+                        return True
+                    return False
 
                 if source_lvl == 1:  # Cell element has been moved
                     target_cell = self._data[parent.row()][parent.column()]
-                    if parent.isValid() and source_item_num == parent.data().num:
+                    if (
+                        parent.isValid()
+                        and shared_idx == parent
+                        and model_id == self.model_id
+                    ):
                         # Internal cell move
-                        return target_cell.dropMimeData(
-                            data, action, row, column, parent
-                        )
+                        cmodel = CellModel(target_cell, shared_idx)
+                        return cmodel.dropMimeData(data, action, row, column, parent)
 
                     else:
                         # Move between cells
-                        source_cell = self.data(self.index_for_num(source_item_num))
-
+                        source_cell: CellItem = shared_idx.data()
                         if len(source_cell) > 0:
                             model = source_cell.pop(
                                 source_cell.row_for_num(source_model_num)
@@ -776,9 +804,8 @@ class TableModel(QAbstractTableModel):
                             return False
 
             elif action == Qt.DropAction.CopyAction:
-                source_index = self.index_for_num(source_item_num)
-                source_item = self.data(source_index)
-                if source_lvl == 0:
+                source_item: CellItem = shared_idx.data()
+                if source_lvl == 0:  # Cell is copied
                     if parent.data():
                         dialog = PasteConfirmation()
                         result = dialog.exec()
@@ -786,7 +813,7 @@ class TableModel(QAbstractTableModel):
                         if result == PasteConfirmation.DialogCode.Accepted:
                             if dialog.selected_paste_method() == 1:  # Replace cell
                                 print("Replacing cell")
-                                if parent != source_index:
+                                if parent != shared_idx or model_id != self.model_id:
                                     new_item = CellItem(
                                         self.headerData(
                                             parent.column(),
@@ -810,7 +837,7 @@ class TableModel(QAbstractTableModel):
                         source_item.copy_to(destination_cell)
                         return True
 
-                if source_lvl == 1:
+                if source_lvl == 1:  # Model is copied
                     destination_cell: CellItem = parent.data()
                     model: BaseElementModel = source_item[
                         source_item.row_for_num(source_model_num)

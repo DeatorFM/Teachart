@@ -126,7 +126,6 @@ class AppCore(QApplication):
         self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
-        self._global_idx = QPersistentModelIndex()
 
         if not self.qsettings.allKeys():
             print("Empty Settings: First initialisation")
@@ -144,6 +143,7 @@ class AppCore(QApplication):
 
         self.init_display_mode = WinApi.get_display_mode()
         print(f"Initial display mode: {self.init_display_mode}")
+        self.setProperty("globalIndex", QPersistentModelIndex())
 
         self.aboutToQuit.connect(self.on_quitting)
         self.screenAdded.connect(self.on_screen_changed)
@@ -491,19 +491,19 @@ class AppCore(QApplication):
         self.init_display_mode = WinApi.get_display_mode()
 
     @staticmethod
-    def set_global_index(idx: QPersistentModelIndex) -> bool:
-        """Sets a global index that can be accessed by all children."""
+    def set_shared_index(idx: QPersistentModelIndex) -> bool:
+        """Sets a persistent index that can be shared across different models"""
         inst: AppCore = AppCore.instance()
         if inst:
-            inst._global_idx = idx
+            inst.setProperty("globalIndex", idx)
             return True
         return False
 
     @staticmethod
-    def global_index() -> QPersistentModelIndex:
+    def shared_index() -> QPersistentModelIndex:
         inst: AppCore = AppCore.instance()
         if inst:
-            return inst._global_idx
+            return inst.property("globalIndex")
 
     def db(self) -> QSqlDatabase | None:
         return self._db
