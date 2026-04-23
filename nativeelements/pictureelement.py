@@ -564,7 +564,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
         action = QAction(
             SvgIcon("resources/icons/ic_fileImage.svg"), tr("Picture"), parent
         )
-        action.setData("PictureElement")
+        action.setData(PictureElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
 

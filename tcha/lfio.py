@@ -195,7 +195,6 @@ class LessonFile:
         """Returns ResourceContainer of the loaded file if file loaded."""
         try:
             qfile = self.xml("resources")
-            qfile.open(QFile.OpenModeFlag.ReadOnly)
 
             container = ResourceContainer(parent)
             reader = QXmlStreamReader(qfile)
@@ -243,7 +242,7 @@ class LessonFile:
             )
             return None
 
-    def get_table(self, rescont: ResourceContainer) -> TableModel | None:
+    def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
         try:
             qfile = self.xml()
@@ -482,15 +481,69 @@ class XmlReader:
         return None
 
     @staticmethod
-    def read_table(
+    def read_resources(
         xml_file: QFile,
         rescont: ResourceContainer,
-        res_path: str,
+        temppath: str,
+        error_handler: ErrorLogger,
+        progress_logger: ProgressLogger = ProgressLogger(),
+    ) -> None:
+        """Reads resources of an xml file and writes it to the container"""
+        try:
+            reader = QXmlStreamReader(xml_file)
+            count = 25
+            factor = 1.0
+
+            while not reader.atEnd():
+                token = reader.readNext()
+
+                if token == QXmlStreamReader.TokenType.StartElement:
+                    if reader.name() == "resources":
+                        attrs = reader.attributes()
+                        count = int(attrs.value("count"))
+                        factor = count / 25
+
+                    if reader.name() == "res":
+                        attrs = reader.attributes()
+                        path: str = osp.join(
+                            temppath, "resources", str(attrs.value("file"))
+                        )
+                        rescont.save(ResourceType[str(attrs.value("type"))], path)
+                        progress_logger.raise_progress(factor)
+
+            if reader.error().value:
+                error_handler.log(
+                    QtError(reader.error(), reader.errorString(), True),
+                    f"There was an error while parsing the xml. Details: {reader.errorString()}",
+                )
+                xml_file.close()
+                # Total: 25%
+
+        except (ValueError, KeyError) as e:
+            e.critical = True
+            error_handler.log(
+                e,
+                "Resource definition has invalid value. This is possibly due to an unknown or invalid resource type that is specified in the definitions.",
+            )
+            return None
+
+        except FileNotFoundError as e:
+            e.critical = True
+            error_handler.log(
+                e, f"The defined file at '{e.filename}' could not be found."
+            )
+            return None
+
+    @staticmethod
+    def read_table(
+        struct_file: QFile,
+        res_file: QFile,
+        temppath: str,
         error_handler: ErrorLogger,
         progress_logger: ProgressLogger = ProgressLogger(),
     ) -> TableModel:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
-        reader = QXmlStreamReader(xml_file)
+        reader = QXmlStreamReader(struct_file)
 
         row = 0
         column = 0
@@ -510,6 +563,8 @@ class XmlReader:
         while not reader.atEnd():
             token = reader.readNext()
 
+            # Initialise table
+
             if token == QXmlStreamReader.TokenType.StartElement:
                 if reader.name() == "table":
                     attrs = reader.attributes()
@@ -523,7 +578,16 @@ class XmlReader:
                         if def_row_count == 0 or def_column_count == 0:
                             raise ValueError
 
-                        tmodel = TableModel.new(def_row_count, def_column_count)
+                        tmodel: TableModel = TableModel.new(
+                            def_row_count, def_column_count
+                        )
+                        XmlReader.read_resources(
+                            res_file,
+                            tmodel.rescont,
+                            temppath,
+                            error_handler,
+                            progress_logger,
+                        )
 
                         total_progress = def_row_count + def_column_count * 2
                         factor = 70 / total_progress
@@ -539,6 +603,10 @@ class XmlReader:
                         )
                         return TableModel.new(0, 0)
                     continue
+
+                # Write Resource Container
+
+                # Write Table
 
                 if in_table:
                     match reader.name():

@@ -24,11 +24,12 @@ from PyQt6.QtCore import (
     QXmlStreamWriter,
     pyqtSignal,
 )
-from PyQt6.QtGui import QFont
-from shiboken6 import isValid
+from PyQt6.QtGui import QFont, QGuiApplication
 
-from nativeelements.baseelement import BaseElementModel
+from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
+from tcha.consts import ResourceFlag
 from tcha.core import AppCore
+from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
 
@@ -168,11 +169,15 @@ class CellModel(QAbstractListModel):
     ) -> None:
         super().__init__(parent)
         self._data: CellItem[BaseElementModel] = data
-        self.cell_index = index
+        self.cell_index: QModelIndex = index
 
     @property
     def height(self) -> int:
         return self._cached_size.height()
+
+    @property
+    def tablemodel(self) -> TableModel:
+        return self.cell_index.model()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -181,7 +186,42 @@ class CellModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
         self.endInsertRows()
-        print(f"Model of type {model} added.")
+
+    def create_model(
+        self, definition: BaseElementDefinitions
+    ) -> BaseElementDefinitions:
+        if definition:
+            rescont = self.tablemodel.rescont
+
+            match definition.resource_flag():
+                case ResourceFlag.NoResource:
+                    resobj = rescont.create(definition.type())
+
+                case ResourceFlag.HasResource:
+                    resource = definition.get_file()
+                    if resource:
+                        resobj = rescont.save(definition.type(), resource)
+                        assert isinstance(resobj, ResourceObject)
+                    else:
+                        return
+
+                case ResourceFlag.Optional:
+                    resource = definition.get_file()
+                    if resource:
+                        resobj = rescont.save(definition.type(), resource)
+                        assert isinstance(resobj, ResourceObject)
+                    else:
+                        resobj = rescont.create(definition.type())
+
+            model = definition.create_model(resobj)
+            self.add_model(model)
+
+    def create_from_clipboard(self, definition: BaseElementDefinitions | None) -> None:
+        if definition:
+            mime_data = QGuiApplication.clipboard().mimeData()
+            model = definition.model_from_mime_data(self.rescont, mime_data)
+            if model:
+                self.add_model(model)
 
     def clear(self) -> None:
         while self._data:
@@ -411,6 +451,7 @@ class TableModel(QAbstractTableModel):
         }
 
         print(f"Model has id: {self._model_id}")
+        self._rescont = ResourceContainer(self)
 
     @property
     def model_id(self) -> int:
@@ -423,6 +464,10 @@ class TableModel(QAbstractTableModel):
             and len(self._header_data[Qt.Orientation.Horizontal]) == self.columnCount()
             and len(self._header_data[Qt.Orientation.Vertical]) == self.rowCount()
         )
+
+    @property
+    def rescont(self) -> ResourceContainer:
+        return self._rescont
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)

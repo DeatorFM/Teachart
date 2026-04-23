@@ -507,7 +507,7 @@ class Ui_Editor(object):
 
         self.ac_from_clipboard = QAction(parent=MainWindow)
         self.ac_from_clipboard.setObjectName("ac_from_clipboard")
-        self.ac_from_clipboard.setProperty("is_element_action", False)
+        self.ac_from_clipboard.setData(None)
         self.elem_menu.addAction(self.ac_from_clipboard)
 
         self.ac_add_to_cell.setMenu(self.elem_menu)

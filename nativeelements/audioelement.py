@@ -772,7 +772,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
         action = QAction(
             SvgIcon("resources/icons/ic_fileAudio.svg"), tr("Audio File"), parent
         )
-        action.setData("AudioElement")
+        action.setData(AudioElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
 

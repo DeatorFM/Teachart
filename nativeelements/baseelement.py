@@ -156,6 +156,11 @@ class BaseElementModel(QObject):
     def attrs(self) -> tuple[str]:
         return tuple()
 
+    @staticmethod
+    @abstractmethod
+    def definitions() -> BaseElementDefinitions:
+        return BaseElementDefinitions
+
 
 class BaseElementEditor(QFrame):
     __metaclass__ = ABCMeta
@@ -259,3 +264,9 @@ class BaseElementDefinitions:
         rescont: ResourceContainer, mime_data: QMimeData
     ) -> BaseElementModel | None:
         return None
+
+    def make_copy(
+        rescont: ResourceContainer, original: BaseElementModel
+    ) -> BaseElementModel:
+        """Make a copy of an element model copying its Resourceobject with the given ResourceContainer."""
+        return BaseElementModel

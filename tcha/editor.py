@@ -35,7 +35,7 @@ from tcha.lfio import LessonFile, ProgressLogger
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from tcha.table import CellEditor, Table
-from tcha.tablemodel import TableModel
+from tcha.tablemodel import CellModel, TableModel
 from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
 
@@ -95,7 +95,6 @@ class Editor(QMainWindow):
 
         self.lessonfile = lessonfile
         self.lesson: Lesson
-        self.rescont: ResourceContainer
 
         self.initialise_editor()
 
@@ -128,14 +127,16 @@ class Editor(QMainWindow):
             self.set_lesson(
                 Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime())
             )
-            self.rescont = ResourceContainer()
-            self.set_table(2, 2)
+            tablemodel = TableModel.new(2, 2)
+            tablemodel.set_rescont(self.rescont)
+            self.table.setModel(tablemodel)
             self.ui.cb_course.setCurrentIndex(0)
             self.setWindowTitle(f"{tr('New Document')} - Teachart {debug_tag}")
 
         elif self.lessonfile.mode == "r":
-            self.rescont = self.lessonfile.get_resource_container()
+            # TODO: Integrate ResourceContainer into TableModel
             tablemodel = self.lessonfile.get_table(self.rescont)
+            tablemodel.set_rescont(self.rescont)
             self.ui.table.setModel(tablemodel)
             self.check_for_schedule(self.lessonfile.file_id)
             self.set_lesson(self.lessonfile.get_lesson())
@@ -225,13 +226,20 @@ class Editor(QMainWindow):
                 self.ui.table.currentIndex().column() + 1
             )
         )
-        self.ui.ac_rmv_row.triggered.connect(lambda: self.table.remove_row())
-        self.ui.ac_rmv_column.triggered.connect(lambda: self.table.remove_column())
-        self.ui.menu_elements.triggered.connect(self.on_element_action)
+        self.ui.ac_rmv_row.triggered.connect(
+            lambda: self.table.remove_row()
+        )  # Move to model
+        self.ui.ac_rmv_column.triggered.connect(
+            lambda: self.table.remove_column()
+        )  # Move to model
 
-        self.ui.ac_del_element.triggered.connect(self.remove_element)
-        self.ui.ac_mov_up.triggered.connect(self.move_element_up)
-        self.ui.ac_mov_dwn.triggered.connect(self.move_element_down)
+        self.ui.ac_del_element.triggered.connect(self.remove_element)  # Move to model
+        self.ui.ac_mov_up.triggered.connect(
+            self.move_element_up
+        )  # Move to table or model
+        self.ui.ac_mov_dwn.triggered.connect(
+            self.move_element_down
+        )  # Move to table or model
 
         self.ui.bg_tools.buttonClicked.connect(self.ui.canvas.set_tool)
         self.ui.bg_colors.buttonClicked.connect(self.ui.canvas.set_color)
@@ -473,11 +481,6 @@ class Editor(QMainWindow):
     def table(self) -> Table:
         return self.ui.table
 
-    @pyqtSlot(int, int)
-    def set_table(self, rows: int, columns: int) -> None:
-        model = TableModel.new(rows, columns)
-        self.ui.table.setModel(model)
-
     @property
     def tablemodel(self) -> TableModel:
         return self.ui.table.model()
@@ -496,8 +499,17 @@ class Editor(QMainWindow):
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.has_index_copied())
             self.ui.ac_goto_active.setEnabled(True)
+
             editor.connect_toolsets(self.toolsets)
             editor.currentIndexChanged.connect(self.on_current_changed)
+
+            emodel: CellModel = editor.model()
+            self.ui.menu_elements.triggered.connect(
+                lambda x: emodel.create_model(x.data())
+            )
+            self.ui.ac_from_clipboard.triggered(
+                lambda: emodel.create_from_clipboard(self.def_for_mime_type)
+            )
             # editor.elementActivated.connect(self.on_element_activated)
 
     def on_cell_closed(self) -> None:
@@ -506,12 +518,13 @@ class Editor(QMainWindow):
         self.ui.ac_copy.setEnabled(False)
         self.ui.ac_paste.setEnabled(False)
         self.ui.ac_goto_active.setEnabled(False)
+        self.ui.menu_elements.disconnect()
+        self.ui.ac_from_clipboard.disconnect()
         for toolset in self.toolsets.values():
             toolset.setVisible(False)
 
     @pyqtSlot(QAction)
     def on_element_action(self, action: QAction) -> None:
-        print("Element Action!")
         if action.property("is_element_action"):
             self.add_element(action)
         else:
@@ -568,7 +581,7 @@ class Editor(QMainWindow):
 
     def add_element(self, action: QAction) -> None:
         print("Init adding model")
-        definition = self.element_definitions[action.data()]
+        definition = action.data()
 
         if self.table.editor:
             match definition.resource_flag():
@@ -614,7 +627,7 @@ class Editor(QMainWindow):
             mime = clipboard.mimeData()
             for definition in self.element_definitions.values():
                 if definition.supports_mime_data(mime):
-                    self.def_for_mime_type = definition.name()
+                    self.def_for_mime_type = definition
                     self.ui.ac_from_clipboard.setEnabled(True)
                     print(
                         f"Supported definition for current mime types: {self.def_for_mime_type}"

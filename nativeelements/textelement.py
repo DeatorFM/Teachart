@@ -1193,7 +1193,7 @@ class TextElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def action(parent) -> QAction:
         action = QAction(QIcon("resources/icons/ic_text.svg"), tr("Text"), parent)
-        action.setData("TextElement")
+        action.setData(TextElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
 
