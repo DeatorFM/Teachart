@@ -1148,10 +1148,10 @@ class Table(QTableView):
 
     def wheelEvent(self, ev: QWheelEvent):
         if self._view_mode == TableViewMode.SingleRow:
-            if ev.angleDelta() >= 15:
-                self.scrollBy(-1)
-            elif ev.angleDelta() <= -15:
-                self.scrollBy(1)
+            if ev.angleDelta().y() >= 15:
+                self.scroll_by(-1)
+            elif ev.angleDelta().y() <= -15:
+                self.scroll_by(1)
         super().wheelEvent(ev)
 
     def show_context_menu(self, position):
