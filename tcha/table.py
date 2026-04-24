@@ -92,7 +92,7 @@ class CellEditor(QListView):
         self.setAutoFillBackground(True)
 
         self.setDragEnabled(True)
-        self.setDragDropMode(QListView.DragDropMode.InternalMove)
+        self.setDragDropMode(QListView.DragDropMode.DragDrop)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
@@ -241,14 +241,12 @@ class CellEditor(QListView):
 
     def dropEvent(self, event: QDropEvent):
         print("Drop event")
+        print("Drop event in CellEditor")
         if event.source() == self:
             event.setDropAction(Qt.DropAction.MoveAction)
             event.accept()
 
-            global_pos = self.mapToGlobal(event.position().toPoint())
-            cell_pos = self.mapFromGlobal(global_pos)
-
-            drop_index = self.indexAt(cell_pos)
+            drop_index = self.indexAt(event.position().toPoint())  # ✓ Fixed
             print("Dropped index at", drop_index.row())
             drop_row = (
                 drop_index.row() if drop_index.isValid() else self.model().rowCount()
@@ -257,6 +255,25 @@ class CellEditor(QListView):
             self.model().dropMimeData(
                 event.mimeData(), event.dropAction(), drop_row, 0, QModelIndex()
             )
+        else:
+            event.ignore()
+
+        # if event.source() == self:
+        #     event.setDropAction(Qt.DropAction.MoveAction)
+        #     event.accept()
+
+        #     global_pos = self.mapToGlobal(event.position().toPoint())
+        #     cell_pos = self.mapFromGlobal(global_pos)
+
+        #     drop_index = self.indexAt(cell_pos)
+        #     print("Dropped index at", drop_index.row())
+        #     drop_row = (
+        #         drop_index.row() if drop_index.isValid() else self.model().rowCount()
+        #     )
+
+        #     self.model().dropMimeData(
+        #         event.mimeData(), event.dropAction(), drop_row, 0, QModelIndex()
+        #     )
 
     def itemDelegateForIndex(self, index: QModelIndex) -> QStyledItemDelegate | None:
         model = index.data()
@@ -351,7 +368,6 @@ class CellDelegate(QStyledItemDelegate):
             lambda: self.update_cell_geometry(option.rect, index)
         )
         editor.setFocus()
-        self.editorOpened.emit(editor)
         self._open_editor_index = index
         return editor
 
@@ -368,6 +384,7 @@ class CellDelegate(QStyledItemDelegate):
         if editor:
             model = CellModel(index.data(), index)
             editor.setModel(model)
+            self.editorOpened.emit(editor)
             if self.element_selection:
                 selected = model.index(self.last_idx.erow, 0)
                 editor.edit(selected)
@@ -1060,32 +1077,74 @@ class Table(QTableView):
         return QModelIndex()
 
     def dropEvent(self, event: QDropEvent):
+        drop_index = self.indexAt(event.position().toPoint())
+
         if self._editor:
+            editor_index = self.currentIndex()  # Cell being edited
             editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
             editor_rect = QRect(editor_rect, self._editor.size())
-
-            # Get the drop position in global coordinates
             drop_position = self.mapToGlobal(event.position().toPoint())
 
-            # Check if the editor's rectangle contains the drop position
-            if editor_rect.contains(drop_position):
-                print("Disallowed drop in table")
-                drop_position = self._editor.mapFromGlobal(
-                    self.mapToGlobal(event.position())
-                )
+            # Dropping within the same cell (internal reordering)
+            if editor_rect.contains(drop_position) and drop_index == editor_index:
+                drop_pos_local = self._editor.mapFromGlobal(drop_position)
                 editor_event = QDropEvent(
-                    drop_position,
+                    drop_pos_local.toPointF(),
                     event.dropAction(),
                     event.mimeData(),
                     event.buttons(),
                     event.modifiers(),
                 )
                 self._editor.dropEvent(editor_event)
-                event.ignore()
-                self.setCurrentIndex(QModelIndex())
+                event.accept()  # ✓ Fixed: was event.ignore()
                 return
-        super().dropEvent(event)
-        self.setCurrentIndex(QModelIndex())
+
+            # Dropping on different cell - close editor and handle below
+            if drop_index.isValid() and drop_index != editor_index:
+                self.setCurrentIndex(QModelIndex())  # Close editor
+
+        # Handle drops at table level (cell swaps, element moves between cells)
+        if drop_index.isValid():
+            success = self.model().dropMimeData(
+                event.mimeData(),
+                event.dropAction(),
+                drop_index.row(),
+                drop_index.column(),
+                drop_index,
+            )
+            if success:
+                event.accept()
+                self.changeMade.emit()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+        # if self._editor:
+        #     editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
+        #     editor_rect = QRect(editor_rect, self._editor.size())
+
+        #     # Get the drop position in global coordinates
+        #     drop_position = self.mapToGlobal(event.position().toPoint())
+
+        #     # Check if the editor's rectangle contains the drop position
+        #     if editor_rect.contains(drop_position):
+        #         print("Disallowed drop in table")
+        #         drop_position = self._editor.mapFromGlobal(
+        #             self.mapToGlobal(event.position())
+        #         )
+        #         editor_event = QDropEvent(
+        #             drop_position,
+        #             event.dropAction(),
+        #             event.mimeData(),
+        #             event.buttons(),
+        #             event.modifiers(),
+        #         )
+        #         self._editor.dropEvent(editor_event)
+        #         event.ignore()
+        #         self.setCurrentIndex(QModelIndex())
+        #         return
+        # super().dropEvent(event)
 
     def wheelEvent(self, ev: QWheelEvent):
         if self._view_mode == TableViewMode.SingleRow:

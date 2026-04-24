@@ -95,7 +95,6 @@ class LessonFile:
     def save(
         self,
         lesson: Lesson,
-        rescont: ResourceContainer,
         tablemodel: TableModel,
         path: str | None = None,
     ) -> bool:
@@ -128,14 +127,14 @@ class LessonFile:
         chksums.append(xml_chksum)
 
         # Copy the resources into file or create new file if necessary
-        for obj in rescont.contents():
+        for obj in tablemodel.rescont.contents():
             if not obj.data:
                 self._copy(obj)
             else:
                 self._write_new(obj)
 
         # Write resources definitions into seperate xml file
-        res_xml = XmlWriter.write_res_xml(rescont)
+        res_xml = XmlWriter.write_res_xml(tablemodel.rescont)
         with self._f.open("resources.xml", "w") as res_f:
             res_f.write(res_xml.data())
 
@@ -191,71 +190,73 @@ class LessonFile:
             raise QtError(qfile.error(), qfile.errorString(), True)
         raise FileNotFoundError
 
-    def get_resource_container(self, parent=None) -> ResourceContainer:
-        """Returns ResourceContainer of the loaded file if file loaded."""
-        try:
-            qfile = self.xml("resources")
+    # def get_resource_container(self, parent=None) -> ResourceContainer:
+    #     """Returns ResourceContainer of the loaded file if file loaded."""
+    #     try:
+    #         qfile = self.xml("resources")
 
-            container = ResourceContainer(parent)
-            reader = QXmlStreamReader(qfile)
-            count = 25
-            factor = 1.0
+    #         container = ResourceContainer(parent)
+    #         reader = QXmlStreamReader(qfile)
+    #         count = 25
+    #         factor = 1.0
 
-            while not reader.atEnd():
-                token = reader.readNext()
+    #         while not reader.atEnd():
+    #             token = reader.readNext()
 
-                if token == QXmlStreamReader.TokenType.StartElement:
-                    if reader.name() == "resources":
-                        attrs = reader.attributes()
-                        count = int(attrs.value("count"))
-                        factor = count / 25
+    #             if token == QXmlStreamReader.TokenType.StartElement:
+    #                 if reader.name() == "resources":
+    #                     attrs = reader.attributes()
+    #                     count = int(attrs.value("count"))
+    #                     factor = count / 25
 
-                    if reader.name() == "res":
-                        attrs = reader.attributes()
-                        path: str = osp.join(
-                            self.temppath, "resources", str(attrs.value("file"))
-                        )
-                        container.save(ResourceType[str(attrs.value("type"))], path)
-                        self._progress.raise_progress(factor)
+    #                 if reader.name() == "res":
+    #                     attrs = reader.attributes()
+    #                     path: str = osp.join(
+    #                         self.temppath, "resources", str(attrs.value("file"))
+    #                     )
+    #                     container.save(ResourceType[str(attrs.value("type"))], path)
+    #                     self._progress.raise_progress(factor)
 
-            if reader.error().value:
-                self._error_handler.log(
-                    QtError(reader.error(), reader.errorString(), True),
-                    f"There was an error while parsing the xml. Details: {reader.errorString()}",
-                )
-            qfile.close()
-            return container
-            # Total: 25%
+    #         if reader.error().value:
+    #             self._error_handler.log(
+    #                 QtError(reader.error(), reader.errorString(), True),
+    #                 f"There was an error while parsing the xml. Details: {reader.errorString()}",
+    #             )
+    #         qfile.close()
+    #         return container
+    #         # Total: 25%
 
-        except (ValueError, KeyError) as e:
-            e.critical = True
-            self._error_handler.log(
-                e,
-                "Resource definition has invalid value. This is possibly due to an unknown or invalid resource type that is specified in the definitions.",
-            )
-            return None
+    #     except (ValueError, KeyError) as e:
+    #         e.critical = True
+    #         self._error_handler.log(
+    #             e,
+    #             "Resource definition has invalid value. This is possibly due to an unknown or invalid resource type that is specified in the definitions.",
+    #         )
+    #         return None
 
-        except FileNotFoundError as e:
-            e.critical = True
-            self._error_handler.log(
-                e, f"The defined file at '{e.filename}' could not be found."
-            )
-            return None
+    #     except FileNotFoundError as e:
+    #         e.critical = True
+    #         self._error_handler.log(
+    #             e, f"The defined file at '{e.filename}' could not be found."
+    #         )
+    #         return None
 
     def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
         try:
-            qfile = self.xml()
+            struct_file = self.xml()
+            res_file = self.xml("resources")
             table = XmlReader.read_table(
-                qfile,
-                rescont,
-                osp.join(self.temppath, "resources"),
+                struct_file,
+                res_file,
+                osp.join(self.temppath),
                 self._error_handler,
                 self._progress,
             )
             remaining = 100 - self._progress.progress
             self._progress.raise_progress(remaining)
-            qfile.close()
+            struct_file.close()
+            res_file.close()
 
             return table
 
@@ -581,6 +582,7 @@ class XmlReader:
                         tmodel: TableModel = TableModel.new(
                             def_row_count, def_column_count
                         )
+
                         XmlReader.read_resources(
                             res_file,
                             tmodel.rescont,
@@ -670,8 +672,12 @@ class XmlReader:
                                     model = XmlReader._element_model(
                                         str(attrs.value("type"))
                                     )
-                                    resobj = rescont.get(
-                                        osp.join(res_path, str(attrs.value("file")))
+                                    resobj = tmodel.rescont.get(
+                                        osp.join(
+                                            temppath,
+                                            "resources",
+                                            str(attrs.value("file")),
+                                        )
                                     )
                                     model = model.read(attrs, resobj)
                                     cell.append(model)

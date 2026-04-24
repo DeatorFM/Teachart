@@ -51,20 +51,18 @@ class SaveWorker(QRunnable):
         path: str | None,
         lessonfile: LessonFile,
         lesson: Lesson,
-        rescont: ResourceContainer,
         tablemodel: TableModel,
     ):
         super().__init__()
         self._path = path
         self._lf = lessonfile
         self._lesson = lesson
-        self._rescont = rescont
         self._tablemodel = tablemodel
         self.signals = SaveWorkerSignals()
 
     @pyqtSlot()
     def run(self):
-        self._lf.save(self._lesson, self._rescont, self._tablemodel, self._path)
+        self._lf.save(self._lesson, self._tablemodel, self._path)
         self.signals.finished.emit()
 
 
@@ -128,15 +126,12 @@ class Editor(QMainWindow):
                 Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime())
             )
             tablemodel = TableModel.new(2, 2)
-            tablemodel.set_rescont(self.rescont)
             self.table.setModel(tablemodel)
             self.ui.cb_course.setCurrentIndex(0)
             self.setWindowTitle(f"{tr('New Document')} - Teachart {debug_tag}")
 
         elif self.lessonfile.mode == "r":
-            # TODO: Integrate ResourceContainer into TableModel
-            tablemodel = self.lessonfile.get_table(self.rescont)
-            tablemodel.set_rescont(self.rescont)
+            tablemodel = self.lessonfile.get_table()
             self.ui.table.setModel(tablemodel)
             self.check_for_schedule(self.lessonfile.file_id)
             self.set_lesson(self.lessonfile.get_lesson())
@@ -329,9 +324,7 @@ class Editor(QMainWindow):
         """Saves the entire document to a serialised file."""
 
         def save(path: str) -> None:
-            worker = SaveWorker(
-                path, self.lessonfile, self.lesson, self.rescont, self.tablemodel
-            )
+            worker = SaveWorker(path, self.lessonfile, self.lesson, self.tablemodel)
             worker.signals.finished.connect(self._on_saving_finished)
             QThreadPool.globalInstance().start(worker)
 
@@ -507,7 +500,7 @@ class Editor(QMainWindow):
             self.ui.menu_elements.triggered.connect(
                 lambda x: emodel.create_model(x.data())
             )
-            self.ui.ac_from_clipboard.triggered(
+            self.ui.ac_from_clipboard.triggered.connect(
                 lambda: emodel.create_from_clipboard(self.def_for_mime_type)
             )
             # editor.elementActivated.connect(self.on_element_activated)
@@ -518,8 +511,13 @@ class Editor(QMainWindow):
         self.ui.ac_copy.setEnabled(False)
         self.ui.ac_paste.setEnabled(False)
         self.ui.ac_goto_active.setEnabled(False)
-        self.ui.menu_elements.disconnect()
-        self.ui.ac_from_clipboard.disconnect()
+
+        try:
+            self.ui.menu_elements.disconnect()
+            self.ui.ac_from_clipboard.disconnect()
+        except TypeError:
+            pass
+
         for toolset in self.toolsets.values():
             toolset.setVisible(False)
 
@@ -754,7 +752,7 @@ class Editor(QMainWindow):
 
     def open_resource_view(self) -> None:
         dialog = ResourceView(self)
-        dialog.setup_view(self.rescont)
+        dialog.setup_view(self.tablemodel.rescont)
         dialog.show()
 
     def open_table_inspector(self) -> None:

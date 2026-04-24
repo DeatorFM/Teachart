@@ -28,7 +28,6 @@ from PyQt6.QtGui import QFont, QGuiApplication
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from tcha.consts import ResourceFlag
-from tcha.core import AppCore
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
@@ -283,6 +282,8 @@ class CellModel(QAbstractListModel):
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
         # Write source info
+        from tcha.core import AppCore
+
         index = indexes[0]
         AppCore.set_shared_index(QPersistentModelIndex(self.cell_index))
         stream.writeInt16(self.cell_index.model().model_id)  # Source model
@@ -304,13 +305,18 @@ class CellModel(QAbstractListModel):
         column: int,
         parent: QModelIndex,
     ):
-        if action == Qt.DropAction.IgnoreAction:
+        if action == Qt.DropAction.IgnoreAction or action == Qt.DropAction.CopyAction:
             return False
 
         if not data.hasFormat("application/x-teachart"):
             return False
 
-        if not parent.isValid():
+        # For internal list reordering: invalid parent with valid row is OK
+        if not parent.isValid() and row < 0:
+            return False
+
+        # Don't allow dropping on the same position
+        if parent.isValid() and parent.row() == row:
             return False
 
         return True
@@ -323,21 +329,30 @@ class CellModel(QAbstractListModel):
         column: int,
         parent: QModelIndex,
     ):
-        if not data.hasFormat("application/x-teachart"):
-            return False
+        if self.canDropMimeData(data, action, row, column, parent):
+            encoded_data = data.data("application/x-teachart")
+            stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-        encoded_data = data.data("application/x-teachart")
-        stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+            model_id = stream.readInt16()  # Source model must have the same pointer
+            source_lvl = stream.readInt8()  # Level
+            source_model_num = stream.readInt32()  # Model number
 
-        model_id = stream.readInt64()  # Source model must have the same pointer
-        source_lvl = stream.readInt8()  # Level
-        source_model_num = stream.readInt32()  # Model number
+            if source_lvl != 1:
+                return False
 
-        if source_lvl != 1:
-            return False
+            source_idx = self.index_for_num(source_model_num)
 
-        if action == Qt.DropAction.MoveAction:
-            return True
+            if not parent.isValid():
+                if source_idx.row() != row:
+                    self.moveRow(QModelIndex(), source_idx.row(), QModelIndex(), row)
+                    return True
+
+            # For dropping onto an item (valid parent)
+            elif source_idx != parent:
+                self.moveRow(
+                    QModelIndex(), source_idx.row(), QModelIndex(), parent.row()
+                )
+                return True
 
         return False
 
@@ -443,7 +458,7 @@ class TableModel(QAbstractTableModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._internal_counter = 0
-        self._model_id = int(getrandbits(16))
+        self._model_id = getrandbits(15)
         self._data: list[list[CellItem]] = []
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
@@ -751,6 +766,8 @@ class TableModel(QAbstractTableModel):
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
         # Write source info
+        from tcha.core import AppCore
+
         index = indexes[0]
         AppCore.set_shared_index(QPersistentModelIndex(index))
         if index.isValid():
@@ -801,11 +818,12 @@ class TableModel(QAbstractTableModel):
                 "and data format",
                 data.formats(),
             )
+            from tcha.core import AppCore
 
             encoded_data = data.data("application/x-teachart")
             stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-            model_id = stream.readInt64()  # Source model must have the same pointer
+            model_id = stream.readInt16()  # Source model must have the same pointer
             source_lvl = stream.readInt8()  # Level
             source_model_num = stream.readInt32()  # Model number
 
@@ -922,7 +940,11 @@ class TableModel(QAbstractTableModel):
             self._header_data[Qt.Orientation.Horizontal][destination_column]
         )
 
-        self.dataChanged.emit(source_index, source_index)
+        if isinstance(source_index, QPersistentModelIndex):
+            normalised = self.index(source_index.row(), source_index.column())
+            self.dataChanged.emit(normalised, normalised)
+        else:
+            self.dataChanged.emit(source_index, source_index)
         self.dataChanged.emit(destination_index, destination_index)
         self.modelChanged.emit()
 
