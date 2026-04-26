@@ -218,7 +218,7 @@ class CellModel(QAbstractListModel):
     def create_from_clipboard(self, definition: BaseElementDefinitions | None) -> None:
         if definition:
             mime_data = QGuiApplication.clipboard().mimeData()
-            model = definition.model_from_mime_data(self.rescont, mime_data)
+            model = definition.model_from_mime_data(self.tablemodel.rescont, mime_data)
             if model:
                 self.add_model(model)
 

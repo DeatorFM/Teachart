@@ -6,6 +6,7 @@ import sys
 import typing
 from os.path import abspath, exists
 from pathlib import Path
+from shutil import rmtree
 from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
@@ -126,6 +127,7 @@ class AppCore(QApplication):
         self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
+        self._clean_up_list: list[Path] = []
 
         if not self.qsettings.allKeys():
             print("Empty Settings: First initialisation")
@@ -312,6 +314,7 @@ class AppCore(QApplication):
         editor_window.presenterClosed.connect(self.close_presenter)
         editor_window.show()
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
+        self._clean_up_list.append(editor_window.resource_path)
 
         if self._start_dialog:
             self._start_dialog.close()
@@ -350,6 +353,9 @@ class AppCore(QApplication):
                 editor_window.ui.ac_recent.setMenu(
                     self._file_model.export_recent_as_menu(6)
                 )
+
+                self._clean_up_list.append(Path(lf.temppath))
+                self._clean_up_list.append(editor_window.resource_path)
 
             except ValueError as e:
                 wrapped_error = PyException(e, True)
@@ -516,3 +522,6 @@ class AppCore(QApplication):
         print("Saving recent and pinned files")
         self.qsettings.setValue("Application/recent", self._file_model.export_recent())
         self.qsettings.setValue("Application/pinned", self._file_model.export_pinned())
+
+        for path in self._clean_up_list:
+            rmtree(path.as_posix(), True)

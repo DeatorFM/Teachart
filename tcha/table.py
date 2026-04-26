@@ -167,11 +167,10 @@ class CellEditor(QListView):
                 encoded_data = clipboard.mimeData().data("application/x-teachart")
                 stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-                model_ptr = stream.readInt64()  # Model pointer
-                source_model = self.model().cell_index.model()
-                if id(source_model) == model_ptr:
+                model_id = stream.readInt16()  # Model id
+                source_model: TableModel = self.model().cell_index.model()
+                if source_model.model_id == model_id:
                     source_lvl = stream.readInt8()  # Level
-                    _ = stream.readInt32()  # Cell item number
                     model_num = stream.readInt32()  # Model item number
                     if source_lvl == 1:
                         model: CellModel = self.model()

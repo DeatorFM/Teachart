@@ -480,6 +480,10 @@ class Editor(QMainWindow):
     def tablemodel(self) -> TableModel:
         return self.ui.table.model()
 
+    @property
+    def resource_path(self) -> Path:
+        return self.tablemodel.rescont.temppath
+
     def on_cell_opened(self, editor: CellEditor) -> None:
         if self.ui.table.currentIndex().isValid() and editor:
             print(
@@ -650,15 +654,6 @@ class Editor(QMainWindow):
                 return True
         return False
 
-    def from_clipboard(self) -> None:
-        """Creates either a TextElement or a PictureElement with the contents of the clipboard."""
-        if self.def_for_mime_type:
-            definition = self.element_definitions[self.def_for_mime_type]
-            mime_data = QApplication.clipboard().mimeData()
-            model = definition.model_from_mime_data(self.rescont, mime_data)
-            if model:
-                self.ui.table.add_element(model)
-
     # Presenter Functions
 
     def enable_presenter_mode(self, enabled: bool) -> None:
@@ -785,4 +780,6 @@ class Editor(QMainWindow):
                 return
         if self.presenter_mode:
             self.presenterClosed.emit()
+
+        self.tablemodel.rescont.close_file_streams()
         super().closeEvent(ev)

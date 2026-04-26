@@ -67,7 +67,7 @@ class LessonFile:
                     f"Start reading file {osp.basename(path)} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}"
                 )
                 self._tempdir = tempfile.TemporaryDirectory(
-                    ".tmp", "TCHA", ignore_cleanup_errors=True
+                    ".tmp", "TCHA", delete=False
                 )
                 print("Temporary", self._tempdir)
                 self._f = ZipFile(path, mode)

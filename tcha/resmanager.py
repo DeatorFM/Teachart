@@ -186,9 +186,13 @@ class ResourceContainer(QObject):
         super().__init__(parent)
         self._objects: dict[str, ResourceObject] = {}
         self._internal_counter = 0
-        self._tempdir = tempfile.TemporaryDirectory(".tmp", "RESC")
+        self._tempdir = tempfile.TemporaryDirectory(".tmp", "RESC", delete=False)
         self._blocked = False
         self._deletion_queue: list[ResourceObject] = []
+
+    @property
+    def temppath(self) -> Path:
+        return Path(self._tempdir.name)
 
     def save(self, restype: ResourceType, path: str) -> ResourceObject:
         """Creates and saves ResourceObject with a file in ResourceContainer and returns an identical object if existing"""
@@ -299,9 +303,3 @@ class ResourceContainer(QObject):
         else:
             raise TypeError("Only types  'ResourceObject' and 'str' are accepted.")
         return False
-
-    def __del__(self) -> None:
-        # print("ResourceContainer deleted")
-        self._objects.clear()
-        self._tempdir.cleanup()
-        self._tempdir = None
