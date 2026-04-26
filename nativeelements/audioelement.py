@@ -41,7 +41,7 @@ from nativeelements.baseelement import (
 from nativeelements.views import AudioEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
-from tcha.resmanager import ResourceObject, ResourceType
+from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
 from tcha.styling import SvgIcon
 from ui.element_toolsets import AudioToolsetView
 
@@ -221,9 +221,10 @@ class AudioModel(BaseElementModel):
     def presentable_item(self) -> None:
         return None
 
-    def copy(self) -> AudioModel:
+    def copy(self, rescont: ResourceContainer) -> AudioModel:
+        resobj = rescont.save(self.resource.type, self.resource.path)
         model = AudioModel(
-            self.resource,
+            resobj,
             self.is_repeating,
             self.repeats,
             self.pause_length,

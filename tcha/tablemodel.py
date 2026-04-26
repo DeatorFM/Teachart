@@ -285,11 +285,13 @@ class CellModel(QAbstractListModel):
         from tcha.core import AppCore
 
         index = indexes[0]
-        AppCore.set_shared_index(QPersistentModelIndex(self.cell_index))
+        AppCore.set_shared_index(
+            QPersistentModelIndex(self.cell_index)
+        )  # Setting so it can be accessed by other models
         stream.writeInt16(self.cell_index.model().model_id)  # Source model
         stream.writeInt8(1)  # Source Level
         stream.writeInt32(index.data().number)  # Model number
-        stream.writeInt8(0)  # Delete source?
+        stream.writeBool(False)  # Delete source?
         print(
             f"Written mime data: Source level 1; Table row {self.cell_index.row()}; Table column {self.cell_index.column()}; Cell row {index.row()}"
         )
@@ -882,35 +884,44 @@ class TableModel(QAbstractTableModel):
                                             parent.column(),
                                             Qt.Orientation.Horizontal,
                                             Qt.ItemDataRole.EditRole,
-                                        )
+                                        ),
+                                        0,
                                     )
-                                    source_item.copy_to(new_item)
+                                    # source_item.copy_to(new_item)
+                                    self.copy_to_cell(source_item, new_item)
                                     return self.setData(parent, new_item)
                                 return False
 
                             elif dialog.selected_paste_method() == 2:  # Append to cell
                                 destination_item = parent.data()
-                                source_item.copy_to(destination_item)
+                                self.copy_to_cell(source_item, destination_item)
+                                # source_item.copy_to(destination_item)
                                 self.dataChanged.emit(parent, parent)
 
                         return False
 
                     else:
-                        destination_cell = parent.data()
-                        source_item.copy_to(destination_cell)
+                        destination_item = parent.data()
+                        self.copy_to_cell(source_item, destination_item)
+                        # source_item.copy_to(destination_cell)
                         return True
 
                 if source_lvl == 1:  # Model is copied
-                    destination_cell: CellItem = parent.data()
+                    destination_item: CellItem = parent.data()
                     model: BaseElementModel = source_item[
                         source_item.row_for_num(source_model_num)
                     ]
                     if model:
-                        destination_cell.append(model.copy())
+                        destination_item.append(model.copy(self.rescont))
                         return True
                     return False
 
         return False
+
+    def copy_to_cell(self, source_cell: CellItem, dest_cell: CellItem) -> None:
+        for model in source_cell:
+            copy = model.copy(self.rescont)
+            dest_cell.append(copy)
 
     def mimeTypes(self) -> list[str]:
         return ["application/x-teachart"]

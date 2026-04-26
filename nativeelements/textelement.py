@@ -142,9 +142,9 @@ class TextModel(QTextDocument, BaseElementModel):
         item.setZValue(0.0)
         return item
 
-    def copy(self) -> TextModel:
-        resource_copy = self._resource.copy()
-        model = TextModel(resource_copy)
+    def copy(self, rescont: ResourceContainer) -> TextModel:
+        resobj = rescont.create(self.restype())
+        model = TextModel(resobj)
         model.setHtml(self.toHtml())
         return model
 

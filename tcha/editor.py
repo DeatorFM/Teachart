@@ -173,7 +173,9 @@ class Editor(QMainWindow):
             )
         )
         self.ui.ac_course_rec.triggered.connect(self.open_course_record)
-        self.ui.ac_copy.triggered.connect(self.copy_index)
+        self.ui.ac_copy.triggered.connect(
+            lambda: self.table.copy_index(self.table.currentIndex())
+        )
         self.ui.ac_paste.triggered.connect(
             lambda: self.ui.table.paste_index(QApplication.clipboard().mimeData())
         )
@@ -512,11 +514,11 @@ class Editor(QMainWindow):
         self.ui.ac_paste.setEnabled(False)
         self.ui.ac_goto_active.setEnabled(False)
 
-        try:
-            self.ui.menu_elements.disconnect()
-            self.ui.ac_from_clipboard.disconnect()
-        except TypeError:
-            pass
+        for signal in (self.ui.menu_elements, self.ui.ac_from_clipboard):
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass
 
         for toolset in self.toolsets.values():
             toolset.setVisible(False)
@@ -656,13 +658,6 @@ class Editor(QMainWindow):
             model = definition.model_from_mime_data(self.rescont, mime_data)
             if model:
                 self.ui.table.add_element(model)
-
-    def copy_index(self) -> None:
-        editor = self.ui.table.editor
-        if editor:
-            editor.copy_index(editor.currentIndex())
-            return
-        self.ui.table.copy_index(self.ui.table.currentIndex())
 
     # Presenter Functions
 

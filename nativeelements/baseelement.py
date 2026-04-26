@@ -149,7 +149,8 @@ class BaseElementModel(QObject):
         return ""
 
     @abstractmethod
-    def copy(self) -> BaseElementModel:
+    def copy(self, rescont: ResourceContainer) -> BaseElementModel:
+        """Creates a unique copy of the model storing the resource into the ResourceContainer 'rescont'."""
         return BaseElementModel()
 
     @abstractmethod

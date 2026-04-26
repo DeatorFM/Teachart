@@ -961,6 +961,8 @@ class Table(QTableView):
                 return
             elif e.key() == Qt.Key.Key_V:
                 self.paste_index(QApplication.clipboard().mimeData())
+                e.accept()
+                return
             elif e.key() == Qt.Key.Key_Down:
                 self.scroll_by(1)
                 e.accept()
@@ -1066,14 +1068,13 @@ class Table(QTableView):
                 encoded_data = clipboard.mimeData().data("application/x-teachart")
                 stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-                model_ptr = stream.readInt64()  # Skip
-                if id(self.model()) == model_ptr:
+                model_id = stream.readInt16()  # Skip
+                if self.model().model_id == model_id:
                     source_lvl = stream.readInt8()  # Level
-                    item_num = stream.readInt32()  # Cell item number
                     if source_lvl == 0:
-                        model: TableModel = self.model()
-                        idx = model.index_for_num(item_num)
-                        return idx
+                        from core import AppCore
+
+                        return AppCore.shared_index()
         return QModelIndex()
 
     def dropEvent(self, event: QDropEvent):
@@ -1096,7 +1097,7 @@ class Table(QTableView):
                     event.modifiers(),
                 )
                 self._editor.dropEvent(editor_event)
-                event.accept()  # ✓ Fixed: was event.ignore()
+                event.accept()
                 return
 
             # Dropping on different cell - close editor and handle below
@@ -1119,32 +1120,6 @@ class Table(QTableView):
                 event.ignore()
         else:
             event.ignore()
-
-        # if self._editor:
-        #     editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
-        #     editor_rect = QRect(editor_rect, self._editor.size())
-
-        #     # Get the drop position in global coordinates
-        #     drop_position = self.mapToGlobal(event.position().toPoint())
-
-        #     # Check if the editor's rectangle contains the drop position
-        #     if editor_rect.contains(drop_position):
-        #         print("Disallowed drop in table")
-        #         drop_position = self._editor.mapFromGlobal(
-        #             self.mapToGlobal(event.position())
-        #         )
-        #         editor_event = QDropEvent(
-        #             drop_position,
-        #             event.dropAction(),
-        #             event.mimeData(),
-        #             event.buttons(),
-        #             event.modifiers(),
-        #         )
-        #         self._editor.dropEvent(editor_event)
-        #         event.ignore()
-        #         self.setCurrentIndex(QModelIndex())
-        #         return
-        # super().dropEvent(event)
 
     def wheelEvent(self, ev: QWheelEvent):
         if self._view_mode == TableViewMode.SingleRow:

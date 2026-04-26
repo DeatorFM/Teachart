@@ -23,7 +23,6 @@ from PyQt6.QtGui import (
     QPainter,
     QPen,
     QPixmap,
-    QPixmapCache,
     QTransform,
 )
 from PyQt6.QtWidgets import (
@@ -33,7 +32,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-from nativeelements.audioelement import AudioElementDefinitions, AudioModel
+from nativeelements.audioelement import AudioElementDefinitions
 from nativeelements.baseelement import (
     BaseElementDefinitions,
     BaseElementDelegate,
@@ -215,9 +214,10 @@ class PictureModel(BaseElementModel):
         item.setCacheMode(QGraphicsPixmapItem.CacheMode.DeviceCoordinateCache)
         return item
 
-    def copy(self):
+    def copy(self, rescont: ResourceContainer) -> PictureModel:
+        resobj = rescont.save(self.resource.type, self.resource.path)
         model = PictureModel(
-            self.resource, self.width, self.height, self.rotation, self.adjusted
+            resobj, self.width, self.height, self.rotation, self.adjusted
         )
         return model
 
