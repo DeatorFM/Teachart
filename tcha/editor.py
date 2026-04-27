@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag, TableViewMode
+from tcha.consts import AppAction, ResourceFlag, TableViewMode, SaveState
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -98,7 +98,7 @@ class Editor(QMainWindow):
 
         # Attributes
         self._caller = False
-        self.changes_unsaved = False if lessonfile.mode == "r" else True
+        self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
@@ -278,7 +278,7 @@ class Editor(QMainWindow):
             )
 
     def set_unsaved(self) -> None:
-        self.changes_unsaved = True
+        self.save_state = SaveState.Unsaved
 
     def set_lesson(self, lesson: Lesson) -> None:
         if lesson:
@@ -341,6 +341,7 @@ class Editor(QMainWindow):
                 self, tr("Save lesson chart"), "", tr("Teachart document (*.tch)")
             )
             if path:
+                self.save_state = SaveState.Saving
                 save(path)
                 return True
             self.ui.ac_save.setEnabled(True)
@@ -357,11 +358,18 @@ class Editor(QMainWindow):
         self.setWindowTitle(
             f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
         )
-        self.changes_unsaved = False
-        self.statusBar().showMessage(tr("Saving finished!"), 3000)
-        self.schedule()
-        self.ui.ac_xml_insp.setEnabled(True)
-        self.fileSaved.emit(Path(self.lessonfile.path))
+        if self.save_state is SaveState.SaveAndQuit:
+            self.save_state = SaveState.Saved
+            self.statusBar().showMessage(tr("Saving finished!"), 3000)
+            self.schedule()
+            self.fileSaved.emit(Path(self.lessonfile.path))
+            self.close()
+        else:
+            self.save_state = SaveState.Saved
+            self.statusBar().showMessage(tr("Saving finished!"), 3000)
+            self.schedule()
+            self.ui.ac_xml_insp.setEnabled(True)
+            self.fileSaved.emit(Path(self.lessonfile.path))
 
     def schedule(self) -> None:
         """Creates a new schedule if not existing."""
@@ -438,7 +446,7 @@ class Editor(QMainWindow):
         if item.duration > 0:
             self.ui.sb_duration.setValue(item.duration)
         self.print_lesson()
-        self.changes_unsaved = True
+        self.set_unsaved()
 
     def filter_courses(self) -> None:
         self.ui.cb_course.showPopup()
@@ -457,17 +465,17 @@ class Editor(QMainWindow):
 
     def set_datetime(self, datetime: QDateTime) -> None:
         self.lesson.set_datetime(datetime)
-        self.changes_unsaved = True
+        self.set_unsaved()
         self.print_lesson()
 
     def set_duration(self, minutes: int) -> None:
         self.lesson.set_duration(minutes)
-        self.changes_unsaved = True
+        self.set_unsaved()
         self.print_lesson()
 
     def set_comment(self) -> None:
         self.lesson.set_comment(self.ui.te_comment.document().toHtml())
-        self.changes_unsaved = True
+        self.set_unsaved()
         self.print_lesson()
 
     # Table Managing Tools
@@ -759,7 +767,7 @@ class Editor(QMainWindow):
 
     def closeEvent(self, ev: QCloseEvent):
         """THe user is asked if they want to savbe the document when there are unsaved changes"""
-        if self.changes_unsaved:
+        if self.save_state is SaveState.Unsaved:
             result = QMessageBox.question(
                 self,
                 tr("Unsaved Changes"),
@@ -778,8 +786,14 @@ class Editor(QMainWindow):
             else:
                 ev.ignore()
                 return
+                
         if self.presenter_mode:
             self.presenterClosed.emit()
 
-        self.tablemodel.rescont.close_file_streams()
-        super().closeEvent(ev)
+        if self.save_state != SaveState.Saving:
+            self.tablemodel.rescont.close_file_streams()
+            super().closeEvent(ev)
+        else:
+            self.save_state = SaveState.SaveAndQuit
+            ev.ignore()
+            return
