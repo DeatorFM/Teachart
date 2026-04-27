@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag, TableViewMode, SaveState
+from tcha.consts import AppAction, ResourceFlag, SaveState, TableViewMode
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -98,7 +98,9 @@ class Editor(QMainWindow):
 
         # Attributes
         self._caller = False
-        self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
+        self.save_state = (
+            SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
+        )
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
@@ -193,6 +195,7 @@ class Editor(QMainWindow):
             lambda: self.table.set_view_mode(TableViewMode.SingleRow)
         )
         self.ui.ac_goto_active.triggered.connect(self.table.scroll_to_current)
+        self.ui.ac_freeze_row.triggered.connect(self.table.freeze_current_row)
         self.ui.ac_about.triggered.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )
@@ -493,7 +496,10 @@ class Editor(QMainWindow):
         return self.tablemodel.rescont.temppath
 
     def on_cell_opened(self, editor: CellEditor) -> None:
-        if self.ui.table.currentIndex().isValid() and editor:
+        if (
+            self.ui.table.currentIndex().isValid()
+            or self.ui.table.frozen_table.currentIndex().isValid()
+        ) and editor:
             print(
                 "Index",
                 self.ui.table.currentIndex().row(),
@@ -506,6 +512,7 @@ class Editor(QMainWindow):
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.has_index_copied())
             self.ui.ac_goto_active.setEnabled(True)
+            self.ui.ac_freeze_row.setEnabled(True)
 
             editor.connect_toolsets(self.toolsets)
             editor.currentIndexChanged.connect(self.on_current_changed)
@@ -525,6 +532,7 @@ class Editor(QMainWindow):
         self.ui.ac_copy.setEnabled(False)
         self.ui.ac_paste.setEnabled(False)
         self.ui.ac_goto_active.setEnabled(False)
+        self.ui.ac_freeze_row.setEnabled(False)
 
         for signal in (self.ui.menu_elements, self.ui.ac_from_clipboard):
             try:
@@ -786,7 +794,7 @@ class Editor(QMainWindow):
             else:
                 ev.ignore()
                 return
-                
+
         if self.presenter_mode:
             self.presenterClosed.emit()
 

@@ -43,12 +43,12 @@ from PyQt6.QtWidgets import (
     QGraphicsSceneMouseEvent,
     QGraphicsView,
     QHeaderView,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QListView,
     QMenu,
     QMessageBox,
+    QSizePolicy,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -56,6 +56,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDelegate,
@@ -508,17 +509,16 @@ class HeaderView(QHeaderView):
         super().setSectionHidden(self.logicalIndex(logicalIndex), hide)
 
 
-class Table(QTableView):
+class BaseTable(QTableView):
     changeMade = pyqtSignal()
     cellEditorOpened = pyqtSignal(CellEditor)
     cellEditorClosed = pyqtSignal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._painting = True
         self._editor: CellEditor | None = None
-        self._top_idx = QModelIndex()
-        self._view_mode = TableViewMode.Table
+        self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._visible_row = -1
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
@@ -531,7 +531,7 @@ class Table(QTableView):
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
 
@@ -552,21 +552,7 @@ class Table(QTableView):
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
 
-        self.verticalScrollBar().valueChanged.connect(self.on_vscrolled)
-        self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
-
-        self.horizontalScrollBar().valueChanged.connect(self.on_hscrolled)
-        self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
-
-        self.row_list = QComboBox()
-        self.row_list.activated.connect(lambda row: self.scroll_to_index(row, -1))
-
         self.count_label = QLabel()
-
-        self._drag_start_position: QPoint | None = None
-        self._last_painted = IndexPoint(-1, -1, -1, QPoint())
-        self._can_close_editor = True
-        self._pres_mode = False
 
     @property
     def editor(self) -> CellEditor | None:
@@ -574,11 +560,6 @@ class Table(QTableView):
 
     def enable_painting(self, painting: bool) -> None:
         self._painting = painting
-
-    def enable_presenter_mode(self, enabled: bool) -> None:
-        self._pres_mode = enabled
-        if self._editor:
-            self._editor.enable_presenter_mode(enabled)
 
     def editing_level(self) -> EditingLevel:
         if self._editor:
@@ -622,10 +603,6 @@ class Table(QTableView):
                 self.horizontalHeader().resizeSection(column, size)
 
             self.update_row_geometries()
-            self.on_vscrolled()
-            self.on_hscrolled()
-            self.row_list.setCurrentIndex(0)
-            self.row_list.setModel(IndexModel(model))
             self.update_count_label()
 
             return True
@@ -634,6 +611,233 @@ class Table(QTableView):
 
     def on_model_changed(self) -> None:
         self.changeMade.emit()
+
+    def add_element(self, element: BaseElementModel) -> None:
+        if self.currentIndex().isValid():
+            cell = self.currentIndex().data()
+            cell.append(element)
+            self.model().dataChanged.emit(self.currentIndex(), self.currentIndex())
+
+    def set_extra_emit(self):
+        self.itemDelegate().extra_emit = True
+
+    def paintEvent(self, e):
+        if self._painting:
+            self.verticalHeader().resizeSections()
+            super().paintEvent(e)
+
+    def update_row_geometries(self) -> None:
+        print("Update row geometries")
+        self.verticalHeader().resizeSections()
+        self.update()
+        self.viewport().update()
+        print("Viewport updated")
+
+    def close_current_editor(self) -> None:
+        print("Trying to close current editor")
+        if self.selectionModel():
+            self.selectionModel().clearCurrentIndex()
+        if self._editor:
+            self._editor.disconnect()
+            self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
+
+    def update_count_label(self) -> None:
+        translated1 = tr("R")
+        translated2 = tr("C")
+        self.count_label.setText(
+            f"{translated1} {self.model().rowCount()} | {translated2} {self.model().columnCount()}"
+        )
+
+    @pyqtSlot(CellEditor)
+    def on_editor_opened(self, editor: CellEditor) -> None:
+        """Connects the cell editor with the signals to notify the editor tab"""
+        print("Editor opened", editor)
+        if editor:
+            self._editor = editor
+            self.cellEditorOpened.emit(self._editor)
+            if self._editor.model():
+                self._editor.model().modelChanged.connect(self.changeMade.emit)
+                self._editor.model().dataChanged.connect(self.changeMade.emit)
+
+    def enable_element_selection(self, enable: bool) -> None:
+        self.itemDelegate().element_selection = enable
+        print(f"Mouse tracking {enable}")
+        self.setMouseTracking(enable)
+        self.update()
+
+    def keyPressEvent(self, e: QKeyEvent):
+        print("Table got key press")
+        if e.key() == Qt.Key.Key_Control:
+            self.enable_element_selection(True)
+
+        if (
+            Qt.KeyboardModifier.ControlModifier
+            in e.keyCombination().keyboardModifiers()
+        ):
+            if e.key() == Qt.Key.Key_C:
+                self.copy_index(self.currentIndex())
+                e.accept()
+                return
+            elif e.key() == Qt.Key.Key_V:
+                self.paste_index(QApplication.clipboard().mimeData())
+                e.accept()
+                return
+
+        super().keyPressEvent(e)
+
+    def keyReleaseEvent(self, ev: QKeyEvent):
+        if ev.key() == Qt.Key.Key_Control:
+            self.enable_element_selection(False)
+            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
+
+        return super().keyReleaseEvent(ev)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.itemDelegate().element_selection:
+            mouse_pos = event.pos()
+            idx = self.indexAt(event.pos())
+            if idx.isValid():
+                cell_rect = self.visualRect(idx)
+                relative_mouse_pos = QPoint(
+                    mouse_pos.x() - cell_rect.x(), mouse_pos.y() - cell_rect.y()
+                )
+                erow = idx.data().row_for_pos(relative_mouse_pos.y())
+                trindex = IndexPoint(
+                    idx.row(),
+                    idx.column(),
+                    erow,
+                    self.viewport().mapFromParent(event.pos()),
+                )
+                if trindex != self.itemDelegate().last_idx:
+                    self.itemDelegate().last_idx = trindex
+                    self.viewport().update()
+
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, e) -> None:
+        index = self.indexAt(e.pos())
+        if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
+            if self._editor:
+                self.setCurrentIndex(QModelIndex())
+                if index.isValid():
+                    self.setCurrentIndex(index)
+                e.accept()
+                return
+        super().mousePressEvent(e)
+
+    def copy_index(self, index: QModelIndex) -> None:
+        if index.isValid():
+            clipboard = QApplication.clipboard()
+            mime_data = self.model().mimeData([index])
+            clipboard.setMimeData(mime_data)
+
+    def paste_index(self, mime_data: QMimeData) -> None:
+        if mime_data and not set(mime_data.formats()).isdisjoint(
+            set(self.model().mimeTypes())
+        ):
+            current = self.currentIndex()
+            self.setCurrentIndex(QModelIndex())
+            if current.isValid():
+                self.model().dropMimeData(
+                    mime_data,
+                    Qt.DropAction.CopyAction,
+                    current.row(),
+                    current.column(),
+                    current,
+                )
+
+    def copied_index(self) -> QModelIndex:
+        """Return the index that was copied. The index is unvalid if the cell item could not be found or is not in the clipboard."""
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            if "application/x-teachart" in clipboard.mimeData().formats():
+                encoded_data = clipboard.mimeData().data("application/x-teachart")
+                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+
+                model_id = stream.readInt16()
+                if self.model().model_id == model_id:
+                    source_lvl = stream.readInt8()
+                    if source_lvl == 0:
+                        from core import AppCore
+
+                        return AppCore.shared_index()
+        return QModelIndex()
+
+    def closeEditor(
+        self, editor: QWidget | None, hint: QStyledItemDelegate.EndEditHint
+    ) -> None:
+        if self._editor and self._editor.state() != QListView.State.EditingState:
+            print("Close CellEditor's editors")
+            self._editor.setCurrentIndex(QModelIndex())
+        super().closeEditor(editor, hint)
+        print("An cell editor has been closed", editor, hint)
+        self.verticalHeader().resizeSections()
+        self._editor = None
+        self.setCurrentIndex(QModelIndex())
+        self.cellEditorClosed.emit()
+
+
+class Table(BaseTable):
+    sizesSplitted = pyqtSignal(int)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._drag_start_position: QPoint | None = None
+        self._top_idx = QModelIndex()
+        self._view_mode = TableViewMode.Table
+        self._excluded_row = -1
+        self._pres_mode = False
+        self._can_close_editor = True
+
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+
+        self.verticalScrollBar().valueChanged.connect(self.on_vscrolled)
+        self.verticalScrollBar().rangeChanged.connect(self.on_vslider_range_changed)
+
+        self.horizontalScrollBar().valueChanged.connect(self.on_hscrolled)
+        self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
+
+        # Linked Widgets
+
+        self.row_list = QComboBox()
+        self.row_list.activated.connect(lambda row: self.scroll_to_index(row, -1))
+
+        self.frozen_table = FrozenRowTable(self)
+
+        self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
+        self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
+        self.frozen_table.changeMade.connect(self.changeMade.emit)
+
+    def has_frozen_row(self) -> bool:
+        return self.frozen_table.isVisible() and self.frozen_table.model()
+
+    def enable_presenter_mode(self, enabled: bool) -> None:
+        self._pres_mode = enabled
+        if self._editor:
+            self._editor.enable_presenter_mode(enabled)
+
+    def setModel(self, model: QAbstractItemModel | None) -> bool:
+        if model:
+            result = super().setModel(model)
+            self.on_vscrolled()
+            self.on_hscrolled()
+            self.row_list.setCurrentIndex(0)
+            self.row_list.setModel(IndexModel(model))
+            return result
+        return False
+
+    @pyqtSlot(CellEditor)
+    def on_editor_opened(self, editor: CellEditor) -> None:
+        """Connects the cell editor with the signals to notify the editor"""
+        print("Editor opened", editor)
+        if editor:
+            self.frozen_table.close_current_editor()
+            self._editor = editor
+            self._editor.enable_presenter_mode(self._pres_mode)
+            self.cellEditorOpened.emit(self._editor)
+            if self._editor.model():
+                self._editor.model().modelChanged.connect(self.changeMade.emit)
+                self._editor.model().dataChanged.connect(self.changeMade.emit)
 
     # Scrolling behaviour
 
@@ -704,7 +908,6 @@ class Table(QTableView):
                 vvalue = self.verticalScrollBar().value()
                 position = sum(self.columnWidth(col) for col in range(idx_col))
                 self.horizontalScrollBar().setValue(position)
-                # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
                 self.verticalScrollBar().setValue(vvalue)
             else:
                 self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
@@ -714,7 +917,6 @@ class Table(QTableView):
                 vvalue = self.verticalScrollBar().value()
                 position = sum(self.columnWidth(col) for col in range(idx_col))
                 self.horizontalScrollBar().setValue(position)
-                # self.horizontalScrollBar().setValue(self.columnViewportPosition(model_index.column()))
                 self.verticalScrollBar().setValue(vvalue)
                 return
 
@@ -797,79 +999,33 @@ class Table(QTableView):
     def isIndexHidden(self, index: QModelIndex) -> bool:
         return index.row() != self._visible_row and self._visible_row >= 0
 
-    def selection_status(self) -> str:
-        if self.selectionModel().currentIndex().isValid():
-            index = self.selectionModel().currentIndex()
-            row = index.row() + 1
-            column: str = self.model().headerData(
-                index.column(), Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole
-            )
-            print("Selected index status updated", row, column)
-            tr_row = tr("Row")
-            tr_column = tr("Column")
-            return f"{tr_row} {row} in {tr_column} {column}"
-        else:
-            tr_noselect = tr("No selection")
-            return tr_noselect
-
-    def focus_row(self) -> None:
-        row, ok = QInputDialog.getInt(
-            self,
-            tr("Focus on row"),
-            tr("Enter row number"),
-            1,
-            1,
-            self.model().rowCount(),
-        )
-        if ok:
-            self.scrollTo(self.model().index(row - 1, 0))
-
-    def add_element(self, element: BaseElementModel) -> None:
+    def freeze_current_row(self) -> None:
         if self.currentIndex().isValid():
-            cell = self.currentIndex().data()
-            cell.append(element)
-            self.model().dataChanged.emit(self.currentIndex(), self.currentIndex())
+            self.freeze_row(self.currentIndex().row())
 
-    def set_extra_emit(self):
-        self.itemDelegate().extra_emit = True
+    def freeze_row(self, row: int) -> None:
+        self.setCurrentIndex(QModelIndex())
+        if self.has_frozen_row():
+            self.showRow(self.frozen_table.frozen_row)
+        self.hideRow(row)
 
-    def paintEvent(self, e):
-        if self._painting:
-            self.verticalHeader().resizeSections()
-            super().paintEvent(e)
+        self.frozen_table.freeze_row(self.model(), row)
 
-    def update_row_geometries(self) -> None:
-        print("Update row geometries")
-        self.verticalHeader().resizeSections()
-        self.update()
-        self.viewport().update()
-        print("Viewport updated")
+        self.horizontalHeader().setVisible(False)
 
-    def close_current_editor(self) -> None:
-        print("Trying to close current editor")
-        self.selectionModel().clearCurrentIndex()
+    def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
+        """Relay frozen table's editor opened signal and close own editor"""
         if self._editor:
-            self._editor.disconnect()
-            self.closeEditor(self._editor, QStyledItemDelegate.EndEditHint.NoHint)
+            self.close_current_editor()
+        self._editor = editor  # Track the frozen table's editor
+        self.cellEditorOpened.emit(editor)
 
-    def update_count_label(self) -> None:
-        translated1 = tr("R")
-        translated2 = tr("C")
-        self.count_label.setText(
-            f"{translated1} {self.model().rowCount()} | {translated2} {self.model().columnCount()}"
-        )
+    def _relay_frozen_editor_closed(self) -> None:
+        """Relay frozen table's editor closed signal"""
+        self._editor = None
+        self.cellEditorClosed.emit()
 
-    @pyqtSlot(CellEditor)
-    def on_editor_opened(self, editor: CellEditor) -> None:
-        """Connects the cell editor with the signals to notify the editor tab"""
-        print("Editor opened", editor)
-        if editor:
-            self._editor = editor
-            self._editor.enable_presenter_mode(self._pres_mode)
-            self.cellEditorOpened.emit(self._editor)
-            if self._editor.model():
-                self._editor.model().modelChanged.connect(self.changeMade.emit)
-                self._editor.model().dataChanged.connect(self.changeMade.emit)
+    # Special model editing behaviour
 
     def add_row(self, row: int = -1) -> None:
         if row == -1:
@@ -939,30 +1095,12 @@ class Table(QTableView):
                     clipboard.mimeData().removeFormat("application/x-teachart")
                     clipboard.dataChanged.emit()
 
-    def enable_element_selection(self, enable: bool) -> None:
-        self.itemDelegate().element_selection = enable
-        print(f"Mouse tracking {enable}")
-        self.setMouseTracking(enable)
-        self.update()
-
     def keyPressEvent(self, e: QKeyEvent):
-        print("Table got key press")
-        if e.key() == Qt.Key.Key_Control:
-            self.enable_element_selection(True)
-
         if (
             Qt.KeyboardModifier.ControlModifier
             in e.keyCombination().keyboardModifiers()
         ):
-            if e.key() == Qt.Key.Key_C:
-                self.copy_index(self.currentIndex())
-                e.accept()
-                return
-            elif e.key() == Qt.Key.Key_V:
-                self.paste_index(QApplication.clipboard().mimeData())
-                e.accept()
-                return
-            elif e.key() == Qt.Key.Key_Down:
+            if e.key() == Qt.Key.Key_Down:
                 self.scroll_by(1)
                 e.accept()
                 return
@@ -981,43 +1119,15 @@ class Table(QTableView):
 
         super().keyPressEvent(e)
 
-    def keyReleaseEvent(self, ev: QKeyEvent):
-        if ev.key() == Qt.Key.Key_Control:
-            self.enable_element_selection(False)
-            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
-
-        return super().keyReleaseEvent(ev)
-
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self.itemDelegate().element_selection:
-            mouse_pos = event.pos()
-            idx = self.indexAt(event.pos())
-            if idx.isValid():
-                cell_rect = self.visualRect(idx)
-                relative_mouse_pos = QPoint(
-                    mouse_pos.x() - cell_rect.x(), mouse_pos.y() - cell_rect.y()
-                )
-                erow = idx.data().row_for_pos(relative_mouse_pos.y())
-                trindex = IndexPoint(
-                    idx.row(),
-                    idx.column(),
-                    erow,
-                    self.viewport().mapFromParent(event.pos()),
-                )
-                if trindex != self.itemDelegate().last_idx:
-                    self.itemDelegate().last_idx = trindex
-                    self.viewport().update()
-
         if event.buttons() & Qt.MouseButton.LeftButton:
             if self._drag_start_position:
-                # self.setCurrentIndex(QModelIndex())
                 distance = (event.pos() - self._drag_start_position).manhattanLength()
                 if distance >= QApplication.startDragDistance():
                     drag = QDrag(self)
                     mime_data = self.model().mimeData([self.currentIndex()])
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
-                    # self.startDrag(Qt.DropAction.MoveAction)
                     clipboard = QApplication.clipboard()
                     clipboard.mimeData().removeFormat("application/x-teachart")
                     clipboard.dataChanged.emit()
@@ -1025,67 +1135,20 @@ class Table(QTableView):
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, e) -> None:
-        index = self.indexAt(e.pos())
         if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
             self._drag_start_position = e.pos()
-            if self._editor:
-                self.setCurrentIndex(QModelIndex())
-                if index.isValid():
-                    self.setCurrentIndex(index)
-                e.accept()
-                return
+
         super().mousePressEvent(e)
-
-    # Copy/Paste Methods
-
-    def copy_index(self, index: QModelIndex) -> None:
-        if index.isValid():
-            clipboard = QApplication.clipboard()
-            mime_data = self.model().mimeData([index])
-            clipboard.setMimeData(mime_data)
-
-    def paste_index(self, mime_data: QMimeData) -> None:
-        if mime_data and not set(mime_data.formats()).isdisjoint(
-            set(self.model().mimeTypes())
-        ):
-            current = self.currentIndex()
-            self.setCurrentIndex(QModelIndex())
-            if current.isValid():
-                self.model().dropMimeData(
-                    mime_data,
-                    Qt.DropAction.CopyAction,
-                    current.row(),
-                    current.column(),
-                    current,
-                )
-
-    def copied_index(self) -> QModelIndex:
-        """Return the index that was copied. The index is unvalid if the cell item could not be found or is not in the clipboard."""
-        clipboard = QApplication.clipboard()
-        if clipboard:
-            if "application/x-teachart" in clipboard.mimeData().formats():
-                encoded_data = clipboard.mimeData().data("application/x-teachart")
-                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
-
-                model_id = stream.readInt16()  # Skip
-                if self.model().model_id == model_id:
-                    source_lvl = stream.readInt8()  # Level
-                    if source_lvl == 0:
-                        from core import AppCore
-
-                        return AppCore.shared_index()
-        return QModelIndex()
 
     def dropEvent(self, event: QDropEvent):
         drop_index = self.indexAt(event.position().toPoint())
 
         if self._editor:
-            editor_index = self.currentIndex()  # Cell being edited
+            editor_index = self.currentIndex()
             editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
             editor_rect = QRect(editor_rect, self._editor.size())
             drop_position = self.mapToGlobal(event.position().toPoint())
 
-            # Dropping within the same cell (internal reordering)
             if editor_rect.contains(drop_position) and drop_index == editor_index:
                 drop_pos_local = self._editor.mapFromGlobal(drop_position)
                 editor_event = QDropEvent(
@@ -1099,11 +1162,9 @@ class Table(QTableView):
                 event.accept()
                 return
 
-            # Dropping on different cell - close editor and handle below
             if drop_index.isValid() and drop_index != editor_index:
-                self.setCurrentIndex(QModelIndex())  # Close editor
+                self.setCurrentIndex(QModelIndex())
 
-        # Handle drops at table level (cell swaps, element moves between cells)
         if drop_index.isValid():
             success = self.model().dropMimeData(
                 event.mimeData(),
@@ -1170,15 +1231,54 @@ class Table(QTableView):
     def closeEditor(
         self, editor: QWidget | None, hint: QStyledItemDelegate.EndEditHint
     ) -> None:
-        if self._editor and self._editor.state() != QListView.State.EditingState:
-            print("Close CellEditor's editors")
-            self._editor.setCurrentIndex(QModelIndex())
         super().closeEditor(editor, hint)
         print("An cell editor has been closed", self._can_close_editor, editor, hint)
-        self.verticalHeader().resizeSections()
-        self._editor = None
-        self.setCurrentIndex(QModelIndex())
-        self.cellEditorClosed.emit()
+
+
+class FrozenRowTable(BaseTable):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVisible(False)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+
+    @property
+    def frozen_row(self) -> int:
+        return self._visible_row
+
+    def freeze_row(self, model: TableModel, visible_row: int) -> None:
+        self.hide()
+        if self.model():
+            self.setModel(None)
+        self.setModel(model)
+        self.show()
+
+        if self._visible_row == -1:
+            self._visible_row = visible_row
+            for row in range(model.rowCount()):
+                if row != visible_row:
+                    self.hideRow(row)
+        else:
+            self.hideRow(self._visible_row)
+            self.showRow(visible_row)
+            self._visible_row = visible_row
+
+    def unfreeze(self) -> None:
+        self.setModel(None)
+        self._visible_row = -1
+        self.hide()
+
+    def sizeHint(self) -> QSize:
+        if self.model():
+            height = (
+                self.sizeHintForRow(self._visible_row)
+                + self.horizontalHeader().height()
+                + 4
+            )
+            if height > self.parent().height():
+                return QSize(self.width(), self.parent().height() // 2)
+            return QSize(self.width(), height)
+        else:
+            return super().sizeHint()
 
 
 class ArrowPath(QPainterPath):

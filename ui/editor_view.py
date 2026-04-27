@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QSpacerItem,
     QSpinBox,
+    QSplitter,
     QStatusBar,
     QStyle,
     QToolBar,
@@ -56,9 +57,16 @@ class Ui_Editor(object):
         self.vl2 = QVBoxLayout(self.centralwidget)
         self.vl2.setObjectName("vl2")
 
+        self.split_table = QSplitter(Qt.Orientation.Vertical, self.centralwidget)
+
         self.table = Table(self.centralwidget)
         self.table.setObjectName("Table")
-        self.vl2.addWidget(self.table)
+        self.table.sizesSplitted.connect(lambda x: self.split_table.moveSplitter(x, 0))
+
+        self.split_table.addWidget(self.table.frozen_table)
+        self.split_table.addWidget(self.table)
+
+        self.vl2.addWidget(self.split_table)
 
         MainWindow.setCentralWidget(self.centralwidget)
 
@@ -469,6 +477,10 @@ class Ui_Editor(object):
         self.ac_goto_active.setObjectName("ac_goto_active")
         self.ac_goto_active.setDisabled(True)
 
+        self.ac_freeze_row = QAction(parent=MainWindow)
+        self.ac_freeze_row.setObjectName("ac_freeze_row")
+        self.ac_freeze_row.setDisabled(True)
+
         # Debugging actions
 
         self.ac_file_insp = QAction(parent=MainWindow)
@@ -599,6 +611,7 @@ class Ui_Editor(object):
         self.menu_view.addAction(self.ac_vmode_row)
         self.menu_view.addSeparator()
         self.menu_view.addAction(self.ac_goto_active)
+        self.menu_view.addAction(self.ac_freeze_row)
         # self.menu_view.addAction(self.ac_show_ttbar)
 
         self.menu_opt.addAction(self.ac_settings)
@@ -747,6 +760,12 @@ class Ui_Editor(object):
         self.ac_vmode_table.setText(_translate("MainWindow", "Show entire table"))
         self.ac_vmode_row.setText(_translate("MainWindow", "Show single row"))
         self.ac_goto_active.setText(_translate("MainWindow", "Go to selected cell"))
+        self.ac_freeze_row.setText(
+            _translate(
+                "MainWindow",
+                "Freeze current row",
+            )
+        )
         self.ac_settings.setText(_translate("MainWindow", "Settings"))
         self.ac_course_exp.setText(_translate("MainWindow", "Course Explorer"))
         self.ac_course_rec.setText(_translate("MainWindow", "View Course Record"))

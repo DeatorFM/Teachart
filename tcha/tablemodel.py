@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from email.header import Header
 from random import getrandbits
 from typing import Any, Self, Sequence
 
@@ -1022,21 +1023,30 @@ class TableModel(QAbstractTableModel):
         return TableModel(table_data)
 
 
-class FilteredTableModel(QSortFilterProxyModel):
-    def __init__(self, source_model: TableModel, parent=None):
+class SingleRowModel(TableModel):
+    def __init__(
+        self,
+        row_idx: int,
+        source_model=TableModel,
+        parent=None,
+    ):
         super().__init__(parent)
-        self.setSourceModel(source_model)
-        self._visible_row = 0
+        self._data = []
+        self._data.append(source_model.get_row(row_idx))
+        self._header_data[Qt.Orientation.Horizontal] = [
+            source_model.headerData(
+                idx, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
+            )
+            for idx in range(source_model.rowCount())
+        ]
+        vheader = []
+        vheader.append(self._header_data[Qt.Orientation.Vertical][row_idx])
+        self._header_data[Qt.Orientation.Vertical] = vheader
 
-    def set_visible_row(self, row: int) -> None:
-        self.beginFilterChange()
-        self._visible_row = row
-        self.invalidateFilter()
+        self._rescont = source_model.rescont
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex):
-        if source_row == self._visible_row:
-            return True
-        return False
+    def rowCount(self, parent=...):
+        return 1
 
 
 class IndexModel(QSortFilterProxyModel):
