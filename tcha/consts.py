@@ -57,4 +57,5 @@ class SaveState(Enum):
     Unsaved = 0
     Saving = 1
     Saved = 2
+    SaveAndQuit = 3
 
