@@ -808,6 +808,10 @@ class Table(BaseTable):
         self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
 
+        self.horizontalScrollBar().valueChanged.connect(
+            self.frozen_table.horizontalScrollBar().setValue
+        )
+
     def has_frozen_row(self) -> bool:
         return self.frozen_table.isVisible() and self.frozen_table.model()
 
@@ -876,22 +880,31 @@ class Table(BaseTable):
         if self.model():
             if not min == max:
                 self.horizontalScrollBar().blockSignals(True)
+                # self.frozen_table.horizontalScrollBar().blockSignals(True)
                 last_col_width = self.sizeHintForColumn(self.model().columnCount() - 1)
                 added_width = self.width() - last_col_width
                 if added_width > 0:
                     self.horizontalScrollBar().setMaximum(max + added_width - 30)
+                    self.frozen_table.horizontalScrollBar().setMaximum(
+                        max + added_width - 30
+                    )
                 else:
                     self.horizontalScrollBar().setMaximum(max + 200)
+                    self.frozen_table.horizontalScrollBar().setMaximum(max + 200)
                     print(f"HSlider: Adjusted max from {max} to {max + added_width}")
                 self.horizontalScrollBar().blockSignals(False)
+                # self.frozen_table.horizontalScrollBar().blockSignals(False)
             else:
                 self.horizontalScrollBar().blockSignals(True)
+                # self.frozen_table.horizontalScrollBar().blockSignals(True)
                 pos = sum(
                     self.columnWidth(col)
                     for col in range(self.model().columnCount() - 1)
                 )
                 self.horizontalScrollBar().setMaximum(pos)
+                self.frozen_table.horizontalScrollBar().setMaximum(pos)
                 self.horizontalScrollBar().blockSignals(False)
+                # self.frozen_table.horizontalScrollBar().blockSignals(False)
 
     def scroll_to_index(self, row: int, column: int) -> None:
         idx_row = row if row >= 0 else 0
@@ -1279,6 +1292,11 @@ class FrozenRowTable(BaseTable):
             return QSize(self.width(), height)
         else:
             return super().sizeHint()
+
+    def wheelEvent(self, ev: QWheelEvent):
+        if ev.angleDelta().x() != 0:
+            self.parent().wheelEvent(ev)
+        return super().wheelEvent(ev)
 
 
 class ArrowPath(QPainterPath):
