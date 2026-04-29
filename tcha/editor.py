@@ -599,40 +599,6 @@ class Editor(QMainWindow):
         self.ui.table.setCurrentIndex(QModelIndex())
         self.tablemodel.removeColumn(current_column)
 
-    def add_element(self, action: QAction) -> None:
-        print("Init adding model")
-        definition = action.data()
-
-        if self.table.editor:
-            match definition.resource_flag():
-                case ResourceFlag.NoResource:
-                    resobj = self.rescont.create(definition.type())
-
-                case ResourceFlag.HasResource:
-                    resource = definition.get_file()
-                    if resource:
-                        resobj = self.rescont.save(definition.type(), resource)
-                        assert isinstance(resobj, ResourceObject)
-                    else:
-                        return
-
-                case ResourceFlag.Optional:
-                    resource = definition.get_file()
-                    if resource:
-                        resobj = self.rescont.save(definition.type(), resource)
-                        assert isinstance(resobj, ResourceObject)
-                    else:
-                        resobj = self.rescont.create(definition.type())
-
-            model = definition.create_model(resobj)
-
-            cell_model = self.table.editor.model()
-            print(f"Adding to cell model {cell_model}")
-            if cell_model is not None:
-                cell_model.add_model(model)
-                print("Model added")
-                self.table.editor.geometriesChanged.emit()
-
     def print_lesson(self) -> None:
         try:
             print(self.lesson)

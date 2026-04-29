@@ -1055,6 +1055,22 @@ class IndexModel(QSortFilterProxyModel):
     def __init__(self, tmodel: TableModel, parent=None):
         super().__init__(parent)
         self.setSourceModel(tmodel)
+        self._inactive = []
+
+    def add_inactive_index(self, row: int) -> None:
+        idx = self.index(row, 1)
+        if idx.isValid():
+            self._inactive.append(row)
+            self.dataChanged.emit(idx, idx)
+
+    def clear_inactive_indices(self):
+        if self._inactive:
+            min_row = min(self._inactive)
+            max_row = max(self._inactive)
+            self._inactive.clear()
+            min_idx = self.index(min_row, 1)
+            max_idx = self.index(max_row, 1)
+            self.dataChanged.emit(min_idx, max_idx)
 
     def columnCount(self, parent=QModelIndex()):
         return 1
@@ -1063,3 +1079,8 @@ class IndexModel(QSortFilterProxyModel):
         if role == Qt.ItemDataRole.DisplayRole:
             return str(index.row() + 1)
         return None
+
+    def flags(self, index: QModelIndex):
+        if index.row() not in self._inactive:
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        return Qt.ItemFlag.NoItemFlags

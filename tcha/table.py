@@ -56,7 +56,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDelegate,
@@ -385,7 +384,7 @@ class CellDelegate(QStyledItemDelegate):
             model = CellModel(index.data(), index)
             editor.setModel(model)
             self.editorOpened.emit(editor)
-            if self.element_selection:
+            if self.element_selection and self.last_idx:
                 selected = model.index(self.last_idx.erow, 0)
                 editor.edit(selected)
 
@@ -478,7 +477,7 @@ class HeaderView(QHeaderView):
                 QSize(newSize, 30),
                 Qt.ItemDataRole.SizeHintRole,
             )
-            
+
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()
         self.model().setHeaderData(
@@ -546,9 +545,7 @@ class BaseTable(QTableView):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
-        self.verticalHeader().sectionMoved.connect(
-            self.close_current_editor
-        )
+        self.verticalHeader().sectionMoved.connect(self.close_current_editor)
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
 
@@ -807,16 +804,12 @@ class Table(BaseTable):
         self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
         self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
-        self.frozen_table.horizontalHeader().sectionResized(self.close_current_editor)
-        self.frozen_table.horizontalHeader().sectionResized(self.update_row_geometries)
+        self.frozen_table.horizontalHeader().sectionResized.connect(
+            self.close_current_editor
+        )
 
         self.horizontalScrollBar().valueChanged.connect(
             self.frozen_table.horizontalScrollBar().setValue
-        )
-        self.frozen_table.horizontalScrollBar().rangeChanged.connect(
-            lambda: self.frozen_table.sync_scroll_bar_max(
-                self.horizontalScrollBar().maximum()
-            )
         )
 
     def has_frozen_row(self) -> bool:
@@ -836,6 +829,11 @@ class Table(BaseTable):
             self.row_list.setModel(IndexModel(model))
             return result
         return False
+
+    def currentIndex(self):
+        table_idx = super().currentIndex()
+        frozen_idx = self.frozen_table.currentIndex()
+        return frozen_idx if frozen_idx.isValid() else table_idx
 
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
@@ -963,6 +961,8 @@ class Table(BaseTable):
         )
 
         dest_row = current_row + row_incr
+        if dest_row == self.frozen_table.frozen_row:
+            dest_row += row_incr
         dest_column = self._top_idx.column() + column_incr
         print("Scrolled", current_row, row_incr, dest_row)
 
@@ -1027,10 +1027,15 @@ class Table(BaseTable):
         self.setCurrentIndex(QModelIndex())
         if self.has_frozen_row():
             self.showRow(self.frozen_table.frozen_row)
+            self.row_list.model().clear_inactive_indices()
         self.hideRow(row)
+        self.row_list.model().add_inactive_index(row)
 
         self.frozen_table.freeze_row(self.model(), row)
 
+        self.frozen_table.horizontalHeader().sectionResized.connect(
+            lambda x, y, z: self.horizontalHeader().resizeSection(x, z)
+        )
         self.horizontalHeader().setVisible(False)
 
     def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
@@ -1256,11 +1261,12 @@ class Table(BaseTable):
 
 
 class FrozenRowTable(BaseTable):
-    def __init__(self, parent=None):
+    def __init__(self, parent_table: Table, parent=None):
         super().__init__(parent)
+        self._table = parent_table
         self.setVisible(False)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        self.horizontalScrollBar().rangeChanged.connect(
+        self.horizontalScrollBar().rangeChanged.connect(self.sync_scroll_bar_max)
 
     @property
     def frozen_row(self) -> int:
@@ -1289,12 +1295,12 @@ class FrozenRowTable(BaseTable):
         self.hide()
 
     def sync_scroll_bar_max(self) -> None:
-        if isinstance(self.parent(), Table):
-            parent_max = self.parent().horizontalScrollBar().maximum() 
-            if parent_max!= self.horizontalScrollBar().maximum():
-                self.horizontalScrollBar().blockSignals(True)
-                self.horizontalScrollBar().setMaximum(parent_max)
-                self.horizontalScrollBar().blockSignals(False)
+        print("Maximum changed")
+        parent_max = self._table.horizontalScrollBar().maximum()
+        if parent_max != self.horizontalScrollBar().maximum():
+            self.horizontalScrollBar().blockSignals(True)
+            self.horizontalScrollBar().setMaximum(parent_max)
+            self.horizontalScrollBar().blockSignals(False)
 
     def sizeHint(self) -> QSize:
         if self.model():
@@ -1308,6 +1314,10 @@ class FrozenRowTable(BaseTable):
             return QSize(self.width(), height)
         else:
             return super().sizeHint()
+
+    def update_row_geometries(self):
+        self.adjustSize()
+        super().update_row_geometries()
 
     def wheelEvent(self, ev: QWheelEvent):
         if ev.angleDelta().x() != 0:
