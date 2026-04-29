@@ -478,7 +478,7 @@ class HeaderView(QHeaderView):
                 QSize(newSize, 30),
                 Qt.ItemDataRole.SizeHintRole,
             )
-
+            
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()
         self.model().setHeaderData(
@@ -547,7 +547,7 @@ class BaseTable(QTableView):
         )
         self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
         self.verticalHeader().sectionMoved.connect(
-            lambda: self.setCurrentIndex(QModelIndex())
+            self.close_current_editor
         )
         self.horizontalHeader().sectionResized.connect(self.close_current_editor)
         self.horizontalHeader().editingStarted.connect(self.close_current_editor)
@@ -807,9 +807,16 @@ class Table(BaseTable):
         self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
         self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
+        self.frozen_table.horizontalHeader().sectionResized(self.close_current_editor)
+        self.frozen_table.horizontalHeader().sectionResized(self.update_row_geometries)
 
         self.horizontalScrollBar().valueChanged.connect(
             self.frozen_table.horizontalScrollBar().setValue
+        )
+        self.frozen_table.horizontalScrollBar().rangeChanged.connect(
+            lambda: self.frozen_table.sync_scroll_bar_max(
+                self.horizontalScrollBar().maximum()
+            )
         )
 
     def has_frozen_row(self) -> bool:
@@ -1253,6 +1260,7 @@ class FrozenRowTable(BaseTable):
         super().__init__(parent)
         self.setVisible(False)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        self.horizontalScrollBar().rangeChanged.connect(
 
     @property
     def frozen_row(self) -> int:
@@ -1279,6 +1287,14 @@ class FrozenRowTable(BaseTable):
         self.setModel(None)
         self._visible_row = -1
         self.hide()
+
+    def sync_scroll_bar_max(self) -> None:
+        if isinstance(self.parent(), Table):
+            parent_max = self.parent().horizontalScrollBar().maximum() 
+            if parent_max!= self.horizontalScrollBar().maximum():
+                self.horizontalScrollBar().blockSignals(True)
+                self.horizontalScrollBar().setMaximum(parent_max)
+                self.horizontalScrollBar().blockSignals(False)
 
     def sizeHint(self) -> QSize:
         if self.model():
