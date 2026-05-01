@@ -514,6 +514,11 @@ class Editor(QMainWindow):
             self.ui.ac_goto_active.setEnabled(True)
             self.ui.ac_freeze_row.setEnabled(True)
 
+            if self.table.frozen_table.frozen_row == self.table.currentIndex().row():
+                self.ui.ac_freeze_row.set_text("unfreeze")
+            else:
+                self.ui.ac_freeze_row.set_text("freeze")
+
             editor.connect_toolsets(self.toolsets)
             editor.currentIndexChanged.connect(self.on_current_changed)
 
@@ -533,6 +538,7 @@ class Editor(QMainWindow):
         self.ui.ac_paste.setEnabled(False)
         self.ui.ac_goto_active.setEnabled(False)
         self.ui.ac_freeze_row.setEnabled(False)
+        self.ui.ac_freeze_row.set_text("freeze")
 
         for signal in (self.ui.menu_elements, self.ui.ac_from_clipboard):
             try:

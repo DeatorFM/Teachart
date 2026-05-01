@@ -53,9 +53,21 @@ class TableViewMode(Enum):
     Table = 0
     SingleRow = 1
 
+
 class SaveState(Enum):
     Unsaved = 0
     Saving = 1
     Saved = 2
     SaveAndQuit = 3
 
+
+class FilterMode(Enum):
+    NoFilter = 0
+    ShowOnlyFiltered = 1
+    HideFiltered = 2
+
+
+class FilteredArea(Enum):
+    Index = 0
+    Row = 1
+    Column = 2

@@ -149,6 +149,28 @@ class SwitchAction(QAction):
         return self._state
 
 
+class MultiLabelAction(QAction):
+    """A QAction whose label text can be changed by binding it to key words."""
+
+    def __init__(
+        self,
+        parent=...,
+        **texts: dict[str, str],
+    ):
+
+        super().__init__(parent)
+        self._texts = texts
+
+    def define_text(self, key: str, text: str) -> None:
+        self._texts[key] = text
+
+    def set_text(self, key: str) -> None:
+        self.setText(self._texts.get(key))
+
+    def set_tool_tip(self, key: str) -> None:
+        self.setToolTip(self._texts.get(key))
+
+
 class DoubleClickButton(QPushButton):
     doubleClicked = pyqtSignal()
 

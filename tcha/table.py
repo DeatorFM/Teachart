@@ -10,6 +10,7 @@ from PyQt6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QPoint,
     QPointF,
     QRect,
@@ -62,14 +63,22 @@ from nativeelements.baseelement import (
     BaseElementModel,
     BaseElementToolset,
 )
-from tcha.consts import CanvasTool, EditingLevel, TableViewMode
+from tcha.consts import (
+    CanvasTool,
+    EditingLevel,
+    FilteredArea,
+    FilterMode,
+    TableViewMode,
+)
 from tcha.tablemodel import (
     CellItem,
     CellModel,
+    FilteredTableModel,
     IndexModel,
     IndexPoint,
     TableModel,
 )
+from ui.table_toolset import TableToolsetView
 
 
 class CellEditor(QListView):
@@ -807,10 +816,40 @@ class Table(BaseTable):
         self.frozen_table.horizontalHeader().sectionResized.connect(
             self.close_current_editor
         )
+        self.frozen_table.unfrozen.connect(self.unfreeze_row)
 
         self.horizontalScrollBar().valueChanged.connect(
             self.frozen_table.horizontalScrollBar().setValue
         )
+
+    # Model setter / getter
+
+    def model(self) -> FilteredTableModel:
+        return super().model()
+
+    def baseModel(self) -> TableModel | None:
+        return (
+            self.model().sourceModel()
+            if isinstance(self.model(), FilteredTableModel)
+            else self.model()
+        )
+
+    def setModel(self, model: QAbstractItemModel | None) -> bool:
+        tmodel = model
+        if model:
+            if isinstance(model, FilteredTableModel):
+                tmodel = model
+            elif isinstance(model, TableModel):
+                tmodel = FilteredTableModel(model, self)
+            else:
+                return False
+
+        result = super().setModel(tmodel)
+        self.on_vscrolled()
+        self.on_hscrolled()
+        self.row_list.setCurrentIndex(0)
+        self.row_list.setModel(IndexModel(model))
+        return result
 
     def has_frozen_row(self) -> bool:
         return self.frozen_table.isVisible() and self.frozen_table.model()
@@ -819,16 +858,6 @@ class Table(BaseTable):
         self._pres_mode = enabled
         if self._editor:
             self._editor.enable_presenter_mode(enabled)
-
-    def setModel(self, model: QAbstractItemModel | None) -> bool:
-        if model:
-            result = super().setModel(model)
-            self.on_vscrolled()
-            self.on_hscrolled()
-            self.row_list.setCurrentIndex(0)
-            self.row_list.setModel(IndexModel(model))
-            return result
-        return False
 
     def currentIndex(self):
         table_idx = super().currentIndex()
@@ -873,7 +902,9 @@ class Table(BaseTable):
         if self._top_idx.isValid():
             try:
                 self.row_list.blockSignals(True)
-                self.row_list.setCurrentIndex(self._top_idx.row())
+                self.row_list.setCurrentIndex(
+                    self.model().mapToSource(self._top_idx).row()
+                )
                 self.row_list.blockSignals(False)
             except IndexError:
                 pass
@@ -914,10 +945,10 @@ class Table(BaseTable):
     def scroll_to_index(self, row: int, column: int) -> None:
         idx_row = row if row >= 0 else 0
         idx_col = column if column >= 0 else 0
-        model_index = self.model().index(idx_row, idx_col)
         print(f"Go to index {idx_row} | {idx_col}")
 
         if self._view_mode == TableViewMode.Table:
+            model_index = self.model().index(idx_row, idx_col)
             if column == -1 and row >= 0:
                 hvalue = self.horizontalScrollBar().value()
                 self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
@@ -931,6 +962,7 @@ class Table(BaseTable):
                 self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
 
         elif self._view_mode == TableViewMode.SingleRow:
+            model_index = self.baseModel().index(idx_row, idx_col)
             if row == -1 and column >= 0:
                 vvalue = self.verticalScrollBar().value()
                 position = sum(self.columnWidth(col) for col in range(idx_col))
@@ -938,17 +970,19 @@ class Table(BaseTable):
                 self.verticalScrollBar().setValue(vvalue)
                 return
 
-            if self._visible_row >= 0:
-                self.verticalHeader().setSectionHidden(self._visible_row, True)
+            # if self.model().filtered_index.row() >= 0:
+            #     self.verticalHeader().setSectionHidden(self._visible_row, True)
 
-            self._visible_row = model_index.row()
-            self.verticalHeader().setSectionHidden(self._visible_row, False)
+            visible_idx = QPersistentModelIndex(model_index)
+            self.model().set_filter(
+                visible_idx, FilterMode.ShowOnlyFiltered, FilteredArea.Row
+            )
 
             self.row_list.setCurrentIndex(model_index.row())
 
             if (
                 self.currentIndex().isValid()
-                and self.currentIndex().row() != self._visible_row
+                and self.currentIndex().row() != visible_idx.row()
             ):
                 self.setCurrentIndex(QModelIndex())
 
@@ -956,6 +990,8 @@ class Table(BaseTable):
             self.viewport().update()
 
     def scroll_by(self, row_incr: int, column_incr=0) -> None:
+        # TODO: Adjust behaviour when row is frozen
+
         current_row = (
             self.row_list.currentIndex() if self.row_list.currentIndex() > -1 else 0
         )
@@ -970,7 +1006,7 @@ class Table(BaseTable):
             self.scroll_to_index(dest_row, -1)
         elif (
             dest_column >= 0
-            and dest_column < self.model().columnCount()
+            and dest_column < self.baseModel().columnCount()
             and row_incr == 0
         ):
             self.scroll_to_index(-1, dest_column)
@@ -986,11 +1022,10 @@ class Table(BaseTable):
     # View mode handling
 
     def set_view_mode(self, mode: TableViewMode) -> None:
+        """Changed the view mode of the table. If 'Table' the entire table is shown. If 'SingleRow' only one row is shown at a time."""
         print(f"Change view mode to {mode}")
         if mode == TableViewMode.Table:
-            self._visible_row = -1
-            for row in range(self.model().rowCount()):
-                self.verticalHeader().setSectionHidden(row, False)
+            self.model().set_filter_mode(FilterMode.NoFilter)
             self.scheduleDelayedItemsLayout()
             self.viewport().update()
             self._view_mode = mode
@@ -998,45 +1033,71 @@ class Table(BaseTable):
 
         elif mode == TableViewMode.SingleRow:
             if self._top_idx.isValid():
-                self._visible_row = self._top_idx.row()
+                visible_idx = QPersistentModelIndex(self._top_idx)
             else:
-                self._visible_row = 0
+                visible_idx = QPersistentModelIndex()
 
             self._view_mode = mode
 
-            for row in range(self.model().rowCount()):
-                self.verticalHeader().setSectionHidden(row, row != self._visible_row)
+            self.model().set_filter(
+                visible_idx, FilterMode.ShowOnlyFiltered, FilteredArea.Row
+            )
 
             if (
                 self.currentIndex().isValid()
-                and self.currentIndex().row() != self._visible_row
+                and self.currentIndex().row() != visible_idx.row()
             ):
                 self.setCurrentIndex(QModelIndex())
 
             self.scheduleDelayedItemsLayout()
             self.viewport().update()
 
-    def isIndexHidden(self, index: QModelIndex) -> bool:
-        return index.row() != self._visible_row and self._visible_row >= 0
-
     def freeze_current_row(self) -> None:
         if self.currentIndex().isValid():
-            self.freeze_row(self.currentIndex().row())
+            self.freeze_row(self.currentIndex())
 
-    def freeze_row(self, row: int) -> None:
-        self.setCurrentIndex(QModelIndex())
+    def freeze_row(self, idx: QModelIndex) -> None:
+        """Make a row fixed on top of the table to be always visible."""
+        mapped = self.model().mapToSource(idx)
+        pers_idx = QPersistentModelIndex(mapped)
+        self.close_current_editor()
         if self.has_frozen_row():
-            self.showRow(self.frozen_table.frozen_row)
             self.row_list.model().clear_inactive_indices()
-        self.hideRow(row)
-        self.row_list.model().add_inactive_index(row)
 
-        self.frozen_table.freeze_row(self.model(), row)
+        if self._view_mode is TableViewMode.SingleRow:
+            if self.currentIndex() == pers_idx:
+                incr = (
+                    1
+                    if self.currentIndex().row() + 1 < self.baseModel().rowCount()
+                    else -1
+                )
+                self.scroll_by(incr)
+
+        else:
+            self.model().set_filter(pers_idx, FilterMode.HideFiltered, FilteredArea.Row)
+
+        self.row_list.model().add_inactive_index(mapped)
+
+        self.frozen_table.freeze_row(self.baseModel(), pers_idx)
 
         self.frozen_table.horizontalHeader().sectionResized.connect(
             lambda x, y, z: self.horizontalHeader().resizeSection(x, z)
         )
         self.horizontalHeader().setVisible(False)
+
+    def unfreeze_row(self) -> None:
+        """Unfreezes the current frozen row"""
+        self.close_current_editor()
+        if self.has_frozen_row():
+            self.row_list.model().clear_inactive_indices()
+            self.frozen_table.unfreeze()
+            self.horizontalHeader().setVisible(True)
+            self.frozen_table.horizontalHeader().sectionResized.disconnect()
+
+            if self._view_mode is TableViewMode.SingleRow:
+                pass
+            else:
+                self.model().set_filter_mode(FilterMode.NoFilter)
 
     def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
         """Relay frozen table's editor opened signal and close own editor"""
@@ -1261,37 +1322,67 @@ class Table(BaseTable):
 
 
 class FrozenRowTable(BaseTable):
+    unfrozen = pyqtSignal(int)
+
     def __init__(self, parent_table: Table, parent=None):
         super().__init__(parent)
         self._table = parent_table
+
         self.setVisible(False)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.horizontalScrollBar().rangeChanged.connect(self.sync_scroll_bar_max)
 
+    def model(self) -> FilteredTableModel | None:
+        return super().model()
+
+    def baseModel(self) -> TableModel | None:
+        return (
+            self.model().sourceModel()
+            if isinstance(self.model(), FilteredTableModel)
+            else self.model()
+        )
+
     @property
     def frozen_row(self) -> int:
-        return self._visible_row
+        return self.model().filtered_index.row() if self.model() else -1
 
-    def freeze_row(self, model: TableModel, visible_row: int) -> None:
+    def setModel(self, model):
+        tmodel = model
+        if model:
+            if isinstance(model, FilteredTableModel):
+                tmodel = model
+            elif isinstance(model, TableModel):
+                tmodel = FilteredTableModel(model, self)
+            else:
+                return False
+
+            result = super().setModel(tmodel)
+            # if result:
+            #     tmodel.rowsInserted.connect(self._on_rows_changed)
+            #     tmodel.rowsMoved.connect(self._on_rows_moved)
+            #     tmodel.rowsRemoved.connect(self._on_rows_changed)
+            #     tmodel.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
+            return result
+        return super().setModel(model)
+
+    def freeze_row(
+        self, model: TableModel, visible_source_idx: QPersistentModelIndex
+    ) -> None:
         self.hide()
         if self.model():
             self.setModel(None)
         self.setModel(model)
-        self.show()
 
-        if self._visible_row == -1:
-            self._visible_row = visible_row
-            for row in range(model.rowCount()):
-                if row != visible_row:
-                    self.hideRow(row)
-        else:
-            self.hideRow(self._visible_row)
-            self.showRow(visible_row)
-            self._visible_row = visible_row
+        if visible_source_idx.isValid():
+            self.model().set_filter(
+                visible_source_idx, FilterMode.ShowOnlyFiltered, FilteredArea.Row
+            )
+
+        self.show()
 
     def unfreeze(self) -> None:
         self.setModel(None)
-        self._visible_row = -1
+        self.model().set_filtered_index(QPersistentModelIndex())
         self.hide()
 
     def sync_scroll_bar_max(self) -> None:
@@ -1305,7 +1396,9 @@ class FrozenRowTable(BaseTable):
     def sizeHint(self) -> QSize:
         if self.model():
             height = (
-                self.sizeHintForRow(self._visible_row)
+                self.baseModel()
+                .data(QModelIndex(self.model().filtered_index))
+                .current_size.height()
                 + self.horizontalHeader().height()
                 + 4
             )
@@ -1316,12 +1409,12 @@ class FrozenRowTable(BaseTable):
             return super().sizeHint()
 
     def update_row_geometries(self):
-        self.adjustSize()
         super().update_row_geometries()
+        self.adjustSize()
 
     def wheelEvent(self, ev: QWheelEvent):
         if ev.angleDelta().x() != 0:
-            self.parent().wheelEvent(ev)
+            self._table.wheelEvent(ev)
         return super().wheelEvent(ev)
 
 

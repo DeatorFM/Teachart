@@ -36,7 +36,7 @@ from tcha.consts import CanvasTool
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.styling import SvgIcon
 from tcha.table import PresenterCanvas, Table
-from ui.commons import NoteEdit, SearchableComboBox, SwitchAction
+from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAction
 
 
 class Ui_Editor(object):
@@ -477,7 +477,7 @@ class Ui_Editor(object):
         self.ac_goto_active.setObjectName("ac_goto_active")
         self.ac_goto_active.setDisabled(True)
 
-        self.ac_freeze_row = QAction(parent=MainWindow)
+        self.ac_freeze_row = MultiLabelAction(parent=MainWindow)
         self.ac_freeze_row.setObjectName("ac_freeze_row")
         self.ac_freeze_row.setDisabled(True)
 
@@ -760,12 +760,23 @@ class Ui_Editor(object):
         self.ac_vmode_table.setText(_translate("MainWindow", "Show entire table"))
         self.ac_vmode_row.setText(_translate("MainWindow", "Show single row"))
         self.ac_goto_active.setText(_translate("MainWindow", "Go to selected cell"))
-        self.ac_freeze_row.setText(
-            _translate(
-                "MainWindow",
-                "Freeze current row",
-            )
+        transl1 = _translate(
+            "MainWindow",
+            "Freeze row",
         )
+        self.ac_freeze_row.define_text(
+            "freeze",
+            transl1,
+        )
+        transl2 = _translate(
+            "MainWindow",
+            "Unfreeze row",
+        )
+        self.ac_freeze_row.define_text(
+            "unfreeze",
+            transl2,
+        )
+        self.ac_freeze_row.set_text("freeze")
         self.ac_settings.setText(_translate("MainWindow", "Settings"))
         self.ac_course_exp.setText(_translate("MainWindow", "Course Explorer"))
         self.ac_course_rec.setText(_translate("MainWindow", "View Course Record"))

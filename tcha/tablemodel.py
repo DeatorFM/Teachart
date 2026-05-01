@@ -28,7 +28,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QFont, QGuiApplication
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import ResourceFlag
+from tcha.consts import FilteredArea, FilterMode, ResourceFlag
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
@@ -1023,30 +1023,150 @@ class TableModel(QAbstractTableModel):
         return TableModel(table_data)
 
 
-class SingleRowModel(TableModel):
-    def __init__(
-        self,
-        row_idx: int,
-        source_model=TableModel,
-        parent=None,
-    ):
+class FilteredTableModel(QSortFilterProxyModel):
+    modelChanged = pyqtSignal()
+
+    def __init__(self, source_model: TableModel, parent=None):
         super().__init__(parent)
-        self._data = []
-        self._data.append(source_model.get_row(row_idx))
-        self._header_data[Qt.Orientation.Horizontal] = [
-            source_model.headerData(
-                idx, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
-            )
-            for idx in range(source_model.rowCount())
-        ]
-        vheader = []
-        vheader.append(self._header_data[Qt.Orientation.Vertical][row_idx])
-        self._header_data[Qt.Orientation.Vertical] = vheader
+        self.setSourceModel(source_model)
+        source_model.modelChanged.connect(self.modelChanged.emit)
 
-        self._rescont = source_model.rescont
+        self._persistent_filtered_index = QPersistentModelIndex()
+        self._filter_mode = FilterMode.NoFilter
+        self._filtered_area = FilteredArea.Row
 
-    def rowCount(self, parent=...):
-        return 1
+    @property
+    def filtered_index(self) -> QPersistentModelIndex:
+        """Returns the index that is handled by the filter."""
+        return self._persistent_filtered_index
+
+    @property
+    def filter_mode(self) -> FilterMode:
+        return self._filter_mode
+
+    @property
+    def filtered_area(self) -> FilteredArea:
+        return self._filtered_area
+
+    def set_filter(
+        self, idx: QPersistentModelIndex, mode: FilterMode, area: FilteredArea
+    ) -> None:
+        self.beginFilterChange()
+        self._persistent_filtered_index = idx
+        self._filter_mode = mode
+        self._filtered_area = area
+        self.endFilterChange()
+
+    def set_filtered_index(self, idx: QPersistentModelIndex) -> None:
+        self.beginFilterChange()
+        self._persistent_filtered_index = idx
+        self.endFilterChange()
+
+    def set_filter_mode(self, mode: FilterMode) -> None:
+        self.beginFilterChange()
+        self._filter_mode = mode
+        self.endFilterChange()
+
+    def set_filtered_area(self, area: FilteredArea) -> None:
+        self.beginFilterChange()
+        self._filtered_area = area
+        self.endFilterChange()
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+        if self.filter_mode and self.filtered_area in (
+            FilteredArea.Row,
+            FilteredArea.Index,
+        ):
+            if self.filter_mode == FilterMode.ShowOnlyFiltered:
+                return source_row == self.filtered_index.row()
+            else:
+                return source_row != self.filtered_index.row()
+
+        return True
+
+    def filterAcceptsColumn(self, source_column: int, source_parent: QModelIndex):
+        if self.filter_mode and self.filtered_area in (
+            FilteredArea.Column,
+            FilteredArea.Index,
+        ):
+            if source_column == self.filtered_index.column():
+                return (
+                    True if self.filter_mode == FilterMode.ShowOnlyFiltered else False
+                )
+
+        return True
+
+    # TableModel methods
+
+    # No conversion
+
+    @property
+    def rescont(self) -> ResourceContainer:
+        return self.sourceModel().rescont
+
+    @property
+    def model_id(self) -> int:
+        return self.sourceModel().model_id
+
+    def counter(self) -> int:
+        return self.sourceModel().counter()
+
+    def increase_counter(self) -> int:
+        return self.sourceModel().increase_counter()
+
+    def is_valid(self) -> bool:
+        return self.sourceModel().is_valid()
+
+    # Index conversion needed
+
+    def get_row(self, proxy_row: int) -> tuple[CellItem]:
+        """Get row from source model using proxy row index."""
+        source_row = self.mapToSource(self.index(proxy_row, 0)).row()
+        return self.sourceModel().get_row(source_row)
+
+    def get_column(self, proxy_column: int) -> tuple[CellItem]:
+        """Get column from source model using proxy column index."""
+        source_column = self.mapToSource(self.index(0, proxy_column)).column()
+        return self.sourceModel().get_column(source_column)
+
+    def map_row_to_source(self, row: int) -> int:
+        idx = self.index(row, 0)
+        mapped = self.mapToSource(idx)
+        return mapped.row()
+
+    def index_for_num(self, num: int) -> QModelIndex:
+        """Returns the proxy index of the CellItem with the given number."""
+        source_index = self.sourceModel().index_for_num(num)
+        return self.mapFromSource(source_index)
+
+    def expected_row_height(self, proxy_row: int) -> int:
+        """Get expected row height using proxy row index."""
+        source_row = self.mapToSource(self.index(proxy_row, 0)).row()
+        return self.sourceModel().expected_row_height(source_row)
+
+    def swap_items(
+        self, proxy_source_index: QModelIndex, proxy_destination_index: QModelIndex
+    ) -> None:
+        """Swap items using proxy indices."""
+        source_index = self.mapToSource(proxy_source_index)
+        destination_index = self.mapToSource(proxy_destination_index)
+        self.sourceModel().swap_items(source_index, destination_index)
+
+    def copy_to_cell(self, source_cell: CellItem, dest_cell: CellItem) -> None:
+        """Copy cell contents (works directly with CellItem objects)."""
+        self.sourceModel().copy_to_cell(source_cell, dest_cell)
+
+    # Override base methods to ensure proper signal forwarding
+
+    def sourceModel(self) -> TableModel:
+        """Type hint override to return TableModel specifically."""
+        return super().sourceModel()
+
+    # XML serialization (delegates to source)
+
+    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        """Delegate XML writing to source model."""
+        return self.sourceModel().xml(writer)
 
 
 class IndexModel(QSortFilterProxyModel):
@@ -1057,10 +1177,9 @@ class IndexModel(QSortFilterProxyModel):
         self.setSourceModel(tmodel)
         self._inactive = []
 
-    def add_inactive_index(self, row: int) -> None:
-        idx = self.index(row, 1)
+    def add_inactive_index(self, idx: QPersistentModelIndex) -> None:
         if idx.isValid():
-            self._inactive.append(row)
+            self._inactive.append(idx)
             self.dataChanged.emit(idx, idx)
 
     def clear_inactive_indices(self):
@@ -1081,6 +1200,6 @@ class IndexModel(QSortFilterProxyModel):
         return None
 
     def flags(self, index: QModelIndex):
-        if index.row() not in self._inactive:
+        if index not in self._inactive:
             return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         return Qt.ItemFlag.NoItemFlags
