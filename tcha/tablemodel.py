@@ -1156,6 +1156,13 @@ class FilteredTableModel(QSortFilterProxyModel):
         """Copy cell contents (works directly with CellItem objects)."""
         self.sourceModel().copy_to_cell(source_cell, dest_cell)
 
+    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        """Override to handle frozen row index updates."""
+        result = self.sourceModel().insertRow(row, parent)
+        if result:
+            self.invalidateRowsFilter()
+        return result
+
     # Override base methods to ensure proper signal forwarding
 
     def sourceModel(self) -> TableModel:
@@ -1179,17 +1186,18 @@ class IndexModel(QSortFilterProxyModel):
 
     def add_inactive_index(self, idx: QPersistentModelIndex) -> None:
         if idx.isValid():
+            print(f"Setting idx {idx.row()}")
             self._inactive.append(idx)
-            self.dataChanged.emit(idx, idx)
+            self.dataChanged.emit(QModelIndex(idx), QModelIndex(idx))
 
     def clear_inactive_indices(self):
         if self._inactive:
-            min_row = min(self._inactive)
-            max_row = max(self._inactive)
+            min_idx = min(self._inactive, key=lambda x: x.row())
+            max_idx = max(self._inactive, key=lambda x: x.row())
             self._inactive.clear()
-            min_idx = self.index(min_row, 1)
-            max_idx = self.index(max_row, 1)
-            self.dataChanged.emit(min_idx, max_idx)
+            # min_idx = self.index(min_row, 1)
+            # max_idx = self.index(max_row, 1)
+            self.dataChanged.emit(QModelIndex(min_idx), QModelIndex(max_idx))
 
     def columnCount(self, parent=QModelIndex()):
         return 1
@@ -1200,6 +1208,6 @@ class IndexModel(QSortFilterProxyModel):
         return None
 
     def flags(self, index: QModelIndex):
-        if index not in self._inactive:
+        if index.row() not in map(lambda x: x.row(), self._inactive):
             return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         return Qt.ItemFlag.NoItemFlags

@@ -219,7 +219,9 @@ class Editor(QMainWindow):
         self.ui.table.changeMade.connect(self.set_unsaved)
 
         self.ui.ac_add_row.triggered.connect(
-            lambda: self.tablemodel.insertRow(self.ui.table.currentIndex().row() + 1)
+            lambda: self.tablemodel.insertRow(
+                self.ui.table.currentBaseIndex().row() + 1
+            )
         )
         self.ui.ac_add_column.triggered.connect(
             lambda: self.tablemodel.insertColumn(

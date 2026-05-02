@@ -864,6 +864,16 @@ class Table(BaseTable):
         frozen_idx = self.frozen_table.currentIndex()
         return frozen_idx if frozen_idx.isValid() else table_idx
 
+    def currentBaseIndex(self) -> QModelIndex:
+        """Returns the current source index"""
+        table_idx = super().currentIndex()
+        frozen_idx = self.frozen_table.currentIndex()
+        return (
+            self.frozen_table.model().mapToSource(frozen_idx)
+            if frozen_idx.isValid()
+            else self.model().mapToSource(table_idx)
+        )
+
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
         """Connects the cell editor with the signals to notify the editor"""
@@ -896,6 +906,8 @@ class Table(BaseTable):
                 last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
                 self.verticalScrollBar().setMaximum(last_row_height)
                 self.verticalScrollBar().blockSignals(False)
+
+        self.on_vscrolled()
 
     def on_vscrolled(self) -> None:
         self._top_idx = self.indexAt(QPoint(0, 0))
@@ -948,10 +960,11 @@ class Table(BaseTable):
         print(f"Go to index {idx_row} | {idx_col}")
 
         if self._view_mode == TableViewMode.Table:
-            model_index = self.model().index(idx_row, idx_col)
+            model_index = self.baseModel().index(idx_row, idx_col)
+            mapped = self.model().mapFromSource(model_index)
             if column == -1 and row >= 0:
                 hvalue = self.horizontalScrollBar().value()
-                self.scrollTo(model_index, QTableView.ScrollHint.PositionAtTop)
+                self.scrollTo(mapped, QTableView.ScrollHint.PositionAtTop)
                 self.horizontalScrollBar().setValue(hvalue)
             elif row == -1 and column >= 0:
                 vvalue = self.verticalScrollBar().value()
@@ -1076,7 +1089,7 @@ class Table(BaseTable):
         else:
             self.model().set_filter(pers_idx, FilterMode.HideFiltered, FilteredArea.Row)
 
-        self.row_list.model().add_inactive_index(mapped)
+        self.row_list.model().add_inactive_index(QPersistentModelIndex(mapped))
 
         self.frozen_table.freeze_row(self.baseModel(), pers_idx)
 
@@ -1088,16 +1101,17 @@ class Table(BaseTable):
     def unfreeze_row(self) -> None:
         """Unfreezes the current frozen row"""
         self.close_current_editor()
-        if self.has_frozen_row():
-            self.row_list.model().clear_inactive_indices()
-            self.frozen_table.unfreeze()
-            self.horizontalHeader().setVisible(True)
-            self.frozen_table.horizontalHeader().sectionResized.disconnect()
+        self.row_list.model().clear_inactive_indices()
+        if self._view_mode is TableViewMode.SingleRow:
+            pass
+        else:
+            self.model().set_filter(
+                QPersistentModelIndex(), FilterMode.NoFilter, FilteredArea.Row
+            )
 
-            if self._view_mode is TableViewMode.SingleRow:
-                pass
-            else:
-                self.model().set_filter_mode(FilterMode.NoFilter)
+        self.frozen_table.unfreeze()
+        self.horizontalHeader().setVisible(True)
+        self.frozen_table.horizontalHeader().sectionResized.disconnect()
 
     def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
         """Relay frozen table's editor opened signal and close own editor"""
@@ -1127,10 +1141,10 @@ class Table(BaseTable):
 
     def remove_row(self, row: int = -1) -> None:
         """Removes specified row or if not current row"""
-        rmv_row = row if row > -1 else self.currentIndex().row()
+        rmv_row = row if row > -1 else self.currentBaseIndex().row()
         print(f"About to remove row {rmv_row}")
-        model: TableModel = self.model()
-        if self._editor and self.model().rowCount() > 1:
+        model: TableModel = self.baseModel()
+        if self._editor and model.rowCount() > 1:
             if any(model.get_row(rmv_row)):
                 result = QMessageBox.question(
                     self,
@@ -1322,7 +1336,7 @@ class Table(BaseTable):
 
 
 class FrozenRowTable(BaseTable):
-    unfrozen = pyqtSignal(int)
+    unfrozen = pyqtSignal()
 
     def __init__(self, parent_table: Table, parent=None):
         super().__init__(parent)
@@ -1357,10 +1371,12 @@ class FrozenRowTable(BaseTable):
                 return False
 
             result = super().setModel(tmodel)
-            # if result:
-            #     tmodel.rowsInserted.connect(self._on_rows_changed)
-            #     tmodel.rowsMoved.connect(self._on_rows_moved)
-            #     tmodel.rowsRemoved.connect(self._on_rows_changed)
+            if result:
+                tmodel.sourceModel().rowsInserted.connect(
+                    lambda: self.verticalHeader().viewport().update()
+                )
+                #     tmodel.rowsMoved.connect(self._on_rows_moved)
+                tmodel.sourceModel().rowsRemoved.connect(self._on_rows_removed)
             #     tmodel.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
             return result
         return super().setModel(model)
@@ -1382,8 +1398,12 @@ class FrozenRowTable(BaseTable):
 
     def unfreeze(self) -> None:
         self.setModel(None)
-        self.model().set_filtered_index(QPersistentModelIndex())
         self.hide()
+
+    def _on_rows_removed(self, parent: QModelIndex, first: int, last: int) -> None:
+        filtered_index = self.model().filtered_index
+        if not filtered_index.isValid():
+            self.unfrozen.emit()
 
     def sync_scroll_bar_max(self) -> None:
         print("Maximum changed")
