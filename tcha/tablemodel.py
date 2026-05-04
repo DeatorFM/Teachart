@@ -28,7 +28,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QFont, QGuiApplication
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import FilteredArea, FilterMode, ResourceFlag
+from tcha.consts import ResourceFlag
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
@@ -428,31 +428,24 @@ class CellModel(QAbstractListModel):
 
 @dataclass
 class HeaderDataItem:
+    visual_index: int
     orientation: Qt.Orientation
     section_size: int
     editable: bool = field(default=True)
     text: str = field(default="")
 
     @classmethod
-    def horizontal(cls) -> "HeaderDataItem":
-        return cls(Qt.Orientation.Horizontal, 100)
+    def horizontal(cls, idx: int) -> "HeaderDataItem":
+        return cls(idx, Qt.Orientation.Horizontal, 100)
 
     @classmethod
-    def vertical(cls) -> "HeaderDataItem":
-        return cls(Qt.Orientation.Vertical, 30, False)
+    def vertical(cls, idx: int) -> "HeaderDataItem":
+        return cls(idx, Qt.Orientation.Vertical, 30, False)
 
     def __deepcopy__(self, memo: dict | None = None) -> HeaderDataItem:
         return HeaderDataItem(
             self.orientation, self.section_size, self.editable, self.text
         )
-
-
-@dataclass
-class TableData:
-    """Provides raw data for the table"""
-
-    table: list[list[CellModel]]
-    headers: dict[Qt.Orientation, list[HeaderDataItem]]
 
 
 class TableModel(QAbstractTableModel):
@@ -568,7 +561,7 @@ class TableModel(QAbstractTableModel):
                         and orientation == Qt.Orientation.Horizontal
                     ):
                         return str(self._header_data[orientation][section].section_size)
-                    return str(section + 1)
+                    return self._header_data[orientation][section].visual_index + 1
             elif role == Qt.ItemDataRole.FontRole:
                 font = QFont()
                 font.setFamily("Segoe UI Semibold")
@@ -585,10 +578,17 @@ class TableModel(QAbstractTableModel):
         except IndexError:
             pass
 
-    def setHeaderData(self, section, orientation, value, role=...) -> bool:
+    def setHeaderData(
+        self, section: int, orientation: Qt.Orientation, value: Any, role=...
+    ) -> bool:
         try:
             if role == Qt.ItemDataRole.DisplayRole and isinstance(value, str):
                 self._header_data[orientation][section].text = value
+                self.headerDataChanged.emit(orientation, section, section)
+                self.modelChanged.emit()
+                return True
+            elif role == Qt.ItemDataRole.EditRole and isinstance(value, int):
+                self._header_data[orientation][section].visual_index = value
                 self.headerDataChanged.emit(orientation, section, section)
                 self.modelChanged.emit()
                 return True
@@ -606,14 +606,15 @@ class TableModel(QAbstractTableModel):
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
         """Inserts new row after the given row"""
+        row = row if row > -1 else self.rowCount()
         try:
             self.beginInsertRows(QModelIndex(), row, row + count - 1)
-            for _ in range(count):
+            for num in range(count):
                 self._header_data[Qt.Orientation.Vertical].insert(
-                    row, HeaderDataItem.vertical()
+                    row + num, HeaderDataItem.vertical(row + num)
                 )
                 self._data.insert(
-                    row,
+                    row + num,
                     [
                         CellItem(
                             self._header_data[Qt.Orientation.Horizontal][col],
@@ -631,16 +632,17 @@ class TableModel(QAbstractTableModel):
     def insertColumns(
         self, column: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
+        column = column if column > -1 else self.columnCount()
         try:
             self.beginInsertColumns(parent, column, column + count - 1)
-            for _ in range(count):
-                hitem = HeaderDataItem.horizontal()
+            for num in range(count):
+                hitem = HeaderDataItem.horizontal(column + num)
                 for row in self._data:
                     row.insert(
-                        column,
+                        column + num,
                         CellItem(hitem, self.increase_counter()),
                     )
-                self._header_data[Qt.Orientation.Horizontal].insert(column, hitem)
+                self._header_data[Qt.Orientation.Horizontal].insert(column + num, hitem)
             self.endInsertColumns()
             self.modelChanged.emit()
             return True
@@ -680,88 +682,89 @@ class TableModel(QAbstractTableModel):
         self.modelChanged.emit()
         return True
 
-    def moveRows(
-        self,
-        sourceParent: QModelIndex,
-        sourceRow: int,
-        count: int,
-        destinationParent: QModelIndex,
-        destinationChild: int,
-    ) -> bool:
-        try:
-            if sourceRow > destinationChild:
-                self.beginMoveRows(
-                    sourceParent,
-                    sourceRow,
-                    sourceRow + count - 1,
-                    destinationParent,
-                    destinationChild,
-                )
-                adjust = 0
-            else:
-                self.beginMoveRows(
-                    sourceParent,
-                    sourceRow,
-                    sourceRow + count - 1,
-                    destinationParent,
-                    destinationChild + 1,
-                )
-                adjust = 0
-            self._data.insert(destinationChild + adjust, self._data.pop(sourceRow))
-            self._header_data[Qt.Orientation.Vertical].insert(
-                destinationChild + adjust,
-                self._header_data[Qt.Orientation.Vertical].pop(sourceRow),
-            )
-            self.endMoveRows()
-            self.modelChanged.emit()
-            print("Moved row", sourceRow, "to", destinationChild, "successfully")
-            print("Table now:\n", self)
-            print("Headers:", self._header_data)
-            return True
-        except IndexError:
-            return False
+    # def moveRows(
+    #     self,
+    #     sourceParent: QModelIndex,
+    #     sourceRow: int,
+    #     count: int,
+    #     destinationParent: QModelIndex,
+    #     destinationChild: int,
+    # ) -> bool:
+    #     try:
+    #         if sourceRow > destinationChild:
+    #             self.beginMoveRows(
+    #                 sourceParent,
+    #                 sourceRow,
+    #                 sourceRow + count - 1,
+    #                 destinationParent,
+    #                 destinationChild,
+    #             )
+    #             adjust = 0
+    #         else:
+    #             self.beginMoveRows(
+    #                 sourceParent,
+    #                 sourceRow,
+    #                 sourceRow + count - 1,
+    #                 destinationParent,
+    #                 destinationChild + 1,
+    #             )
+    #             adjust = -1
+    #         self._data.insert(destinationChild + adjust, self._data.pop(sourceRow))
+    #         self._header_data[Qt.Orientation.Vertical].insert(
+    #             destinationChild + adjust,
+    #             self._header_data[Qt.Orientation.Vertical].pop(sourceRow),
+    #         )
+    #         self.endMoveRows()
+    #         self.modelChanged.emit()
+    #         print("Moved row", sourceRow, "to", destinationChild, "successfully")
+    #         print("Table now:\n", self)
+    #         print("Headers:", self._header_data)
+    #         return True
+    #     except IndexError:
+    #         return False
 
-    def moveColumns(
-        self,
-        sourceParent: QModelIndex,
-        sourceColumn: int,
-        count: int,
-        destinationParent: QModelIndex,
-        destinationChild: int,
-    ) -> bool:
-        try:
-            if sourceColumn > destinationChild:
-                self.beginMoveColumns(
-                    sourceParent,
-                    sourceColumn,
-                    sourceColumn + count - 1,
-                    destinationParent,
-                    destinationChild,
-                )
-                adjust = 0
-            else:
-                self.beginMoveColumns(
-                    sourceParent,
-                    sourceColumn,
-                    sourceColumn + count - 1,
-                    destinationParent,
-                    destinationChild + 1,
-                )
-                adjust = 0
-            for row in self._data:
-                row.insert(destinationChild + adjust, row.pop(sourceColumn))
-            self._header_data[Qt.Orientation.Horizontal].insert(
-                destinationChild + adjust,
-                self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn),
-            )
-            self.endMoveRows()
-            self.modelChanged.emit()
-            print("Moved column", sourceColumn, "to", destinationChild, "successfully")
-            print("Table now:\n", self)
-            print("Headers:", self._header_data)
-            return True
-        except IndexError:
-            return False
+    # def moveColumns(
+    #     self,
+    #     sourceParent: QModelIndex,
+    #     sourceColumn: int,
+    #     count: int,
+    #     destinationParent: QModelIndex,
+    #     destinationChild: int,
+    # ) -> bool:
+    #     print("Starting move operation")
+    #     try:
+    #         if sourceColumn > destinationChild:
+    #             self.beginMoveColumns(
+    #                 sourceParent,
+    #                 sourceColumn,
+    #                 sourceColumn + count - 1,
+    #                 destinationParent,
+    #                 destinationChild,
+    #             )
+    #             adjust = 0
+    #         else:
+    #             self.beginMoveColumns(
+    #                 sourceParent,
+    #                 sourceColumn,
+    #                 sourceColumn + count - 1,
+    #                 destinationParent,
+    #                 destinationChild + 1,
+    #             )
+    #             adjust = -1
+    #         for row in self._data:
+    #             row.insert(destinationChild + adjust, row.pop(sourceColumn))
+    #         self._header_data[Qt.Orientation.Horizontal].insert(
+    #             destinationChild + adjust,
+    #             self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn),
+    #         )
+    #         self.endMoveColumns()
+    #         self.modelChanged.emit()
+    #         print("Moved column", sourceColumn, "to", destinationChild, "successfully")
+    #         print("Table now:\n", self)
+    #         print("Headers:", self._header_data)
+    #         return True
+    #     except IndexError:
+    #         return False
 
     def mimeData(self, indexes: list[QModelIndex]):
         mimedata = QMimeData()
@@ -1016,164 +1019,158 @@ class TableModel(QAbstractTableModel):
     def __str__(self):
         return f"Data: {self._data}\nHeader: {self._header_data}"
 
-    def __deepcopy__(self, memo: dict | None = None) -> TableModel:
-        data = deepcopy(self._data)
-        headers = deepcopy(self._header_data)
-        table_data = TableData(data, headers)
-        return TableModel(table_data)
 
+# class FilteredTableModel(QSortFilterProxyModel):
+#     modelChanged = pyqtSignal()
 
-class FilteredTableModel(QSortFilterProxyModel):
-    modelChanged = pyqtSignal()
+#     def __init__(self, source_model: TableModel, parent=None):
+#         super().__init__(parent)
+#         self.setSourceModel(source_model)
+#         source_model.modelChanged.connect(self.modelChanged.emit)
 
-    def __init__(self, source_model: TableModel, parent=None):
-        super().__init__(parent)
-        self.setSourceModel(source_model)
-        source_model.modelChanged.connect(self.modelChanged.emit)
+#         self._persistent_filtered_index = QPersistentModelIndex()
+#         self._filter_mode = FilterMode.NoFilter
+#         self._filtered_area = FilteredArea.Row
 
-        self._persistent_filtered_index = QPersistentModelIndex()
-        self._filter_mode = FilterMode.NoFilter
-        self._filtered_area = FilteredArea.Row
+#     @property
+#     def filtered_index(self) -> QPersistentModelIndex:
+#         """Returns the index that is handled by the filter."""
+#         return self._persistent_filtered_index
 
-    @property
-    def filtered_index(self) -> QPersistentModelIndex:
-        """Returns the index that is handled by the filter."""
-        return self._persistent_filtered_index
+#     @property
+#     def filter_mode(self) -> FilterMode:
+#         return self._filter_mode
 
-    @property
-    def filter_mode(self) -> FilterMode:
-        return self._filter_mode
+#     @property
+#     def filtered_area(self) -> FilteredArea:
+#         return self._filtered_area
 
-    @property
-    def filtered_area(self) -> FilteredArea:
-        return self._filtered_area
+#     def set_filter(
+#         self, idx: QPersistentModelIndex, mode: FilterMode, area: FilteredArea
+#     ) -> None:
+#         self.beginFilterChange()
+#         self._persistent_filtered_index = idx
+#         self._filter_mode = mode
+#         self._filtered_area = area
+#         self.endFilterChange()
 
-    def set_filter(
-        self, idx: QPersistentModelIndex, mode: FilterMode, area: FilteredArea
-    ) -> None:
-        self.beginFilterChange()
-        self._persistent_filtered_index = idx
-        self._filter_mode = mode
-        self._filtered_area = area
-        self.endFilterChange()
+#     def set_filtered_index(self, idx: QPersistentModelIndex) -> None:
+#         self.beginFilterChange()
+#         self._persistent_filtered_index = idx
+#         self.endFilterChange()
 
-    def set_filtered_index(self, idx: QPersistentModelIndex) -> None:
-        self.beginFilterChange()
-        self._persistent_filtered_index = idx
-        self.endFilterChange()
+#     def set_filter_mode(self, mode: FilterMode) -> None:
+#         self.beginFilterChange()
+#         self._filter_mode = mode
+#         self.endFilterChange()
 
-    def set_filter_mode(self, mode: FilterMode) -> None:
-        self.beginFilterChange()
-        self._filter_mode = mode
-        self.endFilterChange()
+#     def set_filtered_area(self, area: FilteredArea) -> None:
+#         self.beginFilterChange()
+#         self._filtered_area = area
+#         self.endFilterChange()
 
-    def set_filtered_area(self, area: FilteredArea) -> None:
-        self.beginFilterChange()
-        self._filtered_area = area
-        self.endFilterChange()
+#     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+#         if self.filter_mode and self.filtered_area in (
+#             FilteredArea.Row,
+#             FilteredArea.Index,
+#         ):
+#             if self.filter_mode == FilterMode.ShowOnlyFiltered:
+#                 return source_row == self.filtered_index.row()
+#             else:
+#                 return source_row != self.filtered_index.row()
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
-        if self.filter_mode and self.filtered_area in (
-            FilteredArea.Row,
-            FilteredArea.Index,
-        ):
-            if self.filter_mode == FilterMode.ShowOnlyFiltered:
-                return source_row == self.filtered_index.row()
-            else:
-                return source_row != self.filtered_index.row()
+#         return True
 
-        return True
+#     def filterAcceptsColumn(self, source_column: int, source_parent: QModelIndex):
+#         if self.filter_mode and self.filtered_area in (
+#             FilteredArea.Column,
+#             FilteredArea.Index,
+#         ):
+#             if source_column == self.filtered_index.column():
+#                 return (
+#                     True if self.filter_mode == FilterMode.ShowOnlyFiltered else False
+#                 )
 
-    def filterAcceptsColumn(self, source_column: int, source_parent: QModelIndex):
-        if self.filter_mode and self.filtered_area in (
-            FilteredArea.Column,
-            FilteredArea.Index,
-        ):
-            if source_column == self.filtered_index.column():
-                return (
-                    True if self.filter_mode == FilterMode.ShowOnlyFiltered else False
-                )
+#         return True
 
-        return True
+#     # TableModel methods
 
-    # TableModel methods
+#     # No conversion
 
-    # No conversion
+#     @property
+#     def rescont(self) -> ResourceContainer:
+#         return self.sourceModel().rescont
 
-    @property
-    def rescont(self) -> ResourceContainer:
-        return self.sourceModel().rescont
+#     @property
+#     def model_id(self) -> int:
+#         return self.sourceModel().model_id
 
-    @property
-    def model_id(self) -> int:
-        return self.sourceModel().model_id
+#     def counter(self) -> int:
+#         return self.sourceModel().counter()
 
-    def counter(self) -> int:
-        return self.sourceModel().counter()
+#     def increase_counter(self) -> int:
+#         return self.sourceModel().increase_counter()
 
-    def increase_counter(self) -> int:
-        return self.sourceModel().increase_counter()
+#     def is_valid(self) -> bool:
+#         return self.sourceModel().is_valid()
 
-    def is_valid(self) -> bool:
-        return self.sourceModel().is_valid()
+#     # Index conversion needed
 
-    # Index conversion needed
+#     def get_row(self, proxy_row: int) -> tuple[CellItem]:
+#         """Get row from source model using proxy row index."""
+#         source_row = self.mapToSource(self.index(proxy_row, 0)).row()
+#         return self.sourceModel().get_row(source_row)
 
-    def get_row(self, proxy_row: int) -> tuple[CellItem]:
-        """Get row from source model using proxy row index."""
-        source_row = self.mapToSource(self.index(proxy_row, 0)).row()
-        return self.sourceModel().get_row(source_row)
+#     def get_column(self, proxy_column: int) -> tuple[CellItem]:
+#         """Get column from source model using proxy column index."""
+#         source_column = self.mapToSource(self.index(0, proxy_column)).column()
+#         return self.sourceModel().get_column(source_column)
 
-    def get_column(self, proxy_column: int) -> tuple[CellItem]:
-        """Get column from source model using proxy column index."""
-        source_column = self.mapToSource(self.index(0, proxy_column)).column()
-        return self.sourceModel().get_column(source_column)
+#     def map_row_to_source(self, row: int) -> int:
+#         idx = self.index(row, 0)
+#         mapped = self.mapToSource(idx)
+#         return mapped.row()
 
-    def map_row_to_source(self, row: int) -> int:
-        idx = self.index(row, 0)
-        mapped = self.mapToSource(idx)
-        return mapped.row()
+#     def index_for_num(self, num: int) -> QModelIndex:
+#         """Returns the proxy index of the CellItem with the given number."""
+#         source_index = self.sourceModel().index_for_num(num)
+#         return self.mapFromSource(source_index)
 
-    def index_for_num(self, num: int) -> QModelIndex:
-        """Returns the proxy index of the CellItem with the given number."""
-        source_index = self.sourceModel().index_for_num(num)
-        return self.mapFromSource(source_index)
+#     def expected_row_height(self, proxy_row: int) -> int:
+#         """Get expected row height using proxy row index."""
+#         source_row = self.mapToSource(self.index(proxy_row, 0)).row()
+#         return self.sourceModel().expected_row_height(source_row)
 
-    def expected_row_height(self, proxy_row: int) -> int:
-        """Get expected row height using proxy row index."""
-        source_row = self.mapToSource(self.index(proxy_row, 0)).row()
-        return self.sourceModel().expected_row_height(source_row)
+#     def swap_items(
+#         self, proxy_source_index: QModelIndex, proxy_destination_index: QModelIndex
+#     ) -> None:
+#         """Swap items using proxy indices."""
+#         source_index = self.mapToSource(proxy_source_index)
+#         destination_index = self.mapToSource(proxy_destination_index)
+#         self.sourceModel().swap_items(source_index, destination_index)
 
-    def swap_items(
-        self, proxy_source_index: QModelIndex, proxy_destination_index: QModelIndex
-    ) -> None:
-        """Swap items using proxy indices."""
-        source_index = self.mapToSource(proxy_source_index)
-        destination_index = self.mapToSource(proxy_destination_index)
-        self.sourceModel().swap_items(source_index, destination_index)
+#     def copy_to_cell(self, source_cell: CellItem, dest_cell: CellItem) -> None:
+#         """Copy cell contents (works directly with CellItem objects)."""
+#         self.sourceModel().copy_to_cell(source_cell, dest_cell)
 
-    def copy_to_cell(self, source_cell: CellItem, dest_cell: CellItem) -> None:
-        """Copy cell contents (works directly with CellItem objects)."""
-        self.sourceModel().copy_to_cell(source_cell, dest_cell)
+#     def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+#         """Override to handle frozen row index updates."""
+#         result = self.sourceModel().insertRow(row, parent)
+#         if result:
+#             self.invalidateRowsFilter()
+#         return result
 
-    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
-        """Override to handle frozen row index updates."""
-        result = self.sourceModel().insertRow(row, parent)
-        if result:
-            self.invalidateRowsFilter()
-        return result
+#     # Override base methods to ensure proper signal forwarding
 
-    # Override base methods to ensure proper signal forwarding
+#     def sourceModel(self) -> TableModel:
+#         """Type hint override to return TableModel specifically."""
+#         return super().sourceModel()
 
-    def sourceModel(self) -> TableModel:
-        """Type hint override to return TableModel specifically."""
-        return super().sourceModel()
+#     # XML serialization (delegates to source)
 
-    # XML serialization (delegates to source)
-
-    def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
-        """Delegate XML writing to source model."""
-        return self.sourceModel().xml(writer)
+#     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+#         """Delegate XML writing to source model."""
+#         return self.sourceModel().xml(writer)
 
 
 class IndexModel(QSortFilterProxyModel):

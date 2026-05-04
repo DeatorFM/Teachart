@@ -218,16 +218,8 @@ class Editor(QMainWindow):
         self.ui.table.cellEditorClosed.connect(self.on_cell_closed)
         self.ui.table.changeMade.connect(self.set_unsaved)
 
-        self.ui.ac_add_row.triggered.connect(
-            lambda: self.tablemodel.insertRow(
-                self.ui.table.currentBaseIndex().row() + 1
-            )
-        )
-        self.ui.ac_add_column.triggered.connect(
-            lambda: self.tablemodel.insertColumn(
-                self.ui.table.currentIndex().column() + 1
-            )
-        )
+        self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
+        self.ui.ac_add_column.triggered.connect(self.table.add_column_after_current)
         self.ui.ac_rmv_row.triggered.connect(
             lambda: self.table.remove_row()
         )  # Move to model
