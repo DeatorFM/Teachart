@@ -1,4 +1,5 @@
 from math import sqrt
+from typing import Generator, Iterator
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -955,11 +956,18 @@ class Table(BaseTable):
 
     # Scrolling behaviour
 
+    def _on_vsection_moved(self, logicalIndex, oldVisualIndex, newVisualIndex):
+        super()._on_vsection_moved(logicalIndex, oldVisualIndex, newVisualIndex)
+        self._top_idx = self.indexAt(QPoint(0, 0))
+        self.on_vslider_range_changed(0, self.verticalScrollBar().maximum())
+
     def on_vslider_range_changed(self, min: int, max: int) -> None:
         if self.model() and self._view_mode == TableViewMode.Table:
             if not min == max and self.model():
                 self.verticalScrollBar().blockSignals(True)
-                last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
+                last_row_height = self.sizeHintForRow(
+                    self.verticalHeader().logicalIndex(self.model().rowCount() - 1)
+                )
                 added_height = self.height() - last_row_height
                 if added_height > 0:
                     self.verticalScrollBar().setMaximum(max + added_height)
@@ -969,7 +977,9 @@ class Table(BaseTable):
                 self.verticalScrollBar().blockSignals(False)
             else:
                 self.verticalScrollBar().blockSignals(True)
-                last_row_height = self.sizeHintForRow(self.model().rowCount() - 1)
+                last_row_height = self.sizeHintForRow(
+                    self.verticalHeader().logicalIndex(self.model().rowCount() - 1)
+                )
                 self.verticalScrollBar().setMaximum(last_row_height)
                 self.verticalScrollBar().blockSignals(False)
 
@@ -985,15 +995,22 @@ class Table(BaseTable):
             except IndexError:
                 pass
 
+    def _on_hsection_moved(self, logicalIndex, oldVisualIndex, newVisualIndex):
+        super()._on_hsection_moved(logicalIndex, oldVisualIndex, newVisualIndex)
+        self._top_idx = self.indexAt(QPoint(0, 0))
+        self.on_hslider_range_changed(0, self.horizontalScrollBar().maximum())
+
     def on_hscrolled(self) -> None:
         self._top_idx = self.indexAt(QPoint(0, 0))
 
     def on_hslider_range_changed(self, min: int, max: int) -> None:
         if self.model():
+            self.horizontalScrollBar().blockSignals(True)
             if not min == max:
-                self.horizontalScrollBar().blockSignals(True)
                 # self.frozen_table.horizontalScrollBar().blockSignals(True)
-                last_col_width = self.sizeHintForColumn(self.model().columnCount() - 1)
+                last_col_width = self.columnWidth(
+                    self.horizontalHeader().logicalIndex(self.model().columnCount() - 1)
+                )
                 added_width = self.width() - last_col_width
                 if added_width > 0:
                     self.horizontalScrollBar().setMaximum(max + added_width - 30)
@@ -1004,10 +1021,8 @@ class Table(BaseTable):
                     self.horizontalScrollBar().setMaximum(max + 200)
                     self.frozen_table.horizontalScrollBar().setMaximum(max + 200)
                     # print(f"HSlider: Adjusted max from {max} to {max + added_width}")
-                self.horizontalScrollBar().blockSignals(False)
                 # self.frozen_table.horizontalScrollBar().blockSignals(False)
             else:
-                self.horizontalScrollBar().blockSignals(True)
                 # self.frozen_table.horizontalScrollBar().blockSignals(True)
                 pos = sum(
                     self.columnWidth(col)
@@ -1015,13 +1030,20 @@ class Table(BaseTable):
                 )
                 self.horizontalScrollBar().setMaximum(pos)
                 self.frozen_table.horizontalScrollBar().setMaximum(pos)
-                self.horizontalScrollBar().blockSignals(False)
-                # self.frozen_table.horizontalScrollBar().blockSignals(False)
+            self.horizontalScrollBar().blockSignals(False)
+            # self.frozen_table.horizontalScrollBar().blockSignals(False)
+
+    def iterate_column_indices(self, logical_stop: int) -> Iterator[int]:
+        """Iterates visual indices from 0 to stop and returns their logical indices."""
+        visual_stop = self.horizontalHeader().visualIndex(logical_stop)
+        for visual_column in range(visual_stop):
+            logical_column = self.horizontalHeader().logicalIndex(visual_column)
+            yield logical_column
 
     def scroll_to_index(self, row: int, column: int) -> None:
         idx_row = row if row >= 0 else 0
         idx_col = column if column >= 0 else 0
-        print(f"Go to index {idx_row} | {idx_col}")
+        print(f"Go to logical index {idx_row} | {idx_col}")
 
         if self._view_mode == TableViewMode.Table:
             model_index = self.model().index(idx_row, idx_col)
@@ -1032,7 +1054,10 @@ class Table(BaseTable):
                 self.horizontalScrollBar().setValue(hvalue)
             elif row == -1 and column >= 0:
                 vvalue = self.verticalScrollBar().value()
-                position = sum(self.columnWidth(col) for col in range(idx_col))
+                position = sum(
+                    self.columnWidth(col)
+                    for col in self.iterate_column_indices(idx_col)
+                )
                 self.horizontalScrollBar().setValue(position)
                 self.verticalScrollBar().setValue(vvalue)
             else:
@@ -1042,52 +1067,49 @@ class Table(BaseTable):
             model_index = self.model().index(idx_row, idx_col)
             if row == -1 and column >= 0:
                 vvalue = self.verticalScrollBar().value()
-                position = sum(self.columnWidth(col) for col in range(idx_col))
+                position = sum(
+                    self.columnWidth(col)
+                    for col in self.iterate_column_indices(idx_col)
+                )
                 self.horizontalScrollBar().setValue(position)
                 self.verticalScrollBar().setValue(vvalue)
                 return
 
-            # if self.model().filtered_index.row() >= 0:
-            #     self.verticalHeader().setSectionHidden(self._visible_row, True)
-
-            visible_idx = QPersistentModelIndex(model_index)
-            self.model().set_filter(
-                visible_idx, FilterMode.ShowOnlyFiltered, FilteredArea.Row
-            )
+            self._exclusive_row = model_index.row()
+            self.show_only_row(self._exclusive_row)
 
             self.row_list.setCurrentIndex(model_index.row())
 
             if (
                 self.currentIndex().isValid()
-                and self.currentIndex().row() != visible_idx.row()
+                and self.currentIndex().row() != self._exclusive_row
             ):
                 self.setCurrentIndex(QModelIndex())
 
-            self.scheduleDelayedItemsLayout()
-            self.viewport().update()
-
     def scroll_by(self, row_incr: int, column_incr=0) -> None:
-
-        current_row = (
-            self.row_list.currentIndex() if self.row_list.currentIndex() > -1 else 0
-        )
+        current_row = self.verticalHeader().visualIndex(self._top_idx.row())
+        current_col = self.horizontalHeader().visualIndex(self._top_idx.column())
 
         dest_row = current_row + row_incr
-        if dest_row == self.frozen_table.frozen_row:
+        if dest_row == self.verticalHeader().visualIndex(self.frozen_table.frozen_row):
             dest_row += row_incr
-        dest_column = self._top_idx.column() + column_incr
+        dest_column = current_col + column_incr
         print("Scrolled", current_row, row_incr, dest_row)
 
         if dest_row >= 0 and dest_row < self.row_list.count() and column_incr == 0:
-            self.scroll_to_index(dest_row, -1)
+            logical_dest_row = self.verticalHeader().logicalIndex(dest_row)
+            self.scroll_to_index(logical_dest_row, -1)
         elif (
             dest_column >= 0
-            and dest_column < self.baseModel().columnCount()
+            and dest_column < self.model().columnCount()
             and row_incr == 0
         ):
-            self.scroll_to_index(-1, dest_column)
+            logical_dest_column = self.horizontalHeader().logicalIndex(dest_column)
+            self.scroll_to_index(-1, logical_dest_column)
         elif row_incr != 0 and column_incr != 0:
-            self.scroll_to_index(dest_row, dest_column)
+            logical_dest_row = self.verticalHeader().logicalIndex(dest_row)
+            logical_dest_column = self.horizontalHeader().logicalIndex(dest_column)
+            self.scroll_to_index(logical_dest_row, logical_dest_column)
 
     def scroll_to_current(self) -> None:
         if self.currentIndex().isValid():
@@ -1102,6 +1124,7 @@ class Table(BaseTable):
         print(f"Change view mode to {mode}")
         if mode == TableViewMode.Table:
             self._view_mode = mode
+            self._exclusive_row = -1
             self.show_all_rows()
             self.on_vscrolled()
 
@@ -1123,10 +1146,13 @@ class Table(BaseTable):
             self.scheduleDelayedItemsLayout()
             self.viewport().update()
 
+    def change_exclusive_row(self, old: int, new: int) -> None:
+        self.verticalHeader().setSectionHidden(old, True)
+        self.verticalHeader().setSectionHidden(new, False)
+
     def show_only_row(self, row: int) -> None:
         for num in range(self.model().rowCount()):
-            if num != row:
-                self.verticalHeader().setSectionHidden(num, True)
+            self.verticalHeader().setSectionHidden(num, num != row)
 
     def show_all_rows(self) -> None:
         for num in range(self.model().rowCount()):
@@ -1169,33 +1195,6 @@ class Table(BaseTable):
             lambda x, y, z: self.horizontalHeader().resizeSection(x, z)
         )
         self.horizontalHeader().setVisible(False)
-
-        # mapped = self.model().mapToSource(idx)
-        # pers_idx = QPersistentModelIndex(mapped)
-        # self.close_current_editor()
-        # if self.has_frozen_row():
-        #     self.row_list.model().clear_inactive_indices()
-
-        # if self._view_mode is TableViewMode.SingleRow:
-        #     if self.currentIndex() == pers_idx:
-        #         incr = (
-        #             1
-        #             if self.currentIndex().row() + 1 < self.baseModel().rowCount()
-        #             else -1
-        #         )
-        #         self.scroll_by(incr)
-
-        # else:
-        #     self.model().set_filter(pers_idx, FilterMode.HideFiltered, FilteredArea.Row)
-
-        # self.row_list.model().add_inactive_index(QPersistentModelIndex(mapped))
-
-        # self.frozen_table.freeze_row(self.baseModel(), pers_idx)
-
-        # self.frozen_table.horizontalHeader().sectionResized.connect(
-        #     lambda x, y, z: self.horizontalHeader().resizeSection(x, z)
-        # )
-        # self.horizontalHeader().setVisible(False)
 
     def unfreeze_row(self) -> None:
         """Unfreezes the current frozen row"""
