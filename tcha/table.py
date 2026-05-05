@@ -909,11 +909,11 @@ class Table(BaseTable):
 
     def setModel(self, model: QAbstractItemModel | None) -> bool:
         result = super().setModel(model)
-
-        self.on_vscrolled()
-        self.on_hscrolled()
-        self.row_list.setCurrentIndex(0)
-        self.row_list.setModel(IndexModel(model))
+        if result:
+            self.on_vscrolled()
+            self.on_hscrolled()
+            self.row_list.setCurrentIndex(0)
+            self.row_list.setModel(IndexModel(model))
         return result
 
     def has_frozen_row(self) -> bool:
@@ -1041,6 +1041,7 @@ class Table(BaseTable):
             yield logical_column
 
     def scroll_to_index(self, row: int, column: int) -> None:
+        """Scrolls the view to the given logical 'row' and 'column'."""
         idx_row = row if row >= 0 else 0
         idx_col = column if column >= 0 else 0
         print(f"Go to logical index {idx_row} | {idx_col}")
@@ -1075,10 +1076,10 @@ class Table(BaseTable):
                 self.verticalScrollBar().setValue(vvalue)
                 return
 
-            self._exclusive_row = model_index.row()
-            self.show_only_row(self._exclusive_row)
-
-            self.row_list.setCurrentIndex(model_index.row())
+            self.change_exclusive_row(
+                self._exclusive_row, model_index.row()
+            )  # This doesn't work -> FIX!!
+            # self.row_list.setCurrentIndex(model_index.row())
 
             if (
                 self.currentIndex().isValid()
@@ -1087,6 +1088,7 @@ class Table(BaseTable):
                 self.setCurrentIndex(QModelIndex())
 
     def scroll_by(self, row_incr: int, column_incr=0) -> None:
+        """Scroll the table by increasing/decreasing the visual index by the given row and column increment parameters. The frozen row index is skipped."""
         current_row = self.verticalHeader().visualIndex(self._top_idx.row())
         current_col = self.horizontalHeader().visualIndex(self._top_idx.column())
 
@@ -1129,10 +1131,11 @@ class Table(BaseTable):
             self.on_vscrolled()
 
         elif mode == TableViewMode.SingleRow:
+            print(f"Hiding all rows but {self._top_idx.row()}")
             if self._top_idx.isValid():
                 self._exclusive_row = self._top_idx.row()
             else:
-                self._exclusive_row = -1
+                self._exclusive_row = 0
             self._view_mode = mode
 
             self.show_only_row(self._exclusive_row)
@@ -1143,21 +1146,21 @@ class Table(BaseTable):
             ):
                 self.setCurrentIndex(QModelIndex())
 
-            self.scheduleDelayedItemsLayout()
-            self.viewport().update()
-
     def change_exclusive_row(self, old: int, new: int) -> None:
-        self.verticalHeader().setSectionHidden(old, True)
-        self.verticalHeader().setSectionHidden(new, False)
+        self.setRowHidden(old, True)
+        self.setRowHidden(new, False)
+        self._exclusive_row = new
+        self._top_idx = self.indexAt(QPoint(0, 0))
 
-    def show_only_row(self, row: int) -> None:
-        for num in range(self.model().rowCount()):
-            self.verticalHeader().setSectionHidden(num, num != row)
+    def show_only_row(self, visible_row: int) -> None:
+        """Hides all rows except row with the given logical index."""
+        for row in range(self.model().rowCount()):
+            self.setRowHidden(row, row != visible_row)
+        self._top_idx = self.indexAt(QPoint(0, 0))
 
     def show_all_rows(self) -> None:
         for num in range(self.model().rowCount()):
-            if num != self.frozen_table.frozen_row:
-                self.verticalHeader().setSectionHidden(num, False)
+            self.setRowHidden(num, num != self.frozen_table.frozen_row)
 
     def freeze_current_row(self) -> None:
         if self.currentIndex().isValid():
