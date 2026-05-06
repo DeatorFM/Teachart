@@ -910,6 +910,7 @@ class Table(BaseTable):
     def setModel(self, model: QAbstractItemModel | None) -> bool:
         result = super().setModel(model)
         if result:
+            model.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
             self.on_vscrolled()
             self.on_hscrolled()
             self.row_list.setCurrentIndex(0)
@@ -940,6 +941,14 @@ class Table(BaseTable):
             self.frozen_table.add_row_after_current()
         else:
             super().add_row_after_current()
+
+    def _on_rows_about_to_be_removed(
+        self, parent: QModelIndex, first: int, last: int
+    ) -> None:
+        if self._view_mode == TableViewMode.SingleRow:
+            if self._exclusive_row >= first and self._exclusive_row <= last:
+                incr = 1 if self._exclusive_row < self.model().rowCount() - 1 else -1
+                self.scroll_by(incr)
 
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
@@ -1159,8 +1168,8 @@ class Table(BaseTable):
         self._top_idx = self.indexAt(QPoint(0, 0))
 
     def show_all_rows(self) -> None:
-        for num in range(self.model().rowCount()):
-            self.setRowHidden(num, num != self.frozen_table.frozen_row)
+        for row in range(self.model().rowCount()):
+            self.setRowHidden(row, row == self.frozen_table.frozen_row)
 
     def freeze_current_row(self) -> None:
         if self.currentIndex().isValid():
@@ -1246,9 +1255,9 @@ class Table(BaseTable):
 
     def remove_row(self, row: int = -1) -> None:
         """Removes specified row or if not current row"""
-        rmv_row = row if row > -1 else self.currentBaseIndex().row()
+        rmv_row = row if row > -1 else self.currentIndex().row()
         print(f"About to remove row {rmv_row}")
-        model: TableModel = self.baseModel()
+        model: TableModel = self.model()
         if self._editor and model.rowCount() > 1:
             if any(model.get_row(rmv_row)):
                 result = QMessageBox.question(
@@ -1554,8 +1563,7 @@ class FrozenRowTable(BaseTable):
             self.verticalHeader().setSectionHidden(row, True)
 
     def _on_rows_removed(self, parent: QModelIndex, first: int, last: int) -> None:
-        filtered_index = self.model().filtered_index
-        if not filtered_index.isValid():
+        if self.frozen_row <= last and self.frozen_row >= first:
             self.unfrozen.emit()
 
     def sync_scroll_bar_max(self) -> None:
