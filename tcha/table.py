@@ -801,7 +801,7 @@ class BaseTable(QTableView):
         index = self.indexAt(e.pos())
         if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
             if self._editor:
-                self.setCurrentIndex(QModelIndex())
+                self.close_current_editor()
                 if index.isValid():
                     self.setCurrentIndex(index)
                 e.accept()
@@ -883,7 +883,11 @@ class Table(BaseTable):
         # Linked Widgets
 
         self.row_list = QComboBox()
-        self.row_list.activated.connect(lambda row: self.scroll_to_index(row, -1))
+        self.row_list.activated.connect(
+            lambda row: self.scroll_to_index(
+                self.verticalHeader().logicalIndex(row), -1
+            )
+        )
 
         self.frozen_table = FrozenRowTable(self)
 
@@ -911,10 +915,11 @@ class Table(BaseTable):
         result = super().setModel(model)
         if result:
             model.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
+            model.rowsInserted.connect(self._on_rows_inserted)
             self.on_vscrolled()
             self.on_hscrolled()
+            self.row_list.setModel(IndexModel(self.verticalHeader()))
             self.row_list.setCurrentIndex(0)
-            self.row_list.setModel(IndexModel(model))
         return result
 
     def has_frozen_row(self) -> bool:
@@ -950,6 +955,13 @@ class Table(BaseTable):
                 incr = 1 if self._exclusive_row < self.model().rowCount() - 1 else -1
                 self.scroll_by(incr)
 
+    def _on_rows_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
+        if self._view_mode == TableViewMode.SingleRow:
+            for row in range(first, last + 1):
+                self.hideRow(row)
+
+    # Editor functions
+
     @pyqtSlot(CellEditor)
     def on_editor_opened(self, editor: CellEditor) -> None:
         """Connects the cell editor with the signals to notify the editor"""
@@ -962,6 +974,11 @@ class Table(BaseTable):
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
+
+    def close_current_editor(self):
+        super().close_current_editor()
+        if self.has_frozen_row():
+            self.frozen_table.close_current_editor()
 
     # Scrolling behaviour
 
@@ -999,7 +1016,9 @@ class Table(BaseTable):
         if self._top_idx.isValid():
             try:
                 self.row_list.blockSignals(True)
-                self.row_list.setCurrentIndex(self._top_idx.row())
+                self.row_list.setCurrentIndex(
+                    self.verticalHeader().visualIndex(self._top_idx.row())
+                )
                 self.row_list.blockSignals(False)
             except IndexError:
                 pass
@@ -1085,10 +1104,8 @@ class Table(BaseTable):
                 self.verticalScrollBar().setValue(vvalue)
                 return
 
-            self.change_exclusive_row(
-                self._exclusive_row, model_index.row()
-            )  # This doesn't work -> FIX!!
-            # self.row_list.setCurrentIndex(model_index.row())
+            self.change_exclusive_row(self._exclusive_row, model_index.row())
+            self.row_list.setCurrentIndex(self.verticalHeader().visualIndex(idx_row))
 
             if (
                 self.currentIndex().isValid()
