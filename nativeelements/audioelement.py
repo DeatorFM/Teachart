@@ -7,6 +7,9 @@ from typing import Self, Type
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
+    QByteArray,
+    QDataStream,
+    QIODevice,
     QMimeData,
     QModelIndex,
     QObject,
@@ -233,6 +236,20 @@ class AudioModel(BaseElementModel):
         )
         model.set_text(self.text)
         return model
+
+    def to_byte_array() -> QByteArray:
+        data = QByteArray()
+        stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
+
+        stream.writeInt8(AudioElementDefinitions.name())  # Element name
+        stream.writeQString(self.resource.path)  # Resource path
+        stream.writeBool(self.is_repeating)  # Is repeating flag
+        stream.writeInt16(self.repeats)  # Repeat number
+        stream.writeInt64(self.pause_length)  # Pause length val
+        stream.writeInt64(self.start_time)  # Start time val
+        stream.writeint64(self.end_time)
+
+        return data
 
     def attrs(self) -> tuple[str]:
         return (
@@ -767,6 +784,10 @@ class AudioElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def name() -> str:
         return "AudioElement"
+
+    @staticmethod
+    def id() -> int:
+        return 3
 
     @staticmethod
     def action(parent) -> QAction:

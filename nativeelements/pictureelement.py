@@ -16,6 +16,9 @@ from PyQt6.QtCore import (
     QXmlStreamWriter,
     pyqtSignal,
     pyqtSlot,
+    QByteArray,
+    QDataStream,
+    QIODevice
 )
 from PyQt6.QtGui import (
     QImage,
@@ -219,7 +222,21 @@ class PictureModel(BaseElementModel):
         model = PictureModel(
             resobj, self.width, self.height, self.rotation, self.adjusted
         )
-        return model
+        return model´
+
+    def to_byte_array() -> QByteArray:
+        data = QByteArray()
+        stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
+
+        stream.writeInt8(PictureElementDefinitions.name()) # Element name
+        stream.writeQString(self.resource.path) # Resource path
+        stream.writeInt32(self.width) # Width val
+        stream.writeInt32(self.height) # Height val
+        stream.writeInt16(self.rotation) # Rotation val
+        stream.writeBool(self.adjusted) # Is Adjusted flag
+
+        return data
+
 
     def attrs(self) -> tuple[str]:
         return (
@@ -537,6 +554,10 @@ class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def name() -> str:
         return "PictureElement"
+    
+    @staticmethod
+    def id() -> int:
+        return 2
 
     @staticmethod
     def type() -> ResourceType:
@@ -611,4 +632,19 @@ class PictureElementDefinitions(BaseElementDefinitions):
             url = mime_data.urls()[0]
             resobj = rescont.save(AudioElementDefinitions.type(), url.toLocalFile())
             return PictureModel(resobj)
+        return None
+
+    @staticmethod
+    def model_from_bytes(resobj: ResourceObject, bytearr: QByteArray) -> PictureModel | None:
+        if resobj.path:
+            stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
+
+            width = stream.readInt32()
+            height = stream.readInt32()
+            rotation = stream.readInt16()
+            adjusted = stream.readBool()
+
+            if not stream.status() & QDataStream.Status.ReadPastEnd:
+                return PictureModel(resobj, width, height, rotation, adjusted)
+            
         return None

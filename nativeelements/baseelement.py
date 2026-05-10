@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Self, Type
 
 from PyQt6.QtCore import (
+    QByteArray,
     QEvent,
     QMimeData,
     QObject,
@@ -116,6 +117,12 @@ class BaseElementModel(QObject):
     def from_mime_data(cls, resobj: ResourceObject, mime_data: QMimeData) -> Self:
         return BaseElementModel
 
+    @classmethod
+    @abstractmethod
+    def from_bytes(cls, resobj: ResourceObject, bytearr: QByteArray) -> Self:
+        """Returns a model made from the byte data obtained from mime data. See mime-data()."""
+        return BaseElementModel
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -162,6 +169,11 @@ class BaseElementModel(QObject):
     def definitions() -> BaseElementDefinitions:
         return BaseElementDefinitions
 
+    @abstractmethod
+    def to_byte_array() -> QByteArray:
+        """Returns the model data as bytes that can be written to mime data"""
+        return QByteArray
+
 
 class BaseElementEditor(QFrame):
     __metaclass__ = ABCMeta
@@ -205,6 +217,12 @@ class BaseElementDefinitions:
     def name() -> str:
         """Name to identify the element definition. Must by shared by every other object of the same element."""
         return "BaseElement"
+
+    @staticmethod
+    @abstractmethod
+    def id() -> int:
+        """ID to identify the element in a QByteArray. Numbers 0-100 are reserved."""
+        return 0
 
     @staticmethod
     @abstractmethod
@@ -264,7 +282,17 @@ class BaseElementDefinitions:
     def model_from_mime_data(
         rescont: ResourceContainer, mime_data: QMimeData
     ) -> BaseElementModel | None:
+        """Creates a model from mime data if format is supported"""
         return None
+
+    @staticmethod
+    @abstractmethod
+    def model_from_bytes(
+        resobj: ResourceObject, bytearr: QByteArray
+    ) -> BaseElementModel:
+        """Creates the model from a QByteArray extracted from mime data.
+        The byte array must start with the first value that's required by the model excluding the ResourceObject"""
+        return BaseElementModel | None
 
     def make_copy(
         rescont: ResourceContainer, original: BaseElementModel

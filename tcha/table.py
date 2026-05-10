@@ -67,8 +67,6 @@ from nativeelements.baseelement import (
 from tcha.consts import (
     CanvasTool,
     EditingLevel,
-    FilteredArea,
-    FilterMode,
     TableViewMode,
 )
 from tcha.tablemodel import (
@@ -125,6 +123,9 @@ class CellEditor(QListView):
 
     def on_closed(self) -> None:
         self.setCurrentIndex(QModelIndex())
+
+    def model(self) -> CellModel:
+        return super().model()
 
     def setModel(self, model):
         super().setModel(model)
@@ -239,12 +240,11 @@ class CellEditor(QListView):
             return
 
         drag = QDrag(self)
-        mime_data = self.model().mimeData([self.currentIndex()])
+        mime_data = self.model().mimeData(
+            [self.currentIndex()], Qt.DropAction.MoveAction
+        )
         drag.setMimeData(mime_data)
         drag.exec(Qt.DropAction.MoveAction)
-        clipboard = QApplication.clipboard()
-        clipboard.mimeData().removeFormat("application/x-teachart")
-        clipboard.dataChanged.emit()
 
     def dropEvent(self, event: QDropEvent):
         print("Drop event")
@@ -1356,12 +1356,14 @@ class Table(BaseTable):
                 distance = (event.pos() - self._drag_start_position).manhattanLength()
                 if distance >= QApplication.startDragDistance():
                     drag = QDrag(self)
-                    mime_data = self.model().mimeData([self.currentIndex()])
+                    mime_data = self.model().mimeData(
+                        [self.currentIndex()], Qt.DropAction.MoveAction
+                    )
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
-                    clipboard = QApplication.clipboard()
-                    clipboard.mimeData().removeFormat("application/x-teachart")
-                    clipboard.dataChanged.emit()
+                    # clipboard = QApplication.clipboard()
+                    # clipboard.mimeData().removeFormat("application/x-teachart")
+                    # clipboard.dataChanged.emit()
 
         super().mouseMoveEvent(event)
 
@@ -1374,6 +1376,7 @@ class Table(BaseTable):
     def dropEvent(self, event: QDropEvent):
         drop_index = self.indexAt(event.position().toPoint())
 
+        # Check if the item is dropped on the active editor
         if self._editor:
             editor_index = self.currentIndex()
             editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
@@ -1396,6 +1399,7 @@ class Table(BaseTable):
             if drop_index.isValid() and drop_index != editor_index:
                 self.setCurrentIndex(QModelIndex())
 
+        # Item is dropped on a different index
         if drop_index.isValid():
             success = self.model().dropMimeData(
                 event.mimeData(),
@@ -1529,25 +1533,6 @@ class FrozenRowTable(BaseTable):
                     self.verticalHeader().setSectionHidden(row, False)
 
         self.show()
-
-        # self.hide()
-        # if self.model():
-        #     self.setModel(None)
-        # self.setModel(model)
-
-        # if not self._frozen:
-        #     self.horizontalHeader().restoreState(
-        #         self._table.horizontalHeader().saveState()
-        #     )
-        #     self.verticalHeader().restoreState(self._table.verticalHeader().saveState())
-        #     self._frozen = True
-
-        # if visible_source_idx.isValid():
-        #     self.model().set_filter(
-        #         visible_source_idx, FilterMode.ShowOnlyFiltered, FilteredArea.Row
-        #     )
-
-        # self.show()
 
     def unfreeze(self) -> None:
         self.setModel(None)

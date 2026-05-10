@@ -10,6 +10,8 @@ from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QBuffer,
     QByteArray,
+    QDataStream,
+    QIODevice,
     QModelIndex,
     QPoint,
     QPointF,
@@ -114,6 +116,10 @@ class TextModel(QTextDocument, BaseElementModel):
     def name(self) -> str:
         return "TextElement"
 
+    @property
+    def resource(self) -> ResourceObject:
+        return self._resource
+
     def recalculate_size(self, width: int):
         self.setTextWidth(width - 8)
         self.set_item_size(QSize(width, self.size().toSize().height() + 14))
@@ -147,6 +153,16 @@ class TextModel(QTextDocument, BaseElementModel):
         model = TextModel(resobj)
         model.setHtml(self.toHtml())
         return model
+
+    def to_byte_array() -> QByteArray:
+        data = QByteArray()
+        stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
+
+        stream.writeQString(TextElementDefinitions.name())  # Element name
+        stream.writeQString(self.resource.path)  # Path to resource
+        stream.writeQString(self.toHtml())  # HTML content
+
+        return data
 
     def attrs(self) -> tuple[str]:
         return tuple(["resource"])
@@ -1171,6 +1187,10 @@ class TextElementDefinitions(BaseElementDefinitions):
         return "TextElement"
 
     @staticmethod
+    def id() -> int:
+        return 1
+
+    @staticmethod
     def type() -> ResourceType:
         return ResourceType.TEXT
 
@@ -1254,3 +1274,20 @@ class TextElementDefinitions(BaseElementDefinitions):
         elif "text/plain" in common_types:
             model.setPlainText(mime_data.text())
         return model
+
+    @staticmethod
+    def model_from_bytes(
+        resobj: ResourceObject, bytearr: QByteArray
+    ) -> TextModel | None:
+        if resobj.path:
+            return TextModel(resobj)
+        else:
+            stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
+            html = stream.readQString()
+
+            if not stream.status() & QDataStream.Status.ReadPastEnd:
+                model = TextModel(resobj)
+                model.setHtml(html)
+                return model
+
+        return None

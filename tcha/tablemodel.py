@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from base64 import decode
 from copy import deepcopy
 from dataclasses import dataclass, field
-from email.header import Header
 from random import getrandbits
 from typing import Any, Self, Sequence
 
@@ -29,9 +29,50 @@ from PyQt6.QtWidgets import QHeaderView
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from tcha.consts import ResourceFlag
+from tcha.elements import get_definitions
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
+
+
+def decode_mime_data(mime_data: QMimeData) -> MimeData:
+    """Decodes mime data of type 'application/x-teachart' and return the decoded data in a structured data type"""
+    if "application/x-teachart" in mime_data.formats():
+        encoded_data = mime_data.data("application/x-teachart")
+        stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+
+        model_id = stream.readInt16()  # Source model must have the same pointer
+        source_lvl = stream.readInt8()  # Source Level
+
+        # Sources
+        table_row = stream.readInt32()  # Table row
+        table_col = stream.readInt32()  # Table column
+        cell_row = stream.readInt32()  # Cell row
+
+        element_data = None
+        if not stream.atEnd():
+            device = stream.device()
+            if device:
+                element_data = device.readAll()
+
+        if not stream.status() & QDataStream.Status.ReadPastEnd:
+            return MimeData(
+                model_id, source_lvl, table_row, table_col, cell_row, element_data
+            )
+        raise ValueError("Mime data does not have sufficient data.")
+    raise TypeError(
+        "The mime data does not contain the format 'application/x-teachart'."
+    )
+
+
+@dataclass(frozen=True)
+class MimeData:
+    model_id: int
+    level: int
+    table_row: int
+    table_column: int
+    cell_row: int
+    element_data: QByteArray | None = field(default=None)
 
 
 @dataclass(frozen=True)
@@ -169,7 +210,7 @@ class CellModel(QAbstractListModel):
     ) -> None:
         super().__init__(parent)
         self._data: CellItem[BaseElementModel] = data
-        self.cell_index: QModelIndex = index
+        self.cell_index: QModelIndex = index  # TODO: Change this to persistent index
 
     @property
     def height(self) -> int:
@@ -277,28 +318,51 @@ class CellModel(QAbstractListModel):
             print("The data could not be saved into model.")
             return False
 
-    def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:
+    def mimeData(
+        self,
+        indexes: list[QModelIndex],
+        action: Qt.DropAction = Qt.DropAction.MoveAction,
+    ) -> QMimeData:
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
-        # Write source info
-        from tcha.core import AppCore
+        try:
+            index = indexes[0]
+        except IndexError:
+            return mimedata
 
-        index = indexes[0]
-        AppCore.set_shared_index(
-            QPersistentModelIndex(self.cell_index)
-        )  # Setting so it can be accessed by other models
-        stream.writeInt16(self.cell_index.model().model_id)  # Source model
-        stream.writeInt8(1)  # Source Level
-        stream.writeInt32(index.data().number)  # Model number
-        stream.writeBool(False)  # Delete source?
-        print(
-            f"Written mime data: Source level 1; Table row {self.cell_index.row()}; Table column {self.cell_index.column()}; Cell row {index.row()}"
-        )
+        if index.isValid():
+            stream.writeInt16(self.cell_index.model().model_id)  # Model id
+            stream.writeInt8(1)  # Level: Cell level
 
-        mimedata.setData("application/x-teachart", encoded_data)
+            # Indexes for immediate operations (DropAction.Move)
+            stream.writeInt32(self.cell_index.row())  # Table row
+            stream.writeInt32(self.cell_index.column())  # Table column
+            stream.writeInt32(index.row())  # Cell row
+
+            if action is Qt.DropAction.CopyAction:
+                model: BaseElementModel = index.data()
+                model_data = model.to_byte_array()
+                encoded_data.append(model_data)
+
+            mimedata.setData("application/x-teachart", encoded_data)
+
         return mimedata
+
+        # AppCore.set_shared_index(
+        #     QPersistentModelIndex(self.cell_index)
+        # )  # Setting so it can be accessed by other models
+        # stream.writeInt16(self.cell_index.model().model_id)  # Source model
+        # stream.writeInt8(1)  # Source Level
+        # stream.writeInt32(index.data().number)  # Model number
+        # stream.writeBool(False)  # Delete source?
+        # print(
+        #     f"Written mime data: Source level 1; Table row {self.cell_index.row()}; Table column {self.cell_index.column()}; Cell row {index.row()}"
+        # )
+
+        # mimedata.setData("application/x-teachart", encoded_data)
+        # return mimedata
 
     def canDropMimeData(
         self,
@@ -308,7 +372,7 @@ class CellModel(QAbstractListModel):
         column: int,
         parent: QModelIndex,
     ):
-        if action == Qt.DropAction.IgnoreAction or action == Qt.DropAction.CopyAction:
+        if action == Qt.DropAction.IgnoreAction or action != Qt.DropAction.MoveAction:
             return False
 
         if not data.hasFormat("application/x-teachart"):
@@ -322,6 +386,21 @@ class CellModel(QAbstractListModel):
         if parent.isValid() and parent.row() == row:
             return False
 
+        # Mime data checking
+        mime_data = decode_mime_data(data)
+
+        if mime_data.level != 1:
+            return False
+
+        if mime_data.model_id != self.cell_index.model().model_id:
+            return False
+
+        if not (
+            mime_data.table_row == self.cell_index.row()
+            and mime_data.table_column == self.cell_index.column()
+        ):
+            return False
+
         return True
 
     def dropMimeData(
@@ -333,17 +412,9 @@ class CellModel(QAbstractListModel):
         parent: QModelIndex,
     ):
         if self.canDropMimeData(data, action, row, column, parent):
-            encoded_data = data.data("application/x-teachart")
-            stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
+            mime_data = decode_mime_data(data)
 
-            model_id = stream.readInt16()  # Source model must have the same pointer
-            source_lvl = stream.readInt8()  # Level
-            source_model_num = stream.readInt32()  # Model number
-
-            if source_lvl != 1:
-                return False
-
-            source_idx = self.index_for_num(source_model_num)
+            source_idx = self.index(mime_data.cell_row)
 
             if not parent.isValid():
                 if source_idx.row() != row:
@@ -515,6 +586,9 @@ class TableModel(QAbstractTableModel):
     ) -> QModelIndex:
         return self.createIndex(row, column, 0)
 
+    def parent(self, child: QModelIndex):
+        return super().parent()
+
     def index_for_num(self, num: int) -> QModelIndex:
         """Returns the index of the CellItem with the given number."""
         for row_idx, row in enumerate(self._data):
@@ -524,6 +598,7 @@ class TableModel(QAbstractTableModel):
         return QModelIndex()
 
     def increase_counter(self) -> int:
+        """Return the number of items created."""
         self._internal_counter += 1
         return self._internal_counter
 
@@ -682,109 +757,54 @@ class TableModel(QAbstractTableModel):
         self.modelChanged.emit()
         return True
 
-    # def moveRows(
-    #     self,
-    #     sourceParent: QModelIndex,
-    #     sourceRow: int,
-    #     count: int,
-    #     destinationParent: QModelIndex,
-    #     destinationChild: int,
-    # ) -> bool:
-    #     try:
-    #         if sourceRow > destinationChild:
-    #             self.beginMoveRows(
-    #                 sourceParent,
-    #                 sourceRow,
-    #                 sourceRow + count - 1,
-    #                 destinationParent,
-    #                 destinationChild,
-    #             )
-    #             adjust = 0
-    #         else:
-    #             self.beginMoveRows(
-    #                 sourceParent,
-    #                 sourceRow,
-    #                 sourceRow + count - 1,
-    #                 destinationParent,
-    #                 destinationChild + 1,
-    #             )
-    #             adjust = -1
-    #         self._data.insert(destinationChild + adjust, self._data.pop(sourceRow))
-    #         self._header_data[Qt.Orientation.Vertical].insert(
-    #             destinationChild + adjust,
-    #             self._header_data[Qt.Orientation.Vertical].pop(sourceRow),
-    #         )
-    #         self.endMoveRows()
-    #         self.modelChanged.emit()
-    #         print("Moved row", sourceRow, "to", destinationChild, "successfully")
-    #         print("Table now:\n", self)
-    #         print("Headers:", self._header_data)
-    #         return True
-    #     except IndexError:
-    #         return False
-
-    # def moveColumns(
-    #     self,
-    #     sourceParent: QModelIndex,
-    #     sourceColumn: int,
-    #     count: int,
-    #     destinationParent: QModelIndex,
-    #     destinationChild: int,
-    # ) -> bool:
-    #     print("Starting move operation")
-    #     try:
-    #         if sourceColumn > destinationChild:
-    #             self.beginMoveColumns(
-    #                 sourceParent,
-    #                 sourceColumn,
-    #                 sourceColumn + count - 1,
-    #                 destinationParent,
-    #                 destinationChild,
-    #             )
-    #             adjust = 0
-    #         else:
-    #             self.beginMoveColumns(
-    #                 sourceParent,
-    #                 sourceColumn,
-    #                 sourceColumn + count - 1,
-    #                 destinationParent,
-    #                 destinationChild + 1,
-    #             )
-    #             adjust = -1
-    #         for row in self._data:
-    #             row.insert(destinationChild + adjust, row.pop(sourceColumn))
-    #         self._header_data[Qt.Orientation.Horizontal].insert(
-    #             destinationChild + adjust,
-    #             self._header_data[Qt.Orientation.Horizontal].pop(sourceColumn),
-    #         )
-    #         self.endMoveColumns()
-    #         self.modelChanged.emit()
-    #         print("Moved column", sourceColumn, "to", destinationChild, "successfully")
-    #         print("Table now:\n", self)
-    #         print("Headers:", self._header_data)
-    #         return True
-    #     except IndexError:
-    #         return False
-
-    def mimeData(self, indexes: list[QModelIndex]):
+    def mimeData(
+        self,
+        indexes: list[QModelIndex],
+        action: Qt.DropAction = Qt.DropAction.MoveAction,
+    ) -> QMimeData:
         mimedata = QMimeData()
         encoded_data = QByteArray()
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.WriteOnly)
 
-        # Write source info
-        from tcha.core import AppCore
+        try:
+            index = indexes[0]
+        except IndexError:
+            return mimedata
 
-        index = indexes[0]
-        AppCore.set_shared_index(QPersistentModelIndex(index))
         if index.isValid():
             stream.writeInt16(self._model_id)  # Model id
             stream.writeInt8(0)  # Level
-            print(
-                f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
-            )
+
+            # Indexes for immediate operations (DropAction.Move)
+            stream.writeInt32(index.row())  # Table row
+            stream.writeInt32(index.column())  # Table column
+            stream.writeInt32(-1)  # No cell row -> -1
+
+            if action is Qt.DropAction.CopyAction:
+                cell: CellItem = index.data()
+                for model in cell:
+                    model: BaseElementModel
+                    model_data = model.to_byte_array()
+                    encoded_data.append(model_data)
 
             mimedata.setData("application/x-teachart", encoded_data)
+
         return mimedata
+
+        # # Write source info
+        # from tcha.core import AppCore
+
+        # index = indexes[0]
+        # AppCore.set_shared_index(QPersistentModelIndex(index))
+        # if index.isValid():
+        #     stream.writeInt16(self._model_id)  # Model id
+        #     stream.writeInt8(0)  # Level
+        #     print(
+        #         f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
+        #     )
+
+        #     mimedata.setData("application/x-teachart", encoded_data)
+        # return mimedata
 
     def canDropMimeData(
         self,
@@ -805,6 +825,18 @@ class TableModel(QAbstractTableModel):
 
         return True
 
+    def _decode_element_data(self, stream: QDataStream) -> BaseElementModel:
+        name = stream.readQString()
+        definition = get_definitions(name)
+        if definition:
+            resource = stream.readQString()
+            if resource:
+                resobj = self.rescont.save(definition.type(), resource)
+            else:
+                resobj = self.rescont.create(definition.type())
+        
+
+
     def dropMimeData(
         self,
         data: QMimeData,
@@ -824,56 +856,34 @@ class TableModel(QAbstractTableModel):
                 "and data format",
                 data.formats(),
             )
-            from tcha.core import AppCore
-
-            encoded_data = data.data("application/x-teachart")
-            stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
-
-            model_id = stream.readInt16()  # Source model must have the same pointer
-            source_lvl = stream.readInt8()  # Level
-            source_model_num = stream.readInt32()  # Model number
-
-            shared_idx = AppCore.shared_index()
-            if not shared_idx.isValid():
-                return False
-            print(
-                f"Found shared index from model {model_id} with row {shared_idx.row()} and column {shared_idx.column()}"
-            )
+            mime_data = decode_mime_data(data)
 
             if action == Qt.DropAction.MoveAction:
-                if source_lvl == 0:  # Cell has been moved
+                source_idx = self.index(mime_data.table_row, mime_data.table_column)
+                if mime_data.source_lvl == 0:  # Cell has been moved
                     # Handle cell swapping
-                    if model_id == self.model_id:
-                        self.swap_items(shared_idx, parent)
+                    if mime_data.model_id == self.model_id:
+                        self.swap_items(source_idx, parent)
                         return True
                     return False
 
-                if source_lvl == 1:  # Cell element has been moved
+                if mime_data.source_lvl == 1:  # Cell element has been moved
                     target_cell = self._data[parent.row()][parent.column()]
-                    if (
-                        parent.isValid()
-                        and shared_idx == parent
-                        and model_id == self.model_id
-                    ):
+                    if source_idx == parent and mime_data.model_id == self.model_id:
                         # Internal cell move
-                        cmodel = CellModel(target_cell, shared_idx)
+                        cmodel = CellModel(target_cell, source_idx)
                         return cmodel.dropMimeData(data, action, row, column, parent)
 
                     else:
                         # Move between cells
-                        source_cell: CellItem = shared_idx.data()
+                        source_cell: CellItem = source_idx.data()
                         if len(source_cell) > 0:
-                            model = source_cell.pop(
-                                source_cell.row_for_num(source_model_num)
-                            )
+                            model = source_cell.pop(mime_data.cell_row)
                             target_cell.append(model)
                             return True
 
-                        else:
-                            return False
-
             elif action == Qt.DropAction.CopyAction:
-                source_item: CellItem = shared_idx.data()
+                source_item: CellItem = .data()
                 if source_lvl == 0:  # Cell is copied
                     if parent.data():
                         dialog = PasteConfirmation()
