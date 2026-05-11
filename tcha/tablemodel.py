@@ -825,7 +825,7 @@ class TableModel(QAbstractTableModel):
 
         return True
 
-    def _decode_element_data(self, stream: QDataStream) -> BaseElementModel:
+    def _decode_element_data(self, stream: QDataStream) -> BaseElementModel | None:
         name = stream.readQString()
         definition = get_definitions(name)
         if definition:
@@ -834,7 +834,11 @@ class TableModel(QAbstractTableModel):
                 resobj = self.rescont.save(definition.type(), resource)
             else:
                 resobj = self.rescont.create(definition.type())
-        
+            device = stream.device()
+            if device:
+                model = definition.model_from_bytes(resobj, device.readAll())
+                return model
+        return None        
 
 
     def dropMimeData(
