@@ -635,16 +635,16 @@ class PictureElementDefinitions(BaseElementDefinitions):
         return None
 
     @staticmethod
-    def model_from_bytes(resobj: ResourceObject, bytearr: QByteArray) -> PictureModel | None:
+    def model_from_bytes(resobj: ResourceObject, stream: QByteArray | QDataStream) -> PictureModel | None:
         if resobj.path:
-            stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
+            reader = QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly) if isinstance(stream, QByteArray) else stream
 
-            width = stream.readInt32()
-            height = stream.readInt32()
-            rotation = stream.readInt16()
-            adjusted = stream.readBool()
+            width = reader.readInt32()
+            height = reader.readInt32()
+            rotation = reader.readInt16()
+            adjusted = reader.readBool()
 
-            if not stream.status() & QDataStream.Status.ReadPastEnd:
+            if not reader.status() & QDataStream.Status.ReadPastEnd:
                 return PictureModel(resobj, width, height, rotation, adjusted)
             
         return None

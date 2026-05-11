@@ -237,17 +237,18 @@ class AudioModel(BaseElementModel):
         model.set_text(self.text)
         return model
 
-    def to_byte_array() -> QByteArray:
+    def to_byte_array(self) -> QByteArray:
         data = QByteArray()
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
         stream.writeInt8(AudioElementDefinitions.name())  # Element name
         stream.writeQString(self.resource.path)  # Resource path
         stream.writeBool(self.is_repeating)  # Is repeating flag
-        stream.writeInt16(self.repeats)  # Repeat number
-        stream.writeInt64(self.pause_length)  # Pause length val
-        stream.writeInt64(self.start_time)  # Start time val
-        stream.writeint64(self.end_time)
+        stream.writeUInt16(self.repeats)  # Repeat number
+        stream.writeUInt64(self.pause_length)  # Pause length val
+        stream.writeUInt64(self.start_time)  # Start time val
+        stream.writeUInt64(self.end_time)  #  End time val
+        stream.writeQString(self.text)  #  Text label
 
         return data
 
@@ -838,3 +839,26 @@ class AudioElementDefinitions(BaseElementDefinitions):
         )[0].toLocalFile()
         resobj = rescont.save(AudioElementDefinitions.type(), url)
         return AudioModel(resobj)
+
+    @staticmethod
+    def model_from_bytes(resobj: ResourceObject, stream: QByteArray | QDataStream):
+        if resobj.path:
+            reader = (
+                QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly)
+                if isinstance(stream, QByteArray)
+                else stream
+            )
+            is_repeating = reader.readBool()
+            repeats = reader.readUInt16()
+            pause_length = reader.readUInt64()
+            start_time = reader.readUInt64()
+            end_time = reader.readUInt64()
+            text = reader.readQString()
+
+            if not reader.status() & QDataStream.Status.ReadPastEnd:
+                model = AudioModel(
+                    resobj, is_repeating, repeats, pause_length, start_time, end_time
+                )
+                model.set_text(text)
+                return model
+        return None

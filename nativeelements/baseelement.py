@@ -5,6 +5,7 @@ from typing import Self, Type
 
 from PyQt6.QtCore import (
     QByteArray,
+    QDataStream,
     QEvent,
     QMimeData,
     QObject,
@@ -288,9 +289,9 @@ class BaseElementDefinitions:
     @staticmethod
     @abstractmethod
     def model_from_bytes(
-        resobj: ResourceObject, bytearr: QByteArray
+        resobj: ResourceObject, stream: QByteArray | QDataStream
     ) -> BaseElementModel:
-        """Creates the model from a QByteArray extracted from mime data.
+        """Creates the model from a QByteArray or a QDataStream reading a QByteArray.
         The byte array must start with the first value that's required by the model excluding the ResourceObject"""
         return BaseElementModel | None
 

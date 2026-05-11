@@ -23,6 +23,7 @@ from PyQt6.QtCore import (
     QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
+    qChecksum,
 )
 from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QHeaderView
@@ -825,21 +826,23 @@ class TableModel(QAbstractTableModel):
 
         return True
 
-    def _decode_element_data(self, stream: QDataStream) -> BaseElementModel | None:
-        name = stream.readQString()
-        definition = get_definitions(name)
-        if definition:
-            resource = stream.readQString()
-            if resource:
-                resobj = self.rescont.save(definition.type(), resource)
-            else:
-                resobj = self.rescont.create(definition.type())
-            device = stream.device()
-            if device:
-                model = definition.model_from_bytes(resobj, device.readAll())
-                return model
-        return None        
-
+    def _decode_element_data(self, bytearr: QByteArray) -> list[BaseElementModel]:
+        stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
+        models = []
+        while not stream.atEnd():
+            name = stream.readQString()
+            definition = get_definitions(name)
+            if definition:
+                resource = stream.readQString()
+                if resource:
+                    resobj = self.rescont.save(definition.type(), resource)
+                else:
+                    resobj = self.rescont.create(definition.type())
+                device = stream.device()
+                if device:
+                    model = definition.model_from_bytes(resobj, stream)
+                    models.append(model)
+        return models
 
     def dropMimeData(
         self,
@@ -887,8 +890,10 @@ class TableModel(QAbstractTableModel):
                             return True
 
             elif action == Qt.DropAction.CopyAction:
-                source_item: CellItem = .data()
-                if source_lvl == 0:  # Cell is copied
+                loose_source_idx = self.index(
+                    mime_data.table_row, mime_data.table_column
+                )
+                if mime_data.source_lvl == 0:  # Cell is copied
                     if parent.data():
                         dialog = PasteConfirmation()
                         result = dialog.exec()
@@ -896,7 +901,10 @@ class TableModel(QAbstractTableModel):
                         if result == PasteConfirmation.DialogCode.Accepted:
                             if dialog.selected_paste_method() == 1:  # Replace cell
                                 print("Replacing cell")
-                                if parent != shared_idx or model_id != self.model_id:
+                                if (
+                                    parent != loose_source_idx
+                                    or mime_data.model_id != self.model_id
+                                ):
                                     new_item = CellItem(
                                         self.headerData(
                                             parent.column(),
@@ -905,7 +913,7 @@ class TableModel(QAbstractTableModel):
                                         ),
                                         0,
                                     )
-                                    # source_item.copy_to(new_item)
+
                                     self.copy_to_cell(source_item, new_item)
                                     return self.setData(parent, new_item)
                                 return False

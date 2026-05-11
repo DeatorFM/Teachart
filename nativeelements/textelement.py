@@ -1277,15 +1277,19 @@ class TextElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def model_from_bytes(
-        resobj: ResourceObject, bytearr: QByteArray
+        resobj: ResourceObject, stream: QByteArray | QDataStream
     ) -> TextModel | None:
         if resobj.path:
             return TextModel(resobj)
         else:
-            stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
-            html = stream.readQString()
+            reader = (
+                QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly)
+                if isinstance(stream, QByteArray)
+                else stream
+            )
+            html = reader.readQString()
 
-            if not stream.status() & QDataStream.Status.ReadPastEnd:
+            if not reader.status() & QDataStream.Status.ReadPastEnd:
                 model = TextModel(resobj)
                 model.setHtml(html)
                 return model
