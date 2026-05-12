@@ -1468,6 +1468,7 @@ class FrozenRowTable(BaseTable):
                 )
                 model.rowsInserted.connect(self._on_rows_inserted)
                 model.rowsRemoved.connect(self._on_rows_removed)
+                model.dataChanged.connect(self._update_size)
             return result
         return super().setModel(model)
 
@@ -1509,6 +1510,11 @@ class FrozenRowTable(BaseTable):
         super().on_editor_opened(editor)
         self._table.cellEditorOpened.emit(editor)
 
+    def paste_index(self, mime_data):
+        super().paste_index(mime_data)
+        self.hideRow(self._frozen_row)
+        self.showRow(self._frozen_row)
+
     def add_column_after_current(self) -> None:
         if self._table.currentIndex().isValid():
             logical_current = self._table.currentIndex().column()
@@ -1529,6 +1535,10 @@ class FrozenRowTable(BaseTable):
 
             self._table.verticalHeader().moveSection(new_logical, visual_current + 1)
 
+    def _update_size(self) -> None:
+        pass
+        # self.freeze_row(self.model(), self.frozen_row)
+
     def _on_rows_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
         for row in range(first, last + 1):
             self.verticalHeader().setSectionHidden(row, True)
@@ -1544,6 +1554,14 @@ class FrozenRowTable(BaseTable):
             self.horizontalScrollBar().blockSignals(True)
             self.horizontalScrollBar().setMaximum(parent_max)
             self.horizontalScrollBar().blockSignals(False)
+
+    def dropEvent(self, event):
+        super().dropEvent(event)
+        if event.isAccepted():
+            self.hide()
+            self.show()
+            self.setState(QTableView.State.NoState)
+            self.viewport().update()
 
     def sizeHint(self) -> QSize:
         if self.model():
