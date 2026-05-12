@@ -154,12 +154,12 @@ class TextModel(QTextDocument, BaseElementModel):
         model.setHtml(self.toHtml())
         return model
 
-    def to_byte_array() -> QByteArray:
+    def to_byte_array(self) -> QByteArray:
         data = QByteArray()
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
         stream.writeQString(TextElementDefinitions.name())  # Element name
-        stream.writeQString(self.resource.path)  # Path to resource
+        stream.writeQString("")  # No resource because every TextElement is unique
         stream.writeQString(self.toHtml())  # HTML content
 
         return data
@@ -1279,19 +1279,16 @@ class TextElementDefinitions(BaseElementDefinitions):
     def model_from_bytes(
         resobj: ResourceObject, stream: QByteArray | QDataStream
     ) -> TextModel | None:
-        if resobj.path:
-            return TextModel(resobj)
-        else:
-            reader = (
-                QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly)
-                if isinstance(stream, QByteArray)
-                else stream
-            )
-            html = reader.readQString()
+        reader = (
+            QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly)
+            if isinstance(stream, QByteArray)
+            else stream
+        )
+        html = reader.readQString()
 
-            if not reader.status() & QDataStream.Status.ReadPastEnd:
-                model = TextModel(resobj)
-                model.setHtml(html)
-                return model
+        if reader.status() == QDataStream.Status.Ok:
+            model = TextModel(resobj)
+            model.setHtml(html)
+            return model
 
         return None

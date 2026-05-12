@@ -6,6 +6,9 @@ from typing import Self, Type
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
+    QByteArray,
+    QDataStream,
+    QIODevice,
     QMimeData,
     QModelIndex,
     QObject,
@@ -16,9 +19,6 @@ from PyQt6.QtCore import (
     QXmlStreamWriter,
     pyqtSignal,
     pyqtSlot,
-    QByteArray,
-    QDataStream,
-    QIODevice
 )
 from PyQt6.QtGui import (
     QImage,
@@ -222,21 +222,20 @@ class PictureModel(BaseElementModel):
         model = PictureModel(
             resobj, self.width, self.height, self.rotation, self.adjusted
         )
-        return model´
+        return model
 
-    def to_byte_array() -> QByteArray:
+    def to_byte_array(self) -> QByteArray:
         data = QByteArray()
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
-        stream.writeInt8(PictureElementDefinitions.name()) # Element name
-        stream.writeQString(self.resource.path) # Resource path
-        stream.writeInt32(self.width) # Width val
-        stream.writeInt32(self.height) # Height val
-        stream.writeInt16(self.rotation) # Rotation val
-        stream.writeBool(self.adjusted) # Is Adjusted flag
+        stream.writeQString(PictureElementDefinitions.name())  # Element name
+        stream.writeQString(self.resource.path)  # Resource path
+        stream.writeInt32(self.width)  # Width val
+        stream.writeInt32(self.height)  # Height val
+        stream.writeInt16(self.rotation)  # Rotation val
+        stream.writeBool(self.adjusted)  # Is Adjusted flag
 
         return data
-
 
     def attrs(self) -> tuple[str]:
         return (
@@ -554,7 +553,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def name() -> str:
         return "PictureElement"
-    
+
     @staticmethod
     def id() -> int:
         return 2
@@ -635,16 +634,22 @@ class PictureElementDefinitions(BaseElementDefinitions):
         return None
 
     @staticmethod
-    def model_from_bytes(resobj: ResourceObject, stream: QByteArray | QDataStream) -> PictureModel | None:
+    def model_from_bytes(
+        resobj: ResourceObject, stream: QByteArray | QDataStream
+    ) -> PictureModel | None:
         if resobj.path:
-            reader = QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly) if isinstance(stream, QByteArray) else stream
+            reader = (
+                QDataStream(stream, QIODevice.OpenModeFlag.ReadOnly)
+                if isinstance(stream, QByteArray)
+                else stream
+            )
 
             width = reader.readInt32()
             height = reader.readInt32()
             rotation = reader.readInt16()
             adjusted = reader.readBool()
 
-            if not reader.status() & QDataStream.Status.ReadPastEnd:
+            if reader.status() == QDataStream.Status.Ok:
                 return PictureModel(resobj, width, height, rotation, adjusted)
-            
+
         return None

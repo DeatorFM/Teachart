@@ -166,26 +166,11 @@ class CellEditor(QListView):
     def copy_index(self, index: QModelIndex) -> None:
         if index.isValid():
             clipboard = QApplication.clipboard()
-            mime_data = self.model().mimeData([index])
+            mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
             clipboard.setMimeData(mime_data)
 
     def copied_index(self) -> QModelIndex:
-        clipboard = QApplication.clipboard()
-        if clipboard:
-            if "application/x-teachart" in clipboard.mimeData().formats():
-                encoded_data = clipboard.mimeData().data("application/x-teachart")
-                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
-
-                model_id = stream.readInt16()  # Model id
-                source_model: TableModel = self.model().cell_index.model()
-                if source_model.model_id == model_id:
-                    source_lvl = stream.readInt8()  # Level
-                    model_num = stream.readInt32()  # Model item number
-                    if source_lvl == 1:
-                        model: CellModel = self.model()
-                        idx = model.index_for_num(model_num)
-                        return idx
-        return QModelIndex()
+        return QModelIndex
 
     def enable_presenter_mode(self, enabled: bool):
         self._pres_mode = enabled
@@ -394,6 +379,7 @@ class CellDelegate(QStyledItemDelegate):
             self.editorOpened.emit(editor)
             if self.element_selection and self.last_idx:
                 selected = model.index(self.last_idx.erow, 0)
+
                 editor.edit(selected)
 
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
@@ -528,6 +514,7 @@ class BaseTable(QTableView):
         super().__init__(parent)
         self._painting = True
         self._editor: CellEditor | None = None
+        self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._visible_row = -1
 
@@ -769,13 +756,28 @@ class BaseTable(QTableView):
         super().keyPressEvent(e)
 
     def keyReleaseEvent(self, ev: QKeyEvent):
-        if ev.key() == Qt.Key.Key_Control:
+        if (
+            ev.key() == Qt.Key.Key_Control
+            or Qt.KeyboardModifier.ControlModifier
+            in ev.keyCombination().keyboardModifiers()
+        ):
             self.enable_element_selection(False)
             self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
         return super().keyReleaseEvent(ev)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            if self._drag_start_position:
+                distance = (event.pos() - self._drag_start_position).manhattanLength()
+                if distance >= QApplication.startDragDistance():
+                    drag = QDrag(self)
+                    mime_data = self.model().mimeData(
+                        [self.currentIndex()], Qt.DropAction.MoveAction
+                    )
+                    drag.setMimeData(mime_data)
+                    drag.exec(Qt.DropAction.MoveAction)
+
         if self.itemDelegate().element_selection:
             mouse_pos = event.pos()
             idx = self.indexAt(event.pos())
@@ -800,6 +802,7 @@ class BaseTable(QTableView):
     def mousePressEvent(self, e) -> None:
         index = self.indexAt(e.pos())
         if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
+            self._drag_start_position = e.pos()
             if self._editor:
                 self.close_current_editor()
                 if index.isValid():
@@ -808,11 +811,63 @@ class BaseTable(QTableView):
                 return
         super().mousePressEvent(e)
 
+    def dropEvent(self, event: QDropEvent):
+        drop_index = self.indexAt(event.position().toPoint())
+
+        # Check if the item is dropped on the active editor
+        if self._editor:
+            editor_index = self.currentIndex()
+            editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
+            editor_rect = QRect(editor_rect, self._editor.size())
+            drop_position = self.mapToGlobal(event.position().toPoint())
+
+            if editor_rect.contains(drop_position) and drop_index == editor_index:
+                drop_pos_local = self._editor.mapFromGlobal(drop_position)
+                editor_event = QDropEvent(
+                    drop_pos_local.toPointF(),
+                    event.dropAction(),
+                    event.mimeData(),
+                    event.buttons(),
+                    event.modifiers(),
+                )
+                self._editor.dropEvent(editor_event)
+                event.accept()
+                return
+
+            if drop_index.isValid():
+                self.close_current_editor()
+
+        # Item is dropped on a different index
+        if drop_index.isValid():
+            success = self.model().dropMimeData(
+                event.mimeData(),
+                event.dropAction(),
+                drop_index.row(),
+                drop_index.column(),
+                drop_index,
+            )
+            if success:
+                event.accept()
+                self.changeMade.emit()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
     def copy_index(self, index: QModelIndex) -> None:
         if index.isValid():
-            clipboard = QApplication.clipboard()
-            mime_data = self.model().mimeData([index])
-            clipboard.setMimeData(mime_data)
+            if self._editor and self._editor.hasFocus():
+                element_index = self._editor.currentIndex()
+                if element_index.isValid():
+                    # Copy the individual element
+                    self._editor.copy_index(element_index)
+                    print("Copied element from CellEditor")
+                    return
+
+        clipboard = QApplication.clipboard()
+        mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
+        clipboard.setMimeData(mime_data)
+        print(f"Copied entire cell at {index.row()}, {index.column()}")
 
     def paste_index(self, mime_data: QMimeData) -> None:
         if mime_data and not set(mime_data.formats()).isdisjoint(
@@ -831,19 +886,6 @@ class BaseTable(QTableView):
 
     def copied_index(self) -> QModelIndex:
         """Return the index that was copied. The index is unvalid if the cell item could not be found or is not in the clipboard."""
-        clipboard = QApplication.clipboard()
-        if clipboard:
-            if "application/x-teachart" in clipboard.mimeData().formats():
-                encoded_data = clipboard.mimeData().data("application/x-teachart")
-                stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
-
-                model_id = stream.readInt16()
-                if self.model().model_id == model_id:
-                    source_lvl = stream.readInt8()
-                    if source_lvl == 0:
-                        from core import AppCore
-
-                        return AppCore.shared_index()
         return QModelIndex()
 
     def closeEditor(
@@ -865,7 +907,6 @@ class Table(BaseTable):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._drag_start_position: QPoint | None = None
         self._top_idx = QModelIndex()
         self._view_mode = TableViewMode.Table
         self._pres_mode = False
@@ -891,8 +932,8 @@ class Table(BaseTable):
 
         self.frozen_table = FrozenRowTable(self)
 
-        self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
-        self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
+        # self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
+        # self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
         self.frozen_table.horizontalHeader().sectionResized.connect(
             self.close_current_editor
@@ -967,18 +1008,14 @@ class Table(BaseTable):
         """Connects the cell editor with the signals to notify the editor"""
         print("Editor opened", editor)
         if editor:
-            self.frozen_table.close_current_editor()
+            if self.has_frozen_row():
+                self.frozen_table.close_current_editor()
             self._editor = editor
             self._editor.enable_presenter_mode(self._pres_mode)
             self.cellEditorOpened.emit(self._editor)
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
-
-    def close_current_editor(self):
-        super().close_current_editor()
-        if self.has_frozen_row():
-            self.frozen_table.close_current_editor()
 
     # Scrolling behaviour
 
@@ -1238,29 +1275,20 @@ class Table(BaseTable):
                     self.frozen_table.frozen_row, False
                 )
 
-        # self.close_current_editor()
-        # self.row_list.model().clear_inactive_indices()
-        # if self._view_mode is TableViewMode.SingleRow:
-        #     pass
-        # else:
-        #     self.model().set_filter(
-        #         QPersistentModelIndex(), FilterMode.NoFilter, FilteredArea.Row
-        #     )
-
         self.frozen_table.unfreeze()
         self.horizontalHeader().setVisible(True)
 
-    def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
-        """Relay frozen table's editor opened signal and close own editor"""
-        if self._editor:
-            self.close_current_editor()
-        self._editor = editor  # Track the frozen table's editor
-        self.cellEditorOpened.emit(editor)
+    # def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
+    #     """Relay frozen table's editor opened signal and close own editor"""
+    #     if self._editor:
+    #         self.close_current_editor()
+    #     self._editor = editor  # Track the frozen table's editor
+    #     self.cellEditorOpened.emit(editor)
 
-    def _relay_frozen_editor_closed(self) -> None:
-        """Relay frozen table's editor closed signal"""
-        self._editor = None
-        self.cellEditorClosed.emit()
+    # def _relay_frozen_editor_closed(self) -> None:
+    #     """Relay frozen table's editor closed signal"""
+    #     self._editor = None
+    #     self.cellEditorClosed.emit()
 
     # Special model editing behaviour
 
@@ -1349,72 +1377,6 @@ class Table(BaseTable):
                 return
 
         super().keyPressEvent(e)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if event.buttons() & Qt.MouseButton.LeftButton:
-            if self._drag_start_position:
-                distance = (event.pos() - self._drag_start_position).manhattanLength()
-                if distance >= QApplication.startDragDistance():
-                    drag = QDrag(self)
-                    mime_data = self.model().mimeData(
-                        [self.currentIndex()], Qt.DropAction.MoveAction
-                    )
-                    drag.setMimeData(mime_data)
-                    drag.exec(Qt.DropAction.MoveAction)
-                    # clipboard = QApplication.clipboard()
-                    # clipboard.mimeData().removeFormat("application/x-teachart")
-                    # clipboard.dataChanged.emit()
-
-        super().mouseMoveEvent(event)
-
-    def mousePressEvent(self, e) -> None:
-        if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
-            self._drag_start_position = e.pos()
-
-        super().mousePressEvent(e)
-
-    def dropEvent(self, event: QDropEvent):
-        drop_index = self.indexAt(event.position().toPoint())
-
-        # Check if the item is dropped on the active editor
-        if self._editor:
-            editor_index = self.currentIndex()
-            editor_rect = self._editor.mapToGlobal(self._editor.rect().topLeft())
-            editor_rect = QRect(editor_rect, self._editor.size())
-            drop_position = self.mapToGlobal(event.position().toPoint())
-
-            if editor_rect.contains(drop_position) and drop_index == editor_index:
-                drop_pos_local = self._editor.mapFromGlobal(drop_position)
-                editor_event = QDropEvent(
-                    drop_pos_local.toPointF(),
-                    event.dropAction(),
-                    event.mimeData(),
-                    event.buttons(),
-                    event.modifiers(),
-                )
-                self._editor.dropEvent(editor_event)
-                event.accept()
-                return
-
-            if drop_index.isValid() and drop_index != editor_index:
-                self.setCurrentIndex(QModelIndex())
-
-        # Item is dropped on a different index
-        if drop_index.isValid():
-            success = self.model().dropMimeData(
-                event.mimeData(),
-                event.dropAction(),
-                drop_index.row(),
-                drop_index.column(),
-                drop_index,
-            )
-            if success:
-                event.accept()
-                self.changeMade.emit()
-            else:
-                event.ignore()
-        else:
-            event.ignore()
 
     def wheelEvent(self, ev: QWheelEvent):
         if self._view_mode == TableViewMode.SingleRow:
@@ -1539,6 +1501,13 @@ class FrozenRowTable(BaseTable):
         self._frozen_row = -1
         self._frozen = False
         self.hide()
+
+    def on_editor_opened(self, editor: CellEditor | None):
+        if not editor:
+            return
+        self._table.close_current_editor()
+        super().on_editor_opened(editor)
+        self._table.cellEditorOpened.emit(editor)
 
     def add_column_after_current(self) -> None:
         if self._table.currentIndex().isValid():

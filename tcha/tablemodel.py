@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from base64 import decode
 from copy import deepcopy
 from dataclasses import dataclass, field
 from random import getrandbits
@@ -23,7 +22,6 @@ from PyQt6.QtCore import (
     QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
-    qChecksum,
 )
 from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QHeaderView
@@ -35,35 +33,36 @@ from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
 from ui.commons import PasteConfirmation
 
+TCHA_IDENTIFIER = 0x54434841
 
-def decode_mime_data(mime_data: QMimeData) -> MimeData:
+
+def decode_mime_data(mime_data: QMimeData) -> MimeData | None:
     """Decodes mime data of type 'application/x-teachart' and return the decoded data in a structured data type"""
     if "application/x-teachart" in mime_data.formats():
         encoded_data = mime_data.data("application/x-teachart")
         stream = QDataStream(encoded_data, QIODevice.OpenModeFlag.ReadOnly)
 
-        model_id = stream.readInt16()  # Source model must have the same pointer
-        source_lvl = stream.readInt8()  # Source Level
+        identifier = stream.readUInt32()
+        if identifier == TCHA_IDENTIFIER:
+            model_id = stream.readInt16()  # Source model must have the same pointer
+            source_lvl = stream.readInt8()  # Source Level
 
-        # Sources
-        table_row = stream.readInt32()  # Table row
-        table_col = stream.readInt32()  # Table column
-        cell_row = stream.readInt32()  # Cell row
+            # Sources
+            table_row = stream.readInt32()  # Table row
+            table_col = stream.readInt32()  # Table column
+            cell_row = stream.readInt32()  # Cell row
 
-        element_data = None
-        if not stream.atEnd():
-            device = stream.device()
-            if device:
-                element_data = device.readAll()
+            element_data = None
+            if not stream.atEnd():
+                device = stream.device()
+                if device:
+                    element_data = device.readAll()
 
-        if not stream.status() & QDataStream.Status.ReadPastEnd:
-            return MimeData(
-                model_id, source_lvl, table_row, table_col, cell_row, element_data
-            )
-        raise ValueError("Mime data does not have sufficient data.")
-    raise TypeError(
-        "The mime data does not contain the format 'application/x-teachart'."
-    )
+            if stream.status() == QDataStream.Status.Ok:
+                return MimeData(
+                    model_id, source_lvl, table_row, table_col, cell_row, element_data
+                )
+    return None
 
 
 @dataclass(frozen=True)
@@ -334,6 +333,7 @@ class CellModel(QAbstractListModel):
             return mimedata
 
         if index.isValid():
+            stream.writeUInt32(TCHA_IDENTIFIER)
             stream.writeInt16(self.cell_index.model().model_id)  # Model id
             stream.writeInt8(1)  # Level: Cell level
 
@@ -390,19 +390,22 @@ class CellModel(QAbstractListModel):
         # Mime data checking
         mime_data = decode_mime_data(data)
 
-        if mime_data.level != 1:
-            return False
+        if mime_data:
+            if mime_data.level != 1:
+                return False
 
-        if mime_data.model_id != self.cell_index.model().model_id:
-            return False
+            if mime_data.model_id != self.cell_index.model().model_id:
+                return False
 
-        if not (
-            mime_data.table_row == self.cell_index.row()
-            and mime_data.table_column == self.cell_index.column()
-        ):
-            return False
+            if not (
+                mime_data.table_row == self.cell_index.row()
+                and mime_data.table_column == self.cell_index.column()
+            ):
+                return False
 
-        return True
+            return True
+
+        return False
 
     def dropMimeData(
         self,
@@ -773,6 +776,7 @@ class TableModel(QAbstractTableModel):
             return mimedata
 
         if index.isValid():
+            stream.writeUInt32(TCHA_IDENTIFIER)
             stream.writeInt16(self._model_id)  # Model id
             stream.writeInt8(0)  # Level
 
@@ -824,6 +828,10 @@ class TableModel(QAbstractTableModel):
         if not parent.isValid():
             return False
 
+        mime_data = decode_mime_data(data)
+        if not mime_data:
+            return False
+
         return True
 
     def _decode_element_data(self, bytearr: QByteArray) -> list[BaseElementModel]:
@@ -841,7 +849,13 @@ class TableModel(QAbstractTableModel):
                 device = stream.device()
                 if device:
                     model = definition.model_from_bytes(resobj, stream)
-                    models.append(model)
+                    if model:
+                        print(f"Appended model: {model}")
+                        models.append(model)
+            else:
+                print(f"Pasting failed: No definition for {name}")
+                break
+        print(f"Pasted models: {models}")
         return models
 
     def dropMimeData(
@@ -864,17 +878,18 @@ class TableModel(QAbstractTableModel):
                 data.formats(),
             )
             mime_data = decode_mime_data(data)
+            print(f"Element data: {mime_data.element_data}")
 
             if action == Qt.DropAction.MoveAction:
                 source_idx = self.index(mime_data.table_row, mime_data.table_column)
-                if mime_data.source_lvl == 0:  # Cell has been moved
+                if mime_data.level == 0:  # Cell has been moved
                     # Handle cell swapping
                     if mime_data.model_id == self.model_id:
                         self.swap_items(source_idx, parent)
                         return True
                     return False
 
-                if mime_data.source_lvl == 1:  # Cell element has been moved
+                if mime_data.level == 1:  # Cell element has been moved
                     target_cell = self._data[parent.row()][parent.column()]
                     if source_idx == parent and mime_data.model_id == self.model_id:
                         # Internal cell move
@@ -889,11 +904,12 @@ class TableModel(QAbstractTableModel):
                             target_cell.append(model)
                             return True
 
-            elif action == Qt.DropAction.CopyAction:
+            elif action == Qt.DropAction.CopyAction and mime_data.element_data:
                 loose_source_idx = self.index(
                     mime_data.table_row, mime_data.table_column
                 )
-                if mime_data.source_lvl == 0:  # Cell is copied
+
+                if mime_data.level == 0:  # Cell is copied
                     if parent.data():
                         dialog = PasteConfirmation()
                         result = dialog.exec()
@@ -913,41 +929,44 @@ class TableModel(QAbstractTableModel):
                                         ),
                                         0,
                                     )
-
-                                    self.copy_to_cell(source_item, new_item)
-                                    return self.setData(parent, new_item)
-                                return False
+                                    models = self._decode_element_data(
+                                        mime_data.element_data
+                                    )
+                                    if models:
+                                        for model in models:
+                                            new_item.append(model)
+                                        return self.setData(parent, new_item)
 
                             elif dialog.selected_paste_method() == 2:  # Append to cell
+                                models = self._decode_element_data(
+                                    mime_data.element_data
+                                )
                                 destination_item = parent.data()
-                                self.copy_to_cell(source_item, destination_item)
-                                # source_item.copy_to(destination_item)
-                                self.dataChanged.emit(parent, parent)
-
-                        return False
-
+                                if models:
+                                    for model in models:
+                                        destination_item.append(model)
+                                    self.dataChanged.emit(parent, parent)
+                                    return True
                     else:
                         destination_item = parent.data()
-                        self.copy_to_cell(source_item, destination_item)
-                        # source_item.copy_to(destination_cell)
+                        models = self._decode_element_data(mime_data.element_data)
+                        for model in models:
+                            destination_item.append(model)
+                        self.dataChanged.emit(parent, parent)
                         return True
 
-                if source_lvl == 1:  # Model is copied
-                    destination_item: CellItem = parent.data()
-                    model: BaseElementModel = source_item[
-                        source_item.row_for_num(source_model_num)
-                    ]
-                    if model:
-                        destination_item.append(model.copy(self.rescont))
-                        return True
                     return False
 
-        return False
+                #
 
-    def copy_to_cell(self, source_cell: CellItem, dest_cell: CellItem) -> None:
-        for model in source_cell:
-            copy = model.copy(self.rescont)
-            dest_cell.append(copy)
+                if mime_data.level == 1:  # Model is copied
+                    destination_item: CellItem = parent.data()
+                    model = self._decode_element_data(mime_data.element_data)
+                    if model:
+                        destination_item.append(model.pop())
+                        return True
+
+        return False
 
     def mimeTypes(self) -> list[str]:
         return ["application/x-teachart"]

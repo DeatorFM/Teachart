@@ -241,7 +241,7 @@ class AudioModel(BaseElementModel):
         data = QByteArray()
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
-        stream.writeInt8(AudioElementDefinitions.name())  # Element name
+        stream.writeQString(AudioElementDefinitions.name())  # Element name
         stream.writeQString(self.resource.path)  # Resource path
         stream.writeBool(self.is_repeating)  # Is repeating flag
         stream.writeUInt16(self.repeats)  # Repeat number
@@ -855,7 +855,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
             end_time = reader.readUInt64()
             text = reader.readQString()
 
-            if not reader.status() & QDataStream.Status.ReadPastEnd:
+            if reader.status() == QDataStream.Status.Ok:
                 model = AudioModel(
                     resobj, is_repeating, repeats, pause_length, start_time, end_time
                 )
