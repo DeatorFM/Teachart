@@ -1,7 +1,13 @@
-from typing import Self
-from PyQt6.QtCore import QDateTime, QTime, QDate, QXmlStreamWriter, QXmlStreamReader
+from __future__ import annotations
+
+from copy import deepcopy
 from dataclasses import dataclass, field
+from typing import Self
+
+from PyQt6.QtCore import QDate, QDateTime, QTime, QXmlStreamReader, QXmlStreamWriter
+
 from tcha.error import LFExceptions
+
 
 @dataclass
 class Lesson:
@@ -42,7 +48,7 @@ class Lesson:
         stream.writeCharacters(self.comment)
         stream.writeEndElement()
         return stream
-    
+
     @classmethod
     def new(cls: Self, source_id: str) -> Self:
         return cls(source_id, QDateTime.currentDateTime())
@@ -50,7 +56,7 @@ class Lesson:
     @classmethod
     def read(cls: Self, reader: QXmlStreamReader) -> Self:
         """Reads data from an XML DOM element and returns an instance of Lesson.
-           If a value is invalid a ModelReadError is invoked."""
+        If a value is invalid a ModelReadError is invoked."""
         attrs = reader.attributes()
         datetime = QDateTime()
 
@@ -63,7 +69,18 @@ class Lesson:
             comment = reader.readElementText()
             source_id = str(attrs.value("source_id"))
             return cls(source_id, datetime, course_name, course_id, duration, comment)
-        
+
         except (ValueError, TypeError):
             print("Value could not be read.")
             raise LFExceptions.ModelReadError(False)
+
+    def copy(self) -> Lesson:
+        """Creates a deepcopy of the object"""
+        return Lesson(
+            self.source_id,
+            QDateTime(self.datetime),
+            self.course_name,
+            self.course_id,
+            self.duration,
+            self.comment,
+        )

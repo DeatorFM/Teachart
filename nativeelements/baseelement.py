@@ -157,8 +157,8 @@ class BaseElementModel(QObject):
         return ""
 
     @abstractmethod
-    def copy(self, rescont: ResourceContainer) -> BaseElementModel:
-        """Creates a unique copy of the model storing the resource into the ResourceContainer 'rescont'."""
+    def shcopy(self) -> BaseElementModel:
+        """Creates a shallow copy of the model referencing the same resource object"""
         return BaseElementModel()
 
     @abstractmethod
@@ -294,9 +294,3 @@ class BaseElementDefinitions:
         """Creates the model from a QByteArray or a QDataStream reading a QByteArray.
         The byte array must start with the first value that's required by the model excluding the ResourceObject"""
         return BaseElementModel | None
-
-    def make_copy(
-        rescont: ResourceContainer, original: BaseElementModel
-    ) -> BaseElementModel:
-        """Make a copy of an element model copying its Resourceobject with the given ResourceContainer."""
-        return BaseElementModel

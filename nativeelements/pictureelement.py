@@ -60,6 +60,7 @@ class PictureModel(BaseElementModel):
         height: int = 1,
         rotation: int = 0,
         adjusted: bool = False,
+        cache_pxm: bool = True,
         parent=None,
     ):
         super().__init__(parent)
@@ -75,7 +76,7 @@ class PictureModel(BaseElementModel):
         self._rotation = rotation
         self._adjusted = adjusted  # If sizes have been adjusted by the user
 
-        self._pixmap = QPixmap.fromImageReader(reader)
+        self._pixmap = QPixmap.fromImageReader(reader) if cache_pxm else None
 
         self._item_size = QSize(size.width(), self._height)
 
@@ -169,6 +170,15 @@ class PictureModel(BaseElementModel):
         """Aspect ratio based on current width and height values"""
         return self.height / self.width
 
+    def cache_pixmap(self) -> None:
+        """Caches the pixmap from the resource."""
+        reader = QImageReader()
+        reader.setDevice(self.resource.qfile())
+        self._pixmap = QPixmap.fromImageReader(reader)
+
+    def clear_cache(self) -> None:
+        self._pixmap = None
+
     def editable(self) -> bool:
         return False
 
@@ -217,10 +227,9 @@ class PictureModel(BaseElementModel):
         item.setCacheMode(QGraphicsPixmapItem.CacheMode.DeviceCoordinateCache)
         return item
 
-    def copy(self, rescont: ResourceContainer) -> PictureModel:
-        resobj = rescont.save(self.resource.type, self.resource.path)
+    def shcopy(self) -> PictureModel:
         model = PictureModel(
-            resobj, self.width, self.height, self.rotation, self.adjusted
+            self.resource, self.width, self.height, self.rotation, self.adjusted
         )
         return model
 

@@ -5,15 +5,13 @@ import os.path as osp
 import random
 import string
 import tempfile
+from abc import ABCMeta, abstractmethod
 from collections.abc import KeysView, ValuesView
 from dataclasses import dataclass
-from genericpath import exists
 from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
-
-from tcha.error import CopyError
 
 
 class ResourceType(enum.Enum):
@@ -28,6 +26,7 @@ class ResourceType(enum.Enum):
 
 
 class ResourceObject(QObject):
+    __metaclass__ = ABCMeta
     resourceExpired = pyqtSignal(
         str, ResourceType, int
     )  #  self.name, self.type, self._type_num
@@ -36,20 +35,18 @@ class ResourceObject(QObject):
         self,
         num: int,
         rtype: ResourceType = ResourceType.NONE,
-        name: str | None = None,
         parent: ResourceContainer | None = None,
     ):
-        """Creates object that holds reference to a resource and manages its lifetime by counting its users"""
+        """Baseclass for ResourceObjects."""
         super().__init__(parent)
         self._type_num: int = num  # Ordinal number of object with type 'type'
         self._type = rtype
-        self._name: str = name if name else str(id(self))
-        self._f: QFile | None = QFile(self.path) if self.path else None
-        if self._f:
-            self._f.open(QFile.OpenModeFlag.ReadOnly)
-        self._extension: str | None = Path(self.path).suffix if self.path else None
         self._member_count: int = 0
-        self._datalink: Callable | None = None
+
+    def add_member(self) -> None:
+        """Increases member count when a model starts using this resource"""
+        print("Added member to resource")
+        self._member_count += 1
 
     def delete_member(self) -> None:
         """Decreases member count in case a model stops using this resource"""
@@ -59,19 +56,6 @@ class ResourceObject(QObject):
             if self._f:
                 self._f.close()
             print("Object is expired")
-
-    def add_member(self) -> None:
-        """Increases member count when a model starts using this resource"""
-        print("Added member to resource")
-        self._member_count += 1
-
-    def get_data(self) -> bytes:
-        """Returns the data as bytes from the file set by location of the ResourceObject or the raw data if unserialised."""
-        if self.path:
-            data = self._f.readAll()
-            self._f.reset()
-            return data.data()
-        return self._datalink() if self._datalink else bytes()
 
     def adjust_type_num(self, num: int) -> bool:
         """Adjusts the type number and returns True if adjusted."""
@@ -86,30 +70,9 @@ class ResourceObject(QObject):
         return False
 
     @property
-    def name(self) -> str:
-        """Returns the identifiable name of the object. This is usually the path for serialised files otherwise the id."""
-        return self._name
-
-    @property
-    def path(self) -> str | None:
-        """Returns the original path of the resource if existing."""
-        return self._name if self.name and exists(self.name) else None
-
-    def qfile(self) -> QFile | None:
-        """Returns the filepath as a QFile object."""
-        if self.path:
-            self._f.reset()
-            return self._f
-
-    @property
     def type(self) -> ResourceType:
         """Returns resource type"""
         return self._type
-
-    @property
-    def filetype(self) -> str:
-        "Return filetype for serialising the object."
-        return self._extension
 
     @property
     def member_count(self) -> int:
@@ -119,12 +82,52 @@ class ResourceObject(QObject):
     def type_num(self) -> int:
         return self._type_num
 
-    def set_extension(self, suffix: str) -> None:
-        self._extension = suffix.strip(".")
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Returns the identifiable name of the object. This is usually the path for serialised files otherwise the id."""
+        return ""
 
-    def filename(self) -> str | None:
-        """Returns a filename that is used for serialisation as long as the file extension is provided."""
-        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}"
+    @property
+    @abstractmethod
+    def path(self) -> str | None:
+        """Return the path to a resource if existing else None"""
+        return None
+
+    @property
+    @abstractmethod
+    def data(self) -> bytes | None:
+        """Returns the data associated with the ResourceObject"""
+        return None
+
+    @abstractmethod
+    def filename(self) -> str:
+        """Returns the filename used to serialise a tch-file."""
+        return ""
+
+    @abstractmethod
+    def close(self) -> None:
+        """Close handle for data streams."""
+        pass
+
+    def __eq__(self, value: Any) -> bool:
+        if isinstance(value, ResourceObject):
+            return self._type == value.type and self.name == value.name
+        return False
+
+
+class UniqueResourceObject(ResourceObject):
+    """ResourceObject without external resource that is always unique."""
+
+    def __init__(self, num: int, rtype=ResourceType.NONE, parent=None):
+        super().__init__(num, rtype, parent)
+
+        self._datalink: Callable | None = None
+        self._extension: str | None = None
+
+    @property
+    def name(self):
+        return str(id(self))
 
     @property
     def data(self) -> bytes | None:
@@ -135,48 +138,65 @@ class ResourceObject(QObject):
         """Sets a function that returns data from an element"""
         self._datalink = link
 
-    def copy(self) -> ResourceObject:
+    def set_extension(self, suffix: str) -> None:
+        self._extension = suffix.strip(".")
+
+    def filename(self) -> str | None:
+        """Returns a filename that is used for serialisation as long as the file extension is provided."""
+        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}"
+
+    def __str__(self):
+        return self.name
+
+
+class FileResourceObject(UniqueResourceObject):
+    """ResourceObject with external resource that can be shared between models."""
+
+    def __init__(self, num: int, path: str, rtype=ResourceType.NONE, parent=None):
+        super().__init__(num, rtype, parent)
+
+        self._f = QFile(path)
+        self._f.open(QFile.OpenModeFlag.ReadOnly)
+
+    @property
+    def name(self):
+        return self.path
+
+    @property
+    def path(self) -> str | None:
+        """Returns the original path of the resource if existing."""
+        return osp.normpath(self._f.fileName())
+
+    def qfile(self) -> QFile | None:
+        """Returns the filepath as a QFile object."""
         if self.path:
-            raise CopyError(
-                "ResourceObject with cannot be copied because en external resource cannot exist more than once."
-            )
-        else:
-            cont: ResourceContainer = self.parent()
-            obj = cont.create(self.type)
-        return obj
+            self._f.reset()
+            return self._f
 
-    def is_serialised(self) -> bool:
-        return exists(self.path) if self.path else False
-
-    def has_references(self) -> bool:
-        return bool(self._member_count)
+    def filename(self) -> str | None:
+        """Returns a filename that is used for serialisation as long as the file extension is provided."""
+        return f"{self._type.name.lower()}{self._type_num}.{Path(self.path).suffix.strip('.')}"
 
     def close(self) -> None:
         """Safely close file handle"""
         if self._f:
             self._f.close()
 
-    def __eq__(self, value: Any) -> bool:
-        if isinstance(value, ResourceObject):
-            return self._type == value.type and self.name == value.name
-        return False
-
-    def __repr__(self) -> str:
-        return f"ResourceObject: {self.type} {self.name} {self._member_count}"
-
-    def __deepcopy__(self, memo: dict | None = None) -> ResourceObject:
-        return ResourceObject(self._type_num, self._type, self._name)
+    def __str__(self):
+        return self.path
 
 
-@dataclass
+@dataclass(frozen=True)
 class ResourceTransferObject:
-    """Simple Resource API to deepcopy models"""
+    """Representation of a resource without file i/o. Use to write resources to a tch-file."""
 
-    type_num: int
     rtype: ResourceType
     filename: str
-    path: Path | None = None
-    datalink: Callable | None = None
+    src_path: str | None = None
+    data: bytes | None = None
+
+    def has_data(self) -> bool:
+        return True if self.data else False
 
 
 class ResourceContainer(QObject):
@@ -187,8 +207,6 @@ class ResourceContainer(QObject):
         self._objects: dict[str, ResourceObject] = {}
         self._internal_counter = 0
         self._tempdir = tempfile.TemporaryDirectory(".tmp", "RESC", delete=False)
-        self._blocked = False
-        self._deletion_queue: list[ResourceObject] = []
 
     @property
     def temppath(self) -> Path:
@@ -199,13 +217,14 @@ class ResourceContainer(QObject):
         if not osp.exists(path) and osp.isfile(path):
             raise FileNotFoundError
         self._internal_counter += 1
+
+        normalised_path = osp.normpath(osp.abspath(path))
+
         try:
-            return self._objects[path]
+            return self._objects[normalised_path]
         except KeyError:
-            res_object = (
-                ResourceObject(self.count_type(restype) + 1, restype, path, self)
-                if not self._objects.get(path)
-                else self._objects[""]
+            res_object = FileResourceObject(
+                self.count_type(restype) + 1, normalised_path, restype, self
             )
             res_object.resourceExpired.connect(self.delete)
             self._objects[res_object.name] = res_object
@@ -214,12 +233,14 @@ class ResourceContainer(QObject):
     def create(self, restype: ResourceType) -> ResourceObject:
         """Creates a unique ResourceObject and returns it"""
         self._internal_counter += 1
-        res_object = ResourceObject(self.count_type(restype) + 1, restype, None, self)
+        res_object = UniqueResourceObject(
+            self.count_type(restype) + 1, restype, None, self
+        )
         res_object.resourceExpired.connect(self.delete)
         self._objects[res_object.name] = res_object
         return res_object
 
-    def get(self, name: str) -> ResourceObject | None:
+    def get(self, name: str) -> ResourceObject:
         """Returns ResourceObject with the corresponding name. Raises 'KeyError' if object doesn't exist"""
         return self._objects[name]
 
@@ -238,31 +259,16 @@ class ResourceContainer(QObject):
         for obj in self.contents_by_type(restype):
             obj.adjust_type_num(num)
 
-    @pyqtSlot(ResourceObject)
-    def _on_object_copied(self, obj: ResourceObject) -> None:
-        obj.resourceExpired.connect(self.delete)
-        obj.copied.connect(self._on_object_copied)
-        self._objects[obj.name] = obj
-
     @pyqtSlot(str, ResourceType, int)
     def delete(self, name: str, restype: ResourceType, num: int) -> bool:
-        """Removes object from container if deletion not blocked else queue for deletion"""
-        if not self._blocked:
-            try:
-                print("Deleting ResourceObject")
-                del self._objects[name]
-                self._adjust_type_nums(restype, num)
-                return True
-            except KeyError:
-                return False
-        else:
-            self._deletion_queue.append(self._objects[name])
-
-    def set_blocked(self, blocked: bool) -> None:
-        """Blocks the ResourceContainer to delete resource objects immediately."""
-        self._blocked = blocked
-        if not blocked:
-            self._deletion_queue.clear()
+        """Removes object with given name ResourceTyoe and number from container"""
+        try:
+            print("Deleting ResourceObject")
+            del self._objects[name]
+            self._adjust_type_nums(restype, num)
+            return True
+        except KeyError:
+            return False
 
     def names(self) -> KeysView[str]:
         """Returns all objects' names."""
@@ -277,6 +283,14 @@ class ResourceContainer(QObject):
 
     def count_type(self, restype: ResourceType) -> int:
         return len(self.contents_by_type(restype))
+
+    def to_transfer_objects(self) -> list[ResourceTransferObject]:
+        tobjects = []
+        for obj in self.contents():
+            tobjects.append(
+                ResourceTransferObject(obj.type, obj.filename(), obj.path, obj.data)
+            )
+        return tobjects
 
     def close_file_streams(self) -> None:
         for obj in self.contents():

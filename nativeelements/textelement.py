@@ -67,7 +67,7 @@ from nativeelements.baseelement import (
 )
 from nativeelements.views import TextEditorMenuView
 from tcha.consts import ResourceFlag
-from tcha.resmanager import ResourceContainer
+from tcha.resmanager import FileResourceObject, ResourceContainer
 from tcha.settings import Locale, Settings
 from tcha.styling import Svg, SvgIconEngine
 from ui.element_toolsets import TextToolsetView
@@ -93,9 +93,9 @@ class TextModel(QTextDocument, BaseElementModel):
         return writer
 
     @classmethod
-    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
+    def read(cls: Self, xml: QXmlStreamAttributes, resobj: FileResourceObject) -> Self:
         model = cls(resobj)
-        html = resobj.get_data().decode("utf-8")
+        html = resobj.qfile().readAll().data().decode()
         model.setHtml(html)
         return model
 
@@ -148,9 +148,8 @@ class TextModel(QTextDocument, BaseElementModel):
         item.setZValue(0.0)
         return item
 
-    def copy(self, rescont: ResourceContainer) -> TextModel:
-        resobj = rescont.create(self.restype())
-        model = TextModel(resobj)
+    def shcopy(self) -> TextModel:
+        model = TextModel(self.resource)
         model.setHtml(self.toHtml())
         return model
 
@@ -1236,6 +1235,9 @@ class TextElementDefinitions(BaseElementDefinitions):
             and not mime_data.hasImage()
             and not mime_data.hasUrls()
         )
+
+    @staticmethod
+    def model_from_xml(self, xml: QXmlStreamAttributes, resobj: ResourceObject): ...
 
     @staticmethod
     def model_from_mime_data(

@@ -224,10 +224,9 @@ class AudioModel(BaseElementModel):
     def presentable_item(self) -> None:
         return None
 
-    def copy(self, rescont: ResourceContainer) -> AudioModel:
-        resobj = rescont.save(self.resource.type, self.resource.path)
+    def shcopy(self) -> AudioModel:
         model = AudioModel(
-            resobj,
+            self.resource,
             self.is_repeating,
             self.repeats,
             self.pause_length,

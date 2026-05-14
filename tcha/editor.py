@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from time import sleep
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -26,13 +25,13 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, ResourceFlag, SaveState, TableViewMode
+from tcha.consts import AppAction, SaveState, TableViewMode
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile, ProgressLogger
-from tcha.resmanager import ResourceContainer, ResourceObject
+from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
 from tcha.table import CellEditor, Table
 from tcha.tablemodel import CellModel, TableModel
@@ -50,19 +49,15 @@ class SaveWorker(QRunnable):
         self,
         path: str | None,
         lessonfile: LessonFile,
-        lesson: Lesson,
-        tablemodel: TableModel,
     ):
         super().__init__()
         self._path = path
         self._lf = lessonfile
-        self._lesson = lesson
-        self._tablemodel = tablemodel
         self.signals = SaveWorkerSignals()
 
     @pyqtSlot()
     def run(self):
-        self._lf.save(self._lesson, self._tablemodel, self._path)
+        self._lf.save(self._path)
         self.signals.finished.emit()
 
 
@@ -323,7 +318,8 @@ class Editor(QMainWindow):
         """Saves the entire document to a serialised file."""
 
         def save(path: str) -> None:
-            worker = SaveWorker(path, self.lessonfile, self.lesson, self.tablemodel)
+            self.lessonfile.write_buffer(self.lesson, self.tablemodel)
+            worker = SaveWorker(path, self.lessonfile)
             worker.signals.finished.connect(self._on_saving_finished)
             QThreadPool.globalInstance().start(worker)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass, field
 from random import getrandbits
-from typing import Any, Self, Sequence
+from typing import Any, Iterator, Self, Sequence
 
 from PyQt6.QtCore import (
     QAbstractListModel,
@@ -579,32 +579,49 @@ class TableModel(QAbstractTableModel):
             return model
         raise ValueError("Row and column count must be at least 1.")
 
+    # Indexing utilities
+
     def get_row(self, row: int) -> tuple[CellItem]:
         return tuple(self._data[row])
 
     def get_column(self, column: int) -> tuple[CellItem]:
         return tuple([row[column] for row in self._data])
 
+    def visual_row_order(self) -> dict[int, int]:
+        """Return a dict converting the visual row index to logicals based on the header section order."""
+        return {
+            item.visual_index: lindex
+            for lindex, item in enumerate(self._header_data[Qt.Orientation.Vertical])
+        }
+
+    def visual_column_order(self) -> dict[int, int]:
+        """Return a dict converting the visual column index to logicals based on the header section order."""
+        return {
+            item.visual_index: lindex
+            for lindex, item in enumerate(self._header_data[Qt.Orientation.Horizontal])
+        }
+
+    def iter_visual_rows(self) -> Iterator[list[CellItem]]:
+        converter = self.visual_row_order()
+        for i in range(self.rowCount()):
+            yield self._data[converter[i]]
+
+    def iter_visual_columns(self, column: list[CellItem]) -> Iterator[CellItem]:
+        converter = self.visual_column_order()
+        for i in range(self.columnCount()):
+            yield column[converter[i]]
+
     def index(
         self, row: int, column: int, parent: QModelIndex = QModelIndex()
     ) -> QModelIndex:
         return self.createIndex(row, column, 0)
 
-    def parent(self, child: QModelIndex):
-        return super().parent()
-
-    def index_for_num(self, num: int) -> QModelIndex:
-        """Returns the index of the CellItem with the given number."""
-        for row_idx, row in enumerate(self._data):
-            for col_idx, cell in enumerate(row):
-                if cell.num == num:
-                    return self.index(row_idx, col_idx)
-        return QModelIndex()
-
     def increase_counter(self) -> int:
         """Return the number of items created."""
         self._internal_counter += 1
         return self._internal_counter
+
+    # Data access and manipulation
 
     def data(self, index: QModelIndex, role: int = ...) -> CellItem:
         return self._data[index.row()][index.column()]
@@ -620,12 +637,6 @@ class TableModel(QAbstractTableModel):
             return False
         except IndexError:
             return False
-
-    def header_count(self, orientation: Qt.Orientation) -> int:
-        if orientation == Qt.Orientation.Horizontal:
-            return self.columnCount()
-        else:
-            return self.rowCount()
 
     def headerData(
         self, section: int, orientation: Qt.Orientation, role: int = ...
@@ -1010,17 +1021,19 @@ class TableModel(QAbstractTableModel):
         writer.writeAttribute("columns", str(self.columnCount()))
 
         # Writing Header info
+        visual_order = self.visual_column_order()
         writer.writeStartElement("headers")
-        for header_item in self._header_data[Qt.Orientation.Horizontal]:  #
+        for i in range(self.columnCount()):
+            header_item = self._header_data[Qt.Orientation.Horizontal][visual_order[i]]
             writer.writeEmptyElement("header")
             writer.writeAttribute("size", str(header_item.section_size))
             writer.writeAttribute("text", header_item.text)
         writer.writeEndElement()
 
         # Start writing cells
-        for row in self._data:
+        for row in self.iter_visual_rows():
             writer.writeStartElement("row")
-            for cell in row:
+            for cell in self.iter_visual_columns(row):
                 writer = cell.xml(writer)
             writer.writeEndElement()
 
