@@ -663,18 +663,19 @@ class XmlReader:
                                 attrs = reader.attributes()
 
                                 try:
-                                    model = XmlReader._element_model(
+                                    definition = get_definitions(
                                         str(attrs.value("type"))
                                     )
-                                    resobj = tmodel.rescont.get(
-                                        osp.join(
-                                            temppath,
-                                            "resources",
-                                            str(attrs.value("file")),
+                                    if definition:
+                                        resobj = tmodel.rescont.get(
+                                            osp.join(
+                                                temppath,
+                                                "resources",
+                                                str(attrs.value("file")),
+                                            )
                                         )
-                                    )
-                                    model = model.read(attrs, resobj)
-                                    cell.append(model)
+                                        model = definition.model_from_xml(attrs, resobj)
+                                        cell.append(model)
 
                                 except KeyError as e:
                                     e.critical = False

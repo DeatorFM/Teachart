@@ -44,7 +44,12 @@ from nativeelements.baseelement import (
 from nativeelements.views import AudioEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
-from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
+from tcha.resmanager import (
+    FileResourceObject,
+    ResourceContainer,
+    ResourceObject,
+    ResourceType,
+)
 from tcha.styling import SvgIcon
 from ui.element_toolsets import AudioToolsetView
 
@@ -126,25 +131,6 @@ class AudioModel(BaseElementModel):
 
     def set_item_size(self, size: QSize):
         self._item_size = QSize(size.width(), 49)
-
-    @classmethod
-    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
-        try:
-            model = cls(
-                resobj,
-                bool(int(xml.value("repeating"))),
-                int(xml.value("repeats")),
-                int(xml.value("pause_length")),
-                int(xml.value("start_time")),
-                int(xml.value("end_time")),
-            )
-            model.set_text(str(xml.value("name")))
-            return model
-
-        except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(
-                False, "Attribute for AudioModel could not be read."
-            )
 
     @property
     def resource(self) -> ResourceObject:
@@ -826,6 +812,27 @@ class AudioElementDefinitions(BaseElementDefinitions):
             )
             return len(filtered) > 0
         return False
+
+    @staticmethod
+    def model_from_xml(
+        xml: QXmlStreamAttributes, resobj: FileResourceObject
+    ) -> AudioModel:
+        try:
+            model = AudioModel(
+                resobj,
+                bool(int(xml.value("repeating"))),
+                int(xml.value("repeats")),
+                int(xml.value("pause_length")),
+                int(xml.value("start_time")),
+                int(xml.value("end_time")),
+            )
+            model.set_text(str(xml.value("name")))
+            return model
+
+        except (ValueError, TypeError):
+            raise LFExceptions.ModelReadError(
+                False, "Attribute for AudioModel could not be read."
+            )
 
     @staticmethod
     def model_from_mime_data(rescont, mime_data):

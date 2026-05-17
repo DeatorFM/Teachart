@@ -1040,12 +1040,6 @@ class TableModel(QAbstractTableModel):
         writer.writeEndElement()
         return writer
 
-    @classmethod
-    def read(cls, reader: QXmlStreamReader) -> Self:
-        attrs = reader.attributes()
-        model = cls()
-        model.new(int(attrs.value("rows")), int(attrs.value("columns")))
-
     def expected_row_height(self, row: int) -> int:
         return max([cell.height for cell in self._data[row]])
 

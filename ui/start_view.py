@@ -189,12 +189,12 @@ class Ui_StartWindow(object):
         self.retranslateUi(start_window)
         self.file_tabs.setCurrentIndex(0)
 
-    def retranslateUi(self, start_window):
+    def retranslateUi(self, start_window: QMainWindow):
         _translate = QCoreApplication.translate
-        start_window.setWindowTitle(_translate("start_window", "Start - Teachart"))
+        start_window.setWindowTitle(start_window.tr("Start - Teachart"))
         self.file_tabs.setTabText(
             self.file_tabs.indexOf(self.tab_recent),
-            _translate("start_window", "Recent Files"),
+            start_window.tr("Recent Files"),
         )
         self.file_tabs.setTabText(
             self.file_tabs.indexOf(self.tab_pinned),

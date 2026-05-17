@@ -47,7 +47,12 @@ from nativeelements.baseelement import (
 from nativeelements.views import PictureEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
-from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
+from tcha.resmanager import (
+    FileResourceObject,
+    ResourceContainer,
+    ResourceObject,
+    ResourceType,
+)
 from tcha.styling import SvgIcon
 from ui.element_toolsets import PictureToolsetView
 
@@ -93,23 +98,6 @@ class PictureModel(BaseElementModel):
         writer.writeAttribute("rotation", str(self.rotation))
         writer.writeAttribute("adjusted", str(int(self.adjusted)))
         return writer
-
-    @classmethod
-    def read(cls: Self, xml: QXmlStreamAttributes, resobj: ResourceObject) -> Self:
-        try:
-            width, height, adjusted = (
-                int(xml.value("width")),
-                int(xml.value("height")),
-                bool(int(xml.value("adjusted"))),
-            )
-            if width + height > 1:  # Width and height values must be at least 1
-                model = cls(resobj, width, height, int(xml.value("rotation")), adjusted)
-                print("Read PictureModel", model)
-                return model
-            raise LFExceptions.ModelReadError(False)
-
-        except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(False)
 
     @property
     def name(self) -> str:
@@ -625,6 +613,27 @@ class PictureElementDefinitions(BaseElementDefinitions):
                 and QImageReader(urls[0].toLocalFile()).canRead()
             )
         return False
+
+    @staticmethod
+    def model_from_xml(
+        xml: QXmlStreamAttributes, resobj: FileResourceObject
+    ) -> PictureModel:
+        try:
+            width, height, adjusted = (
+                int(xml.value("width")),
+                int(xml.value("height")),
+                bool(int(xml.value("adjusted"))),
+            )
+            if width + height > 1:  # Width and height values must be at least 1
+                model = PictureModel(
+                    resobj, width, height, int(xml.value("rotation")), adjusted
+                )
+                print("Read PictureModel", model)
+                return model
+            raise LFExceptions.ModelReadError(False)
+
+        except (ValueError, TypeError):
+            raise LFExceptions.ModelReadError(False)
 
     @staticmethod
     def model_from_mime_data(

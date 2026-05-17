@@ -93,13 +93,6 @@ class TextModel(QTextDocument, BaseElementModel):
         return writer
 
     @classmethod
-    def read(cls: Self, xml: QXmlStreamAttributes, resobj: FileResourceObject) -> Self:
-        model = cls(resobj)
-        html = resobj.qfile().readAll().data().decode()
-        model.setHtml(html)
-        return model
-
-    @classmethod
     def from_mime_data(cls, resobj: ResourceObject, mime_data: QMimeData) -> TextModel:
         model = TextModel(resobj)
         if mime_data.hasHtml():
@@ -1237,7 +1230,13 @@ class TextElementDefinitions(BaseElementDefinitions):
         )
 
     @staticmethod
-    def model_from_xml(self, xml: QXmlStreamAttributes, resobj: ResourceObject): ...
+    def model_from_xml(
+        self, xml: QXmlStreamAttributes, resobj: ResourceObject
+    ) -> TextModel:
+        model = TextModel(resobj)
+        html = resobj.qfile().readAll().data().decode()
+        model.setHtml(html)
+        return model
 
     @staticmethod
     def model_from_mime_data(

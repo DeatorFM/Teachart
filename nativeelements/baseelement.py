@@ -11,6 +11,7 @@ from PyQt6.QtCore import (
     QObject,
     QSize,
     Qt,
+    QXmlStreamAttributes,
     QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
@@ -106,12 +107,6 @@ class BaseElementModel(QObject):
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         """Writes the DOM-element holding the attributes of the model"""
         return QXmlStreamWriter
-
-    @classmethod
-    @abstractmethod
-    def read(cls, reader: QXmlStreamReader, resobject):
-        """Creates a model from the Dom-element and the ResourceObject"""
-        return BaseElementModel
 
     @classmethod
     @abstractmethod
@@ -277,6 +272,13 @@ class BaseElementDefinitions:
     @abstractmethod
     def supports_mime_data(mime_data: QMimeData) -> bool:
         return False
+
+    @staticmethod
+    @abstractmethod
+    def model_from_xml(
+        xml: QXmlStreamAttributes, resobj: ResourceObject
+    ) -> BaseElementModel:
+        return
 
     @staticmethod
     @abstractmethod
