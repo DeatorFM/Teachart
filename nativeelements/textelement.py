@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unicodedata
 import webbrowser
-from typing import Self, Type
+from typing import Type
 
 from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
@@ -341,6 +341,7 @@ class TextEditor(BaseTextElementEditor):
             elif e.key() == Qt.Key.Key_Backtab:
                 self.change_indentation(-1)
                 return None
+        print("Handles KeyEvent in TextEditor")
         super().keyPressEvent(e)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
@@ -824,7 +825,8 @@ class TextDelegate(BaseElementDelegate):
     def setModelData(
         self, editor: TextEditor | None, model, index: QModelIndex
     ) -> None:
-        model.setData(index, editor.document())
+        print("Set new model data for TextElement")
+        model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
     def destroyEditor(self, editor: TextEditor, index: QModelIndex):
         editor.sizeChanged.disconnect()
@@ -832,11 +834,9 @@ class TextDelegate(BaseElementDelegate):
         super().destroyEditor(editor, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        model: TextModel | None = index.data()
-        if model:
-            return model.item_size
-        else:
-            return QSize(option.rect.width(), 30)
+        if index.isValid():
+            return index.data(Qt.ItemDataRole.SizeHintRole)
+        return QSize(0, 0)
 
 
 class TextToolset(BaseElementToolset):
@@ -1231,7 +1231,7 @@ class TextElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def model_from_xml(
-        self, xml: QXmlStreamAttributes, resobj: ResourceObject
+        xml: QXmlStreamAttributes, resobj: FileResourceObject
     ) -> TextModel:
         model = TextModel(resobj)
         html = resobj.qfile().readAll().data().decode()

@@ -494,10 +494,6 @@ class Ui_Editor(object):
         self.ac_xml_insp.setDisabled(True)
 
         # Table Actions
-
-        # self.ac_new_table = QAction(parent=MainWindow)
-        # self.ac_new_table.setObjectName("ac_new_table")
-
         self.ac_copy = QAction(parent=MainWindow)
         self.ac_copy.setObjectName("ac_copy")
         self.ac_copy.setDisabled(True)
@@ -524,6 +520,14 @@ class Ui_Editor(object):
 
         self.ac_add_to_cell.setMenu(self.elem_menu)
 
+        self.ac_cell_finish_editing = QAction(parent=MainWindow)
+        icon24 = MainWindow.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogOkButton
+        )
+        self.ac_cell_finish_editing.setIcon(icon24)
+        self.ac_cell_finish_editing.setObjectName("ac_cell_finish_editing")
+        self.table_group.addAction(self.ac_cell_finish_editing)
+
         self.ac_add_row = QAction(parent=MainWindow)
         icon1 = SvgIcon("resources/icons/ic_addrow.svg")
         self.ac_add_row.setIcon(icon1)
@@ -549,6 +553,21 @@ class Ui_Editor(object):
         self.table_group.addAction(self.ac_rmv_column)
 
         self.table_group.setDisabled(True)
+
+        self.ac_elem_finish_editing = QAction(parent=MainWindow)
+        self.ac_elem_finish_editing.setObjectName("elem_finish_editing")
+        self.ac_elem_finish_editing.setIcon(icon24)
+        self.ac_elem_finish_editing.setShortcuts(
+            [QKeySequence("Return"), QKeySequence("Ctrl+Return")]
+        )
+
+        self.ac_elem_discard_changes = QAction(parent=MainWindow)
+        self.ac_elem_discard_changes.setObjectName("elem_discard_changes")
+        icon25 = MainWindow.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogCloseButton
+        )
+        self.ac_elem_discard_changes.setIcon(icon25)
+        self.ac_elem_discard_changes.setShortcut(QKeySequence(Qt.Key.Key_Escape))
 
         self.ac_mov_up = QAction(parent=MainWindow)
         icon6 = SvgIcon("resources/icons/ic_move_up.svg")
@@ -690,6 +709,8 @@ class Ui_Editor(object):
 
         # Construct Table Tool Bar
 
+        self.tb_table.addAction(self.ac_cell_finish_editing)
+        self.tb_table.addSeparator()
         self.tb_table.addAction(self.ac_add_to_cell)
         widget: QToolButton = self.tb_table.widgetForAction(self.ac_add_to_cell)
         widget.setMenu(self.menu_elements)
@@ -699,6 +720,10 @@ class Ui_Editor(object):
         self.tb_table.addSeparator()
         self.tb_table.addAction(self.ac_rmv_row)
         self.tb_table.addAction(self.ac_rmv_column)
+
+        self.tb_cell.addAction(self.ac_elem_finish_editing)
+        self.tb_cell.addAction(self.ac_elem_discard_changes)
+        self.tb_cell.addSeparator()
         self.tb_cell.addAction(self.ac_mov_up)
         self.tb_cell.addAction(self.ac_mov_dwn)
         self.tb_cell.addAction(self.ac_del_element)
@@ -727,39 +752,37 @@ class Ui_Editor(object):
         self.tb_vmode_row.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.statusbar.addPermanentWidget(self.tb_vmode_row)
 
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self, MainWindow: QMainWindow):
         _translate = QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.menu_file.setTitle(_translate("MainWindow", "File"))
-        self.menu_edit.setTitle(_translate("MainWindow", "Edit"))
-        self.menu_elements.setTitle(_translate("MainWindow", "Add To Cell"))
-        self.menu_view.setTitle(_translate("MainWindow", "View"))
-        self.menu_opt.setTitle(_translate("MainWindow", "Options"))
-        self.menu_debug.setTitle(_translate("MainWindow", "Debugging"))
-        self.menuHelp.setTitle(_translate("MainWindow", "Help"))
-        self.dw_presenter.setWindowTitle(_translate("MainWindow", "Presentation View"))
-        self.dw_comment.setWindowTitle(_translate("MainWindow", "Notes"))
-        self.tb_lesson.setWindowTitle(_translate("MainWindow", "Lesson Details"))
-        self.tb_table.setWindowTitle(_translate("MainWindow", "Table Tools"))
-        self.tb_cell.setWindowTitle(_translate("MainWindow", "Cell Tools"))
-        self.ac_add_to_cell.setText(_translate("MainWindow", "Add to Cell"))
-        self.ac_from_clipboard.setText(_translate("MainWindow", "From Clipboard"))
-        self.ac_add_row.setText(_translate("MainWindow", "Add Row"))
-        self.ac_add_column.setText(_translate("MainWindow", "Add Column"))
-        self.ac_new_doc.setText(_translate("MainWindow", "New"))
-        self.ac_open_doc.setText(_translate("MainWindow", "Open"))
-        self.ac_recent.setText(_translate("MainWindow", "Recent Files"))
-        self.ac_save.setText(_translate("MainWindow", "Save"))
-        self.ac_save_as.setText(_translate("MainWindow", "Save as"))
-        self.ac_close.setText(_translate("MainWindow", "Close"))
-        # self.ac_new_table.setText(_translate("MainWindow", "New Table"))
-        # self.ac_new_table.setToolTip(
-        #     _translate("MainWindow", "Reset and create a new table")
-        # )
-        self.ac_pres_mode.setText(_translate("MainWindow", "Presentation Mode"))
-        self.ac_vmode_table.setText(_translate("MainWindow", "Show entire table"))
-        self.ac_vmode_row.setText(_translate("MainWindow", "Show single row"))
-        self.ac_goto_active.setText(_translate("MainWindow", "Go to selected cell"))
+        MainWindow.setWindowTitle(MainWindow.tr("MainWindow"))
+        self.menu_file.setTitle(MainWindow.tr("File"))
+        self.menu_edit.setTitle(MainWindow.tr("Edit"))
+        self.menu_elements.setTitle(MainWindow.tr("Add To Cell"))
+        self.menu_view.setTitle(MainWindow.tr("View"))
+        self.menu_opt.setTitle(MainWindow.tr("Options"))
+        self.menu_debug.setTitle(MainWindow.tr("Debugging"))
+        self.menuHelp.setTitle(MainWindow.tr("Help"))
+        self.dw_presenter.setWindowTitle(MainWindow.tr("Presentation View"))
+        self.dw_comment.setWindowTitle(MainWindow.tr("Notes"))
+        self.tb_lesson.setWindowTitle(MainWindow.tr("Lesson Details"))
+        self.tb_table.setWindowTitle(MainWindow.tr("Table Tools"))
+        self.tb_cell.setWindowTitle(MainWindow.tr("Cell Tools"))
+        self.ac_cell_finish_editing.setToolTip(MainWindow.tr("Finish editing cell"))
+        self.ac_add_to_cell.setText(MainWindow.tr("Add to Cell"))
+        self.ac_from_clipboard.setText(MainWindow.tr("From Clipboard"))
+        self.ac_add_row.setText(MainWindow.tr("Add Row"))
+        self.ac_add_column.setText(MainWindow.tr("Add Column"))
+        self.ac_new_doc.setText(MainWindow.tr("New"))
+        self.ac_open_doc.setText(MainWindow.tr("Open"))
+        self.ac_recent.setText(MainWindow.tr("Recent Files"))
+        self.ac_save.setText(MainWindow.tr("Save"))
+        self.ac_save_as.setText(MainWindow.tr("Save as"))
+        self.ac_close.setText(MainWindow.tr("Close"))
+
+        self.ac_pres_mode.setText(MainWindow.tr("Presentation Mode"))
+        self.ac_vmode_table.setText(MainWindow.tr("Show entire table"))
+        self.ac_vmode_row.setText(MainWindow.tr("Show single row"))
+        self.ac_goto_active.setText(MainWindow.tr("Go to selected cell"))
         transl1 = _translate(
             "MainWindow",
             "Freeze row",
@@ -777,28 +800,32 @@ class Ui_Editor(object):
             transl2,
         )
         self.ac_freeze_row.set_text("freeze")
-        self.ac_settings.setText(_translate("MainWindow", "Settings"))
-        self.ac_course_exp.setText(_translate("MainWindow", "Course Explorer"))
-        self.ac_course_rec.setText(_translate("MainWindow", "View Course Record"))
-        self.ac_file_insp.setText(_translate("MainWindow", "File Inspector"))
-        self.ac_about.setText(_translate("MainWindow", "About Teachart"))
-        self.ac_res_view.setText(_translate("MainWindow", "Resource View"))
-        self.ac_table_insp.setText(_translate("MainWindow", "Table Inspector"))
-        self.ac_xml_insp.setText(_translate("MainWindow", "XML Inspector"))
-        self.ac_schedule.setText(_translate("MainWindow", "Schedule"))
-        self.ac_copy.setText(_translate("MainWindow", "Copy "))
-        self.ac_paste.setText(_translate("MainWindow", "Paste"))
-        self.ac_show_notes.setText(_translate("MainWindow", "Show Notes"))
-        self.ac_show_ttbar.setText(_translate("MainWindow", "Show Table Tool Bar"))
-        self.ac_add_course.setText(_translate("MainWindow", "New Course"))
-        self.ac_rmv_row.setText(_translate("MainWindow", "Remove Row"))
-        self.ac_rmv_column.setText(_translate("MainWindow", "Remove Column"))
-        self.ac_scheduledf.setText(_translate("MainWindow", "Today's Scheduled Files"))
-        self.ac_mov_up.setText(_translate("MainWindow", "Move Up"))
-        self.ac_mov_dwn.setText(_translate("MainWindow", "Move Down"))
-        self.ac_mov_dwn.setToolTip(_translate("MainWindow", "Move Down"))
-        self.ac_del_element.setText(_translate("MainWindow", "Delete Element"))
-        self.ac_clear_cell.setText(_translate("MainWindow", "Clear Cell"))
+        self.ac_settings.setText(MainWindow.tr("Settings"))
+        self.ac_course_exp.setText(MainWindow.tr("Course Explorer"))
+        self.ac_course_rec.setText(MainWindow.tr("View Course Record"))
+        self.ac_file_insp.setText(MainWindow.tr("File Inspector"))
+        self.ac_about.setText(MainWindow.tr("About Teachart"))
+        self.ac_res_view.setText(MainWindow.tr("Resource View"))
+        self.ac_table_insp.setText(MainWindow.tr("Table Inspector"))
+        self.ac_xml_insp.setText(MainWindow.tr("XML Inspector"))
+        self.ac_schedule.setText(MainWindow.tr("Schedule"))
+        self.ac_copy.setText(MainWindow.tr("Copy "))
+        self.ac_paste.setText(MainWindow.tr("Paste"))
+        self.ac_show_notes.setText(MainWindow.tr("Show Notes"))
+        self.ac_show_ttbar.setText(MainWindow.tr("Show Table Tool Bar"))
+        self.ac_add_course.setText(MainWindow.tr("New Course"))
+        self.ac_rmv_row.setText(MainWindow.tr("Remove Row"))
+        self.ac_rmv_column.setText(MainWindow.tr("Remove Column"))
+        self.ac_scheduledf.setText(MainWindow.tr("Today's Scheduled Files"))
+        self.ac_elem_finish_editing.setToolTip(
+            MainWindow.tr("Finish editing and save changes")
+        )
+        self.ac_elem_discard_changes.setToolTip(MainWindow.tr("Discard changes"))
+        self.ac_mov_up.setText(MainWindow.tr("Move Up"))
+        self.ac_mov_dwn.setText(MainWindow.tr("Move Down"))
+        self.ac_mov_dwn.setToolTip(MainWindow.tr("Move Down"))
+        self.ac_del_element.setText(MainWindow.tr("Delete Element"))
+        self.ac_clear_cell.setText(MainWindow.tr("Clear Cell"))
 
         self.tb_arrow.setToolTip(
             _translate(
@@ -806,21 +833,19 @@ class Ui_Editor(object):
                 "Draw Arrow - Drag the cursor while holding the mouse button and release for the arrow tip",
             )
         )
-        self.tb_rubber.setToolTip(_translate("MainWindow", "Rubber"))
-        self.tb_pen.setToolTip(_translate("MainWindow", "Pen"))
-        self.tb_red.setToolTip(_translate("MainWindow", "Red"))
-        self.tb_blue.setToolTip(_translate("MainWindow", "Blue"))
-        self.tb_yellow.setToolTip(_translate("MainWindow", "Dark yellow"))
+        self.tb_rubber.setToolTip(MainWindow.tr("Rubber"))
+        self.tb_pen.setToolTip(MainWindow.tr("Pen"))
+        self.tb_red.setToolTip(MainWindow.tr("Red"))
+        self.tb_blue.setToolTip(MainWindow.tr("Blue"))
+        self.tb_yellow.setToolTip(MainWindow.tr("Dark yellow"))
 
-        self.lb_course.setText(_translate("MainWindow", "Course"))
-        self.lb_date_time.setText(_translate("MainWindow", "Date/Time"))
-        self.lb_duration.setText(_translate("MainWindow", "Duration"))
-        self.lb_row.setText(_translate("MainWindow", "Top row"))
-        self.lb_counts.setToolTip(
-            _translate("MainWindow", "Number of rows | Number of columns")
-        )
+        self.lb_course.setText(MainWindow.tr("Course"))
+        self.lb_date_time.setText(MainWindow.tr("Date/Time"))
+        self.lb_duration.setText(MainWindow.tr("Duration"))
+        self.lb_row.setText(MainWindow.tr("Top row"))
+        self.lb_counts.setToolTip(MainWindow.tr("Number of rows | Number of columns"))
 
-        self.sb_duration.setSuffix(_translate("MainWindow", " min"))
+        self.sb_duration.setSuffix(MainWindow.tr(" min"))
 
     def add_element_actions(
         self, edefinitions: dict[str, BaseElementDefinitions]

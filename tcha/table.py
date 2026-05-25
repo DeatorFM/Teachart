@@ -1,17 +1,14 @@
 from math import sqrt
-from typing import Generator, Iterator
+from typing import Iterator
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractItemModel,
     QByteArray,
-    QDataStream,
     QEvent,
-    QIODevice,
     QMimeData,
     QModelIndex,
     QObject,
-    QPersistentModelIndex,
     QPoint,
     QPointF,
     QRect,
@@ -61,8 +58,10 @@ from PyQt6.QtWidgets import (
 
 from nativeelements.baseelement import (
     BaseElementDelegate,
+    BaseElementEditor,
     BaseElementModel,
     BaseElementToolset,
+    BaseTextElementEditor,
 )
 from tcha.consts import (
     CanvasTool,
@@ -127,6 +126,10 @@ class CellEditor(QListView):
     def model(self) -> CellModel:
         return super().model()
 
+    @property
+    def editor(self) -> BaseElementEditor | BaseTextElementEditor | None:
+        return self.indexWidget(self.currentIndex())
+
     def setModel(self, model):
         super().setModel(model)
         self.setCurrentIndex(QModelIndex())
@@ -141,9 +144,19 @@ class CellEditor(QListView):
         e.ignore()
         return super().wheelEvent(e)
 
-    def closeEditor(self, editor, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
-        print("An element editor has been closed:", editor)
+    def close_active_editor(self, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
+        if self.editor:
+            self.closeEditor(self.editor, hint)
+
+    def closeEditor(
+        self,
+        editor: BaseElementEditor | BaseTextElementEditor,
+        hint=QStyledItemDelegate.EndEditHint.NoHint,
+    ) -> None:
+        print("An element editor has been closed:", editor, hint.name)
         if editor:
+            if hint == QStyledItemDelegate.EndEditHint.RevertModelCache:
+                self.model().revert_work_data(self.currentIndex())
             super().closeEditor(editor, hint)
             self._editor_just_destroyed = True
             self.elementActivated.emit(False)
@@ -250,23 +263,6 @@ class CellEditor(QListView):
         else:
             event.ignore()
 
-        # if event.source() == self:
-        #     event.setDropAction(Qt.DropAction.MoveAction)
-        #     event.accept()
-
-        #     global_pos = self.mapToGlobal(event.position().toPoint())
-        #     cell_pos = self.mapFromGlobal(global_pos)
-
-        #     drop_index = self.indexAt(cell_pos)
-        #     print("Dropped index at", drop_index.row())
-        #     drop_row = (
-        #         drop_index.row() if drop_index.isValid() else self.model().rowCount()
-        #     )
-
-        #     self.model().dropMimeData(
-        #         event.mimeData(), event.dropAction(), drop_row, 0, QModelIndex()
-        #     )
-
     def itemDelegateForIndex(self, index: QModelIndex) -> QStyledItemDelegate | None:
         model = index.data()
         if isinstance(model, BaseElementModel) and self._toolsets:
@@ -305,8 +301,6 @@ class CellDelegate(QStyledItemDelegate):
             painter.save()
             super().paint(painter, option, QModelIndex())
             painter.restore()
-
-        # print(f"CellDelegate's rect: {option.rect.width()}")
 
         if index != self._open_editor_index:
             # Apply 2px padding to simulate CellEditor frame
@@ -355,36 +349,37 @@ class CellDelegate(QStyledItemDelegate):
     def createEditor(
         self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget | None:
-        editor = CellEditor(parent)
-        editor.geometriesChanged.connect(
+        self._editor = CellEditor(parent)
+        self._editor.geometriesChanged.connect(
             lambda: self.update_cell_geometry(option.rect, index)
         )
-        editor.setFocus()
+        self._editor.setFocus()
         self._open_editor_index = index
-        return editor
+        return self._editor
 
     def updateEditorGeometry(
         self, editor: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         editor_rect = option.rect.adjusted(2, 2, -2, -2)
-        # print(f"List's dimensions: {editor_rect.width()} | {editor_rect.height()}")
         if editor.geometry() != editor_rect:
             editor.setGeometry(editor_rect)
             editor.viewport().update()
 
     def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
         if editor:
-            model = CellModel(index.data(), index)
+            model: CellItem = index.data(Qt.ItemDataRole.EditRole)
             editor.setModel(model)
             self.editorOpened.emit(editor)
             if self.element_selection and self.last_idx:
                 selected = model.index(self.last_idx.erow, 0)
-
                 editor.edit(selected)
 
+    def setModelData(self, editor: CellEditor, model: TableModel, index: QModelIndex):
+        model.setData(index, editor.model().item)
+
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
-        model: CellItem = index.data()
-        model.recalculate_items()
+        item: CellItem = index.data()
+        item.recalculate_items()
         self.sizeHintChanged.emit(index)
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
@@ -408,10 +403,9 @@ class CellDelegate(QStyledItemDelegate):
         super().destroyEditor(editor, index)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        # if index.isValid():
-        size = index.data().current_size
-        return size
-        # return QSize(0, 0)
+        if index.isValid():
+            return index.data(Qt.ItemDataRole.SizeHintRole)
+        return QSize(0, 0)
 
 
 class HeaderView(QHeaderView):
@@ -543,10 +537,10 @@ class BaseTable(QTableView):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
-        self.verticalHeader().sectionMoved.connect(self.close_current_editor)
+        self.verticalHeader().sectionMoved.connect(self.close_active_editor)
         self.verticalHeader().sectionMoved.connect(self._on_vsection_moved)
-        self.horizontalHeader().sectionResized.connect(self.close_current_editor)
-        self.horizontalHeader().editingStarted.connect(self.close_current_editor)
+        self.horizontalHeader().sectionResized.connect(self.close_active_editor)
+        self.horizontalHeader().editingStarted.connect(self.close_active_editor)
         self.horizontalHeader().sectionMoved.connect(self._on_hsection_moved)
 
         self.count_label = QLabel()
@@ -703,8 +697,8 @@ class BaseTable(QTableView):
         self.viewport().update()
         print("Viewport updated")
 
-    def close_current_editor(self) -> None:
-        print("Trying to close current editor")
+    def close_active_editor(self, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
+        print("Trying to close current editor", self.indexWidget(self.currentIndex()))
         if self.selectionModel():
             self.selectionModel().clearCurrentIndex()
         if self._editor:
@@ -753,6 +747,8 @@ class BaseTable(QTableView):
                 e.accept()
                 return
 
+        print("Handled KeyEvent in Table")
+
         super().keyPressEvent(e)
 
     def keyReleaseEvent(self, ev: QKeyEvent):
@@ -764,7 +760,7 @@ class BaseTable(QTableView):
             self.enable_element_selection(False)
             self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
-        return super().keyReleaseEvent(ev)
+        super().keyReleaseEvent(ev)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() & Qt.MouseButton.LeftButton:
@@ -804,7 +800,7 @@ class BaseTable(QTableView):
         if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
             self._drag_start_position = e.pos()
             if self._editor:
-                self.close_current_editor()
+                self.close_active_editor()
                 if index.isValid():
                     self.setCurrentIndex(index)
                 e.accept()
@@ -835,7 +831,7 @@ class BaseTable(QTableView):
                 return
 
             if drop_index.isValid():
-                self.close_current_editor()
+                self.close_active_editor()
 
         # Item is dropped on a different index
         if drop_index.isValid():
@@ -898,6 +894,7 @@ class BaseTable(QTableView):
         print("An cell editor has been closed", editor, hint)
         self.verticalHeader().resizeSections()
         self._editor = None
+        self.model().clear_cache()
         self.setCurrentIndex(QModelIndex())
         self.cellEditorClosed.emit()
 
@@ -936,7 +933,7 @@ class Table(BaseTable):
         # self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
         self.frozen_table.horizontalHeader().sectionResized.connect(
-            self.close_current_editor
+            self.close_active_editor
         )
         self.frozen_table.unfrozen.connect(self.unfreeze_row)
 
@@ -1009,7 +1006,7 @@ class Table(BaseTable):
         print("Editor opened", editor)
         if editor:
             if self.has_frozen_row():
-                self.frozen_table.close_current_editor()
+                self.frozen_table.close_active_editor()
             self._editor = editor
             self._editor.enable_presenter_mode(self._pres_mode)
             self.cellEditorOpened.emit(self._editor)
@@ -1234,7 +1231,7 @@ class Table(BaseTable):
 
     def freeze_row(self, idx: QModelIndex) -> None:
         """Make a row fixed on top of the table to be always visible."""
-        self.close_current_editor()
+        self.close_active_editor()
         if self.has_frozen_row():
             self.row_list.model().clear_inactive_indices()
 
@@ -1264,7 +1261,7 @@ class Table(BaseTable):
 
     def unfreeze_row(self) -> None:
         """Unfreezes the current frozen row"""
-        self.close_current_editor()
+        self.close_active_editor()
         self.row_list.model().clear_inactive_indices()
         if self._view_mode is TableViewMode.SingleRow:
             pass
@@ -1281,7 +1278,7 @@ class Table(BaseTable):
     # def _relay_frozen_editor_opened(self, editor: CellEditor) -> None:
     #     """Relay frozen table's editor opened signal and close own editor"""
     #     if self._editor:
-    #         self.close_current_editor()
+    #         self.close_active_editor()
     #     self._editor = editor  # Track the frozen table's editor
     #     self.cellEditorOpened.emit(editor)
 
@@ -1506,7 +1503,7 @@ class FrozenRowTable(BaseTable):
     def on_editor_opened(self, editor: CellEditor | None):
         if not editor:
             return
-        self._table.close_current_editor()
+        self._table.close_active_editor()
         super().on_editor_opened(editor)
         self._table.cellEditorOpened.emit(editor)
 

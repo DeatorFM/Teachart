@@ -404,7 +404,9 @@ class PictureDelegate(BaseElementDelegate):
     def createEditor(self, parent, option, index) -> PictureEditor:
         # Apply 2px padding + 3px extra for element editor to match paint area
         editor = PictureEditor(
-            index.data(), option.rect.adjusted(2, 2, -2, -2).width(), parent
+            index.data(Qt.ItemDataRole.EditRole),
+            option.rect.adjusted(2, 2, -2, -2).width(),
+            parent,
         )
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
         self.installEventFilter(editor)
@@ -422,7 +424,7 @@ class PictureDelegate(BaseElementDelegate):
     def setModelData(
         self, editor: PictureEditor, model: PictureModel, index: QModelIndex
     ):
-        model.setData(index, editor.model)
+        model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
     def destroyEditor(self, editor, index):
         self._toolset.close_()
@@ -432,11 +434,9 @@ class PictureDelegate(BaseElementDelegate):
         return False
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        model = index.data()
-        if isinstance(model, PictureModel):
-            return model.item_size
-        else:
-            return QSize(option.rect.width(), 0)
+        if index.isValid():
+            return index.data(Qt.ItemDataRole.SizeHintRole)
+        return QSize(0, 0)
 
 
 class PictureToolset(BaseElementToolset):

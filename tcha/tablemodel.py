@@ -19,7 +19,6 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QVariant,
-    QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
 )
@@ -99,7 +98,7 @@ class CellItem(list):
         super().__init__()
         if hheader_item.orientation != Qt.Orientation.Horizontal:
             raise ValueError("HeaderDataItem must have a horizontal orientation.")
-        self._internal_counter = 0
+        self._internal_counter = len(self)
         self._header = hheader_item
         self._num = num
 
@@ -160,17 +159,11 @@ class CellItem(list):
         self._header = hheader
         self.recalculate_items()
 
-    def copy_to(self, new_cell: CellItem) -> None:
-        """Copies all elements of a model to another CellItem"""
-        for model in self:
-            copied_model = model.copy()
-            new_cell.append(copied_model)
-
-    def row_for_num(self, num: int) -> int:
-        for row, model in enumerate(self):
-            if model.number == num:
-                return row
-        return -1
+    def copy(self) -> CellItem:
+        """Shallow copy of CellItem"""
+        new_item = CellItem(self.header, self.num)
+        new_item[:] = self[:]
+        return new_item
 
     def row_for_pos(self, y_pos: int) -> int:
         y_offset = 0
@@ -197,6 +190,15 @@ class CellItem(list):
         return f"CellItem: {super().__str__()}"
 
 
+@dataclass
+class CachedModel:
+    index: QPersistentModelIndex
+    model: CellModel
+
+    def __eq__(self, value: QModelIndex | QPersistentModelIndex | CellModel):
+        return value == self.index or value == self.model
+
+
 class CellModel(QAbstractListModel):
     """Model to edit a cell's data inside a CellEditor and to connect CellItem with views."""
 
@@ -210,15 +212,28 @@ class CellModel(QAbstractListModel):
     ) -> None:
         super().__init__(parent)
         self._data: CellItem[BaseElementModel] = data
-        self.cell_index: QModelIndex = index  # TODO: Change this to persistent index
-
-    @property
-    def height(self) -> int:
-        return self._cached_size.height()
+        self._work_data = data.copy()
+        self.cell_index: QPersistentModelIndex = (
+            index  # TODO: Change this to persistent index
+        )
 
     @property
     def tablemodel(self) -> TableModel:
         return self.cell_index.model()
+
+    @property
+    def item(self) -> CellItem:
+        "Returns the item with the original data"
+        return self._data
+
+    @property
+    def work_item(self) -> CellItem:
+        "Returns the item used to edit data."
+        return self._work_data
+
+    @property
+    def current_size(self) -> QSize:
+        return self._work_data.current_size
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._data)
@@ -226,6 +241,7 @@ class CellModel(QAbstractListModel):
     def add_model(self, model: BaseElementModel) -> None:
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
+        self._work_data.append(model)
         self.endInsertRows()
 
     def create_model(
@@ -303,17 +319,43 @@ class CellModel(QAbstractListModel):
 
         return QModelIndex()
 
-    def data(self, index: QModelIndex, role: int = 1) -> BaseElementModel:
+    # Data methods
+
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> BaseElementModel:
         try:
-            return self._data[index.row()]
+            model: BaseElementModel = self._data[index.row()]
+            if role == Qt.ItemDataRole.DisplayRole:
+                return model
+            elif role == Qt.ItemDataRole.EditRole:
+                mcopy = model.shcopy()
+                self._work_data[index.row()] = mcopy
+                return mcopy
+            elif role == Qt.ItemDataRole.SizeHintRole:
+                return self._work_data[index.row()].item_size
+
         except IndexError:
             return QVariant(None)
 
-    def setData(self, index: QModelIndex, value: Any, role: int = 1) -> bool:
+    def revert_work_data(self, index: QModelIndex) -> None:
+        """Reverts the working CellItem at index to the same model as the original data"""
+        self._work_data[index.row()] = self._data[index.row()]
+        self._work_data.recalculate_items()
+
+    def setData(
+        self,
+        index: QModelIndex,
+        value: BaseElementModel,
+        role: int = Qt.ItemDataRole.EditRole,
+    ) -> bool:
         if index.isValid():
-            self._data[index.row()] = value
-            self.dataChanged.emit(index, index, [role])
-            return True
+            if role == Qt.ItemDataRole.EditRole:
+                self._data[index.row()] = value
+                self.dataChanged.emit(index, index, [role])
+                print("Data saved to the model")
+                return True
+            return False
         else:
             print("The data could not be saved into model.")
             return False
@@ -530,6 +572,8 @@ class TableModel(QAbstractTableModel):
         super().__init__(parent)
         self._internal_counter = 0
         self._model_id = getrandbits(15)
+
+        self._cached_model: CachedModel | None = None
         self._data: list[list[CellItem]] = []
         self._header_data: dict[Qt.Orientation, list[HeaderDataItem]] = {
             Qt.Orientation.Horizontal: [],
@@ -623,8 +667,29 @@ class TableModel(QAbstractTableModel):
 
     # Data access and manipulation
 
-    def data(self, index: QModelIndex, role: int = ...) -> CellItem:
-        return self._data[index.row()][index.column()]
+    def clear_cache(self) -> None:
+        print("Cache emptied")
+        self._cached_model = None
+
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> CellItem | CellModel | QSize:
+        if index.isValid():
+            item = (
+                self._data[index.row()][index.column()]
+                if not index == self._cached_model
+                else self._cached_model.model.work_item
+            )
+            if role == Qt.ItemDataRole.EditRole:
+                pindex = QPersistentModelIndex(index)
+                model = CellModel(item, pindex)
+                print("Caching edited model")
+                self._cached_model = CachedModel(pindex, model)
+                return model
+            elif role == Qt.ItemDataRole.SizeHintRole:
+                return item.current_size
+            return item
+        return None
 
     def setData(
         self, index: QModelIndex, value: CellItem, role=Qt.ItemDataRole.DisplayRole

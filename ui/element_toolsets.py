@@ -1,6 +1,7 @@
 from PyQt6.QtCore import (
     QCoreApplication,
     QEvent,
+    QRangeModel,
     QRegularExpression,
     Qt,
     pyqtSignal,
@@ -477,7 +478,7 @@ class FontSizeBox(QComboBox):
             [
                 "8",
                 "9",
-                "10.5",
+                self.locale().toString(10.5),
                 "11",
                 "12",
                 "14",

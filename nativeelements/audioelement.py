@@ -513,7 +513,7 @@ class AudioDelegate(BaseElementDelegate):
             painter.restore()
 
     def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index):
-        editor = AudioEditor(index.data(), parent)
+        editor = AudioEditor(index.data(Qt.ItemDataRole.EditRole), parent)
         self._cached_editor = editor
         editor.player.mediaStatusChanged.connect(self.on_media_status_changed)
         self.installEventFilter(editor)
@@ -535,7 +535,7 @@ class AudioDelegate(BaseElementDelegate):
         editor.setGeometry(sub_rect)
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.model)
+        model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
     def destroyEditor(self, editor: AudioEditor, index: QModelIndex) -> None:
         """Disconnects signals and destroys the editor."""
@@ -546,11 +546,8 @@ class AudioDelegate(BaseElementDelegate):
 
         super().destroyEditor(editor, index)
 
-    def passthru(self) -> bool:
-        return True
-
     def sizeHint(self, option, index):
-        if index.data():
+        if index.isValid():
             return QSize(option.rect.width(), 49)
         else:
             return QSize(option.rect.width(), 0)

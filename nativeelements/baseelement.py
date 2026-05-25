@@ -12,7 +12,6 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QXmlStreamAttributes,
-    QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
 )
@@ -64,18 +63,6 @@ class BaseElementToolset(QToolBar):
         self.setVisible(False)
 
 
-class BaseElementDelegate(QStyledItemDelegate):
-    def __init__(self, toolset: BaseElementToolset | None, parent=None):
-        super().__init__(parent)
-        self._toolset = toolset
-        self.pres_mode = False
-
-    def eventFilter(self, object: QObject, event: QEvent):
-        if event.type() == QEvent.Type.FocusOut:
-            return True
-        return super().eventFilter(object, event)
-
-
 class BaseElementModel(QObject):
     __metaclass__ = ABCMeta
 
@@ -97,7 +84,7 @@ class BaseElementModel(QObject):
         return self._num
 
     def set_number(self, num: int) -> None:
-        self._num = num  #
+        self._num = num
 
     @abstractmethod
     def recalculate_size(self, width: int) -> None:
@@ -203,6 +190,24 @@ class BaseTextElementEditor(QTextEdit):
 
     def focusOutEvent(self, e):
         return
+
+
+class BaseElementDelegate(QStyledItemDelegate):
+    editorOpened = pyqtSignal([BaseElementEditor], [BaseTextElementEditor])
+    editorClosed = pyqtSignal()
+
+    def __init__(self, toolset: BaseElementToolset | None, parent=None):
+        super().__init__(parent)
+        self._toolset = toolset
+        self._cache: BaseElementModel | None = (
+            None  # Original model when editing has been started
+        )
+        self.pres_mode = False
+
+    def eventFilter(self, object: QObject, event: QEvent):
+        if event.type() == QEvent.Type.FocusOut:
+            return True
+        return super().eventFilter(object, event)
 
 
 class BaseElementDefinitions:

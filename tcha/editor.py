@@ -33,7 +33,7 @@ from tcha.lesson import Lesson
 from tcha.lfio import LessonFile, ProgressLogger
 from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
-from tcha.table import CellEditor, Table
+from tcha.table import CellEditor, QStyledItemDelegate, Table
 from tcha.tablemodel import CellModel, TableModel
 from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
@@ -213,6 +213,7 @@ class Editor(QMainWindow):
         self.ui.table.cellEditorClosed.connect(self.on_cell_closed)
         self.ui.table.changeMade.connect(self.set_unsaved)
 
+        self.ui.ac_cell_finish_editing.triggered.connect(self.table.close_active_editor)
         self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
         self.ui.ac_add_column.triggered.connect(self.table.add_column_after_current)
         self.ui.ac_rmv_row.triggered.connect(
@@ -485,6 +486,10 @@ class Editor(QMainWindow):
     def resource_path(self) -> Path:
         return self.tablemodel.rescont.temppath
 
+    # TODO: Integratge CellEditor interface more with Table:
+    #       - UI actions are sent directly to table
+    #       - Send minimal information from table to parent editor: Called toolset name...
+    #       - UI: More actions in cell or table group
     def on_cell_opened(self, editor: CellEditor) -> None:
         if (
             self.ui.table.currentIndex().isValid()
@@ -503,6 +508,17 @@ class Editor(QMainWindow):
             self.ui.ac_paste.setEnabled(self.has_index_copied())
             self.ui.ac_goto_active.setEnabled(True)
             self.ui.ac_freeze_row.setEnabled(True)
+
+            self.ui.ac_elem_finish_editing.triggered.connect(
+                lambda: editor.close_active_editor(
+                    QStyledItemDelegate.EndEditHint.SubmitModelCache
+                )
+            )
+            self.ui.ac_elem_discard_changes.triggered.connect(
+                lambda: editor.close_active_editor(
+                    QStyledItemDelegate.EndEditHint.RevertModelCache
+                )
+            )
 
             if self.table.frozen_table.frozen_row == self.table.currentIndex().row():
                 self.ui.ac_freeze_row.set_text("unfreeze")
@@ -525,10 +541,19 @@ class Editor(QMainWindow):
         self.ui.table_group.setDisabled(True)
         self.ui.menu_elements.setDisabled(True)
         self.ui.ac_copy.setEnabled(False)
-        self.ui.ac_paste.setEnabled(False)
+        self.ui.ac_paste.setEnabled(False)  # ???
         self.ui.ac_goto_active.setEnabled(False)
         self.ui.ac_freeze_row.setEnabled(False)
         self.ui.ac_freeze_row.set_text("freeze")
+
+        for signal in (
+            self.ui.ac_elem_finish_editing,
+            self.ui.ac_elem_discard_changes,
+        ):
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass
 
         for signal in (self.ui.menu_elements, self.ui.ac_from_clipboard):
             try:

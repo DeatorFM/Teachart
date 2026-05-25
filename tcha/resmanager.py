@@ -233,9 +233,7 @@ class ResourceContainer(QObject):
     def create(self, restype: ResourceType) -> ResourceObject:
         """Creates a unique ResourceObject and returns it"""
         self._internal_counter += 1
-        res_object = UniqueResourceObject(
-            self.count_type(restype) + 1, restype, None, self
-        )
+        res_object = UniqueResourceObject(self.count_type(restype) + 1, restype, self)
         res_object.resourceExpired.connect(self.delete)
         self._objects[res_object.name] = res_object
         return res_object

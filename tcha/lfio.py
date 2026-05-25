@@ -688,7 +688,7 @@ class XmlReader:
                                     e.critical = False
                                     error_handler.log(
                                         e,
-                                        "Reading the model failed. Either the model type could not be identified or a required attribute is missing. Model will be skipped.",
+                                        f"Reading the model of type '{str(attrs.value('type'))}' failed. Either the model type could not be identified or a required attribute is missing. Model will be skipped.",
                                     )
                                     continue
                                 except ValueError as e:
@@ -746,9 +746,3 @@ class XmlReader:
                         break
 
         return tmodel
-
-    @staticmethod
-    def _element_model(name: str) -> "BaseElementModel":
-        print("Getting model of type:", name)
-        definition = get_definitions(name)
-        return definition.model()
