@@ -342,6 +342,7 @@ class CellModel(QAbstractListModel):
         """Reverts the working CellItem at index to the same model as the original data"""
         self._work_data[index.row()] = self._data[index.row()]
         self._work_data.recalculate_items()
+        self.dataChanged.emit(index, index)
 
     def setData(
         self,

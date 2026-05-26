@@ -144,9 +144,13 @@ class CellEditor(QListView):
         e.ignore()
         return super().wheelEvent(e)
 
-    def close_active_editor(self, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
+    def close_active_editor(self, submit=True) -> None:
         if self.editor:
-            self.closeEditor(self.editor, hint)
+            if submit:
+                self.commitData(self.editor)
+            else:
+                self.model().revert_work_data(self.currentIndex())
+            self.closeEditor(self.editor)
 
     def closeEditor(
         self,

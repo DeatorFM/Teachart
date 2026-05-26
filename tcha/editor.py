@@ -510,14 +510,10 @@ class Editor(QMainWindow):
             self.ui.ac_freeze_row.setEnabled(True)
 
             self.ui.ac_elem_finish_editing.triggered.connect(
-                lambda: editor.close_active_editor(
-                    QStyledItemDelegate.EndEditHint.SubmitModelCache
-                )
+                lambda: editor.close_active_editor()
             )
             self.ui.ac_elem_discard_changes.triggered.connect(
-                lambda: editor.close_active_editor(
-                    QStyledItemDelegate.EndEditHint.RevertModelCache
-                )
+                lambda: editor.close_active_editor(False)
             )
 
             if self.table.frozen_table.frozen_row == self.table.currentIndex().row():

@@ -11,8 +11,10 @@ from PyQt6.QtCore import (
     QBuffer,
     QByteArray,
     QDataStream,
+    QEvent,
     QIODevice,
     QModelIndex,
+    QObject,
     QPoint,
     QPointF,
     QRectF,
@@ -804,6 +806,7 @@ class TextDelegate(BaseElementDelegate):
         editor = TextEditor(option.rect.width() - 8.0, data, parent)
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
         editor.installEventFilter(parent)
+        editor.installEventFilter(self)
         editor.setFocus()
         editor.enable_presenter_mode(self.pres_mode)
         return editor
@@ -821,6 +824,20 @@ class TextDelegate(BaseElementDelegate):
     ) -> None:
         print(f"Geometry with width: {option.rect.width() - 7}")
         editor.setGeometry(option.rect.adjusted(2, 2, -5, -2))
+
+    def eventFilter(self, object: QObject, event: QEvent):
+        if isinstance(object, TextEditor) and isinstance(event, QKeyEvent):
+            if event.type() == QEvent.Type.KeyPress:
+                if (
+                    event.keyCombination().keyboardModifiers()
+                    == Qt.KeyboardModifier.ControlModifier
+                    and event.key() == Qt.Key.Key_Return
+                ):
+                    self.commitData.emit(object)
+                    self.closeEditor.emit(object)
+                    return True
+
+        return super().eventFilter(object, event)
 
     def setModelData(
         self, editor: TextEditor | None, model, index: QModelIndex
