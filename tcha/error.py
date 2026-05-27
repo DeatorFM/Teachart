@@ -1,11 +1,14 @@
 import logging
+import os.path as osp
 from dataclasses import dataclass
 from enum import Enum
-from genericpath import exists
+from functools import cache
+from pathlib import Path
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QFileDevice, Qt, QXmlStreamReader
 from PyQt6.QtWidgets import QMessageBox
+
+from tcha.settings import Settings
 
 
 @dataclass(frozen=True)
@@ -165,15 +168,20 @@ class ErrorCode(Enum):
 class ErrorLogger:
     """Logs errors and evaluates them."""
 
-    def __init__(self, logging_file: str | None, raise_critical: bool = False):
+    def __init__(self, file_name: str | None, raise_critical: bool = False):
         self._errors: set[LFExceptions.LFException] = set()
         self._logger = None
         self._raise_critical = raise_critical
-        if logging_file:
-            self._file = logging_file
-            self._setup_logger(f"{logging_file}.log")
+        if file_name:
+            self._file = ErrorLogger.logdir() / (osp.basename(file_name) + ".log")
+            self._setup_logger(self._file.as_posix())
         else:
             self._file = None
+
+    @cache
+    @staticmethod
+    def logdir() -> Path:
+        return Settings.user_path() / "tchlogs"
 
     def _setup_logger(self, log_file: str) -> None:
         """Create a unique logger for this ErrorLogger instance"""
@@ -186,9 +194,9 @@ class ErrorLogger:
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
 
-    def set_file(self, filename: str) -> None:
-        self._file = filename.strip(".log")
-        self._setup_logger(f"{filename}.log")
+    def set_file(self, file_name: str) -> None:
+        self._file = ErrorLogger.logdir() / (osp.basename(file_name) + ".log")
+        self._setup_logger(self._file.as_posix())
 
     def log_msg(self, msg: str) -> None:
         """Logs a message in file if defined."""
@@ -221,7 +229,7 @@ class ErrorLogger:
         self._errors.clear()
 
     @property
-    def logfile(self) -> str:
+    def logfile(self) -> Path | None:
         return self._file
 
     def code(self) -> ErrorCode:

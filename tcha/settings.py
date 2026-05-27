@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass, field, fields, make_dataclass
 from enum import Enum, Flag, IntEnum, StrEnum
+from functools import cache, lru_cache
 from os.path import abspath, dirname, exists
 from pathlib import Path
 from re import L
@@ -402,6 +403,13 @@ class Settings:
         scope: QSettings.Scope = QSettings.Scope.UserScope,
     ) -> QSettings:
         return QSettings(format, scope, "Teachart", "settings")
+
+    @cache
+    @staticmethod
+    def user_path() -> Path:
+        qsettings = Settings.qsettings()
+        path = Path(qsettings.fileName())
+        return path.parent
 
 
 class DefaultValue:

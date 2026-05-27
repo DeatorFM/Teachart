@@ -26,7 +26,6 @@ from tcha.error import ErrorLogger, LFExceptions, QtError
 from tcha.lesson import Lesson
 from tcha.resmanager import (
     ResourceContainer,
-    ResourceObject,
     ResourceTransferObject,
     ResourceType,
 )

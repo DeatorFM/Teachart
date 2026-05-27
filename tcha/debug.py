@@ -8,7 +8,6 @@ from PyQt6.QtCore import (
     QFile,
     QModelIndex,
     Qt,
-    QVariant,
 )
 from PyQt6.QtWidgets import QDialog, QHeaderView
 from PyQt6.QtXml import QDomDocument

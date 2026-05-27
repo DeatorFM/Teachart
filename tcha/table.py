@@ -57,6 +57,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import (
+    BaseElementDefinitions,
     BaseElementDelegate,
     BaseElementEditor,
     BaseElementModel,
@@ -659,6 +660,18 @@ class BaseTable(QTableView):
             )
 
     # Table editing
+
+    @pyqtSlot(QAction)
+    def handle_action(self, action: QAction) -> None:
+        match action.data():
+            case _:
+                pass
+
+    @pyqtSlot(QAction)
+    def handle_element_action(self, action: QAction) -> None:
+        if self.editor and isinstance(action.data(), BaseElementDefinitions):
+            model = self.editor.model()
+            model.create_model(action.data())
 
     def add_column_after_current(self) -> None:
         if self.currentIndex().isValid():

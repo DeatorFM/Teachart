@@ -34,7 +34,7 @@ from tcha.dbmodels import (
 )
 from tcha.editor import Editor
 from tcha.elements import get_all_definitions
-from tcha.error import CriticalError, PyException
+from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
@@ -171,6 +171,9 @@ class AppCore(QApplication):
                 continue
             print("No invalid values found.")
             break
+
+        if not ErrorLogger.logdir().exists():
+            ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
 
         # Check database
         dbpath = self.qsettings.value("User/dbpath", type=str)

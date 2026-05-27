@@ -1,4 +1,4 @@
-from enum import Enum, Flag
+from enum import Enum, Flag, auto
 
 
 class AppAction(Enum):
@@ -11,6 +11,19 @@ class AppAction(Enum):
     OpenDialog = 6
     PresenterView = 7
     AboutTeachart = 8
+
+
+class TableAction(Enum):
+    Discard = auto()
+    Accept = auto()
+    InsertRow = auto()
+    InsertColumn = auto()
+    RemoveRow = auto()
+    RemoveColumn = auto()
+    AddElement = auto()
+    RemoveElement = auto()
+    MoveUp = auto()
+    MoveDown = auto()
 
 
 class ResourceFlag(Enum):

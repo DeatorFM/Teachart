@@ -292,6 +292,7 @@ class CellModel(QAbstractListModel):
                 for _ in range(count):
                     self._data[row].close()
                     del self._data[row]
+                    del self._work_data[row]
                 self.endRemoveRows()
                 self.modelChanged.emit()
                 print("Successfully removed. Current data", self._data)
@@ -302,6 +303,7 @@ class CellModel(QAbstractListModel):
 
     def pop_model(self, row: int) -> BaseElementModel:
         model = self._data.pop(row)
+        self._work_data.pop(row)
         self.layoutChanged.emit()
         self.modelChanged.emit()
         return model
@@ -507,6 +509,7 @@ class CellModel(QAbstractListModel):
                 sourceParent, sourceRow, sourceRow, destinationParent, target
             )
             self._data.insert(destinationChild, self._data.pop(sourceRow))
+            self._work_data.insert(destinationChild, self._work_data.pop(sourceRow))
             self.endMoveRows()
             self.modelChanged.emit()
             return True
