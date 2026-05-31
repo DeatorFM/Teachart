@@ -244,9 +244,7 @@ class CellModel(QAbstractListModel):
         self._work_data.append(model)
         self.endInsertRows()
 
-    def create_model(
-        self, definition: BaseElementDefinitions
-    ) -> BaseElementDefinitions:
+    def create_model(self, definition: BaseElementDefinitions) -> None:
         if definition:
             rescont = self.tablemodel.rescont
 
@@ -769,11 +767,10 @@ class TableModel(QAbstractTableModel):
         try:
             self.beginInsertRows(QModelIndex(), row, row + count - 1)
             for num in range(count):
-                self._header_data[Qt.Orientation.Vertical].insert(
-                    row + num, HeaderDataItem.vertical(row + num)
+                self._header_data[Qt.Orientation.Vertical].append(
+                    HeaderDataItem.vertical(row + num)
                 )
-                self._data.insert(
-                    row + num,
+                self._data.append(
                     [
                         CellItem(
                             self._header_data[Qt.Orientation.Horizontal][col],
@@ -797,8 +794,7 @@ class TableModel(QAbstractTableModel):
             for num in range(count):
                 hitem = HeaderDataItem.horizontal(column + num)
                 for row in self._data:
-                    row.insert(
-                        column + num,
+                    row.append(
                         CellItem(hitem, self.increase_counter()),
                     )
                 self._header_data[Qt.Orientation.Horizontal].insert(column + num, hitem)

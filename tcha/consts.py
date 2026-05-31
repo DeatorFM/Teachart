@@ -13,17 +13,21 @@ class AppAction(Enum):
     AboutTeachart = 8
 
 
-class TableAction(Enum):
+class CellAction(Enum):
     Discard = auto()
     Accept = auto()
-    InsertRow = auto()
-    InsertColumn = auto()
-    RemoveRow = auto()
-    RemoveColumn = auto()
     AddElement = auto()
+    AddFromClipboard = auto()
     RemoveElement = auto()
     MoveUp = auto()
     MoveDown = auto()
+    Clear = auto()
+
+
+class ClipboardContent(Flag):
+    NotParsable = auto()
+    ElementData = auto()
+    CopiedIndex = auto()
 
 
 class ResourceFlag(Enum):
@@ -57,9 +61,9 @@ class CanvasTool(Enum):
 
 
 class EditingLevel(Flag):
-    NoEditing = 0
-    CellEditing = 1
-    ElementEditing = 2
+    NoEditing = auto()
+    CellEditing = auto()
+    ElementEditing = auto()
 
 
 class TableViewMode(Enum):

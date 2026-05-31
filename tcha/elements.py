@@ -1,4 +1,7 @@
 import importlib
+from functools import cache
+
+from PyQt6.QtCore import QMimeData
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -39,6 +42,7 @@ NATIVE_ELEMENTS = {
 # Native elements' getters
 
 
+@cache
 def get_all_definitions() -> dict[str, BaseElementDefinitions]:
     return {
         key: getattr(importlib.import_module(val["module"]), val["definitions"])
@@ -46,6 +50,17 @@ def get_all_definitions() -> dict[str, BaseElementDefinitions]:
     }
 
 
+@cache
+def compatible_mime_types() -> frozenset[str]:
+    mime_types = set()
+    definitions = get_all_definitions()
+    for definition in definitions.values():
+        def_mime_types = set(definition.mime_types())
+        mime_types.symmetric_difference_update(def_mime_types)
+    return frozenset(mime_types)
+
+
+@cache
 def get_definitions(name: str) -> BaseElementDefinitions | None:
     try:
         return getattr(
@@ -54,6 +69,15 @@ def get_definitions(name: str) -> BaseElementDefinitions | None:
         )
     except AttributeError:
         return None
+
+
+def definition_for_mime_data(mime_data: QMimeData) -> BaseElementDefinitions | None:
+    """Return the element definition that supports the mime data"""
+    definitions = get_all_definitions()
+    for definition in definitions.values():
+        if definition.supports_mime_data(mime_data):
+            return definition
+    return None
 
 
 def get_toolsets() -> dict[str, BaseElementToolset]:

@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementToolset
-from tcha.consts import CanvasTool
+from tcha.consts import CanvasTool, CellAction
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.styling import SvgIcon
 from tcha.table import PresenterCanvas, Table
@@ -554,12 +554,16 @@ class Ui_Editor(object):
 
         self.table_group.setDisabled(True)
 
+        self.cell_group = QActionGroup(MainWindow)
+
         self.ac_elem_finish_editing = QAction(parent=MainWindow)
         self.ac_elem_finish_editing.setObjectName("elem_finish_editing")
         self.ac_elem_finish_editing.setIcon(icon24)
         self.ac_elem_finish_editing.setShortcuts(
             [QKeySequence("Return"), QKeySequence("Ctrl+Return")]
         )
+        self.ac_elem_finish_editing.setData(CellAction.Accept)
+        self.cell_group.addAction(self.ac_elem_finish_editing)
 
         self.ac_elem_discard_changes = QAction(parent=MainWindow)
         self.ac_elem_discard_changes.setObjectName("elem_discard_changes")
@@ -568,21 +572,34 @@ class Ui_Editor(object):
         )
         self.ac_elem_discard_changes.setIcon(icon25)
         self.ac_elem_discard_changes.setShortcut(QKeySequence(Qt.Key.Key_Escape))
+        self.ac_elem_discard_changes.setData(CellAction.Discard)
+        self.cell_group.addAction(self.ac_elem_discard_changes)
 
         self.ac_mov_up = QAction(parent=MainWindow)
         icon6 = SvgIcon("resources/icons/ic_move_up.svg")
         self.ac_mov_up.setIcon(icon6)
         self.ac_mov_up.setObjectName("ac_mov_up")
+        self.ac_mov_up.setData(CellAction.MoveUp)
+        self.cell_group.addAction(self.ac_mov_up)
+
         self.ac_mov_dwn = QAction(parent=MainWindow)
         icon7 = SvgIcon("resources/icons/ic_move_down.svg")
         self.ac_mov_dwn.setIcon(icon7)
         self.ac_mov_dwn.setObjectName("ac_mov_dwn")
+        self.ac_mov_dwn.setData(CellAction.MoveDown)
+        self.cell_group.addAction(self.ac_mov_dwn)
+
         self.ac_del_element = QAction(parent=MainWindow)
         icon8 = SvgIcon("resources/icons/ic_trash.svg")
         self.ac_del_element.setIcon(icon8)
         self.ac_del_element.setObjectName("ac_del_element")
+        self.ac_del_element.setData(CellAction.RemoveElement)
+        self.cell_group.addAction(self.ac_del_element)
+
         self.ac_clear_cell = QAction(parent=MainWindow)
         self.ac_clear_cell.setObjectName("ac_clear_cell")
+        self.ac_clear_cell.setData(CellAction.Clear)
+        self.cell_group.addAction(self.ac_clear_cell)
 
         # Other Actions
 
@@ -866,6 +883,7 @@ class Ui_Editor(object):
             toolset.setVisible(False)
             toolset.visibilityChanged.connect(self.on_element_toolbar_visibilty_changed)
             d[key] = toolset
+        self.table.set_toolset_reference(d)
         return d
 
     def on_element_toolbar_visibilty_changed(self, open: bool) -> None:

@@ -15,6 +15,7 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
+    QTimer,
     pyqtSignal,
     pyqtSlot,
 )
@@ -66,8 +67,14 @@ from nativeelements.baseelement import (
 )
 from tcha.consts import (
     CanvasTool,
+    CellAction,
+    ClipboardContent,
     EditingLevel,
     TableViewMode,
+)
+from tcha.elements import (
+    compatible_mime_types,
+    definition_for_mime_data,
 )
 from tcha.tablemodel import (
     CellItem,
@@ -118,7 +125,7 @@ class CellEditor(QListView):
 
     # Toolset methods
 
-    def connect_toolsets(self, toolsets: dict[str, BaseElementToolset]) -> None:
+    def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
         self._toolsets = toolsets
 
     def on_closed(self) -> None:
@@ -168,6 +175,36 @@ class CellEditor(QListView):
             self.setCurrentIndex(QModelIndex())
             self.setFocus()
             print("Close complete")
+
+    def remove_current_element(self) -> None:
+        result = QMessageBox.question(
+            self,
+            tr("Confirm removal"),
+            tr("Are you sure you want to permanently remove this element?"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if result == QMessageBox.StandardButton.Yes:
+            model = self.model()
+            index = self.currentIndex()
+            self.setCurrentIndex(QModelIndex())
+            model.removeRow(index.row())
+
+    def move_element_up(self) -> None:
+        model = self.model()
+        index = self.currentIndex()
+        if index.row() > 0:
+            model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
+
+    def move_element_down(self) -> None:
+        model = self.model()
+        index = self.currentIndex()
+        if not index.row() == model.rowCount() - 1:
+            model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
+
+    def can_make_element_from_mime_data(self) -> bool:
+        current = frozenset(QApplication.clipboard().mimeData().formats())
+        compatible = compatible_mime_types()
+        return current <= compatible
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
@@ -506,8 +543,12 @@ class HeaderView(QHeaderView):
 
 class BaseTable(QTableView):
     changeMade = pyqtSignal()
-    cellEditorOpened = pyqtSignal(CellEditor)
-    cellEditorClosed = pyqtSignal()
+    editingLevelChanged = pyqtSignal(EditingLevel)
+    currentEditorIndexChanged = pyqtSignal(QModelIndex)
+    clipboardChanged = pyqtSignal(ClipboardContent)
+
+    # cellEditorOpened = pyqtSignal(CellEditor)
+    # cellEditorClosed = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -516,6 +557,8 @@ class BaseTable(QTableView):
         self._drag_start_position: QPoint | None = None
         self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._visible_row = -1
+        self._definition_for_mime_data = None
+        self._toolset_reference: dict[str, BaseElementDefinitions] | None = None
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -550,6 +593,8 @@ class BaseTable(QTableView):
 
         self.count_label = QLabel()
 
+        QApplication.clipboard().changed.connect(self._on_clipboard_changed)
+
     @property
     def editor(self) -> CellEditor | None:
         return self._editor
@@ -557,12 +602,26 @@ class BaseTable(QTableView):
     def enable_painting(self, painting: bool) -> None:
         self._painting = painting
 
+    def current_model(self) -> BaseElementModel | None:
+        """Return model of editor's current index"""
+        if self.editor:
+            return self.editor.currentIndex().data()
+        return None
+
+    # States
+
+    def check_clipboard(self) -> None:
+        self._on_clipboard_changed()
+
     def editing_level(self) -> EditingLevel:
         if self._editor:
             if self._editor.state() == QListView.State.EditingState:
                 return EditingLevel.CellEditing | EditingLevel.ElementEditing
             return EditingLevel.CellEditing
         return EditingLevel.NoEditing
+
+    def can_create_from_clipboard(self) -> bool:
+        return True if self._definition_for_mime_data else False
 
     # Model connection and signal handling
 
@@ -574,11 +633,9 @@ class BaseTable(QTableView):
             super().setModel(model)
             self.setCurrentIndex(QModelIndex())
 
-            self.horizontalHeader().setModel(model)
             self.verticalHeader().setSectionResizeMode(
                 QHeaderView.ResizeMode.ResizeToContents
             )
-            self.verticalHeader().setModel(model)
 
             self.model().dataChanged.connect(self.set_extra_emit)
             self.model().dataChanged.connect(self.update_row_geometries)
@@ -659,19 +716,56 @@ class BaseTable(QTableView):
                 Qt.ItemDataRole.EditRole,
             )
 
-    # Table editing
+    def _on_clipboard_changed(self) -> None:
+        flags = ClipboardContent(0)
+        mime_data = QApplication.clipboard().mimeData()
+        if mime_data:
+            self._definition_for_mime_data = definition_for_mime_data(mime_data)
+            if self._definition_for_mime_data:
+                flags |= ClipboardContent.ElementData
+
+            if "application/x-teachart" in mime_data.formats():
+                flags |= ClipboardContent.CopiedIndex
+
+        if not flags:
+            flags = ClipboardContent.NotParsable
+
+        print("Flag result: ", flags)
+        print("Definition: ", self._definition_for_mime_data)
+        self.clipboardChanged.emit(flags)
+
+    # Editor interaction
 
     @pyqtSlot(QAction)
-    def handle_action(self, action: QAction) -> None:
-        match action.data():
-            case _:
-                pass
+    def handle_cell_action(self, action: QAction) -> None:
+        if self.editor:
+            match action.data():
+                case CellAction.Discard:
+                    self.editor.close_active_editor(False)
+                    return
+                case CellAction.Accept:
+                    self.editor.close_active_editor()
+                    return
+                case CellAction.RemoveElement:
+                    self.editor.remove_current_element()
+                    return
+                case CellAction.MoveUp:
+                    self.editor.move_element_up()
+                    return
+                case CellAction.MoveDown:
+                    self.editor.move_element_down()
+                    return
 
     @pyqtSlot(QAction)
     def handle_element_action(self, action: QAction) -> None:
-        if self.editor and isinstance(action.data(), BaseElementDefinitions):
+        print("Handing element action: ", type(action.data()))
+        if self.editor and action.property("is_element_action"):
             model = self.editor.model()
             model.create_model(action.data())
+
+    def add_clipboard_data(self) -> None:
+        if self.editor and self.can_create_from_clipboard():
+            self.editor.model().create_from_clipboard(self._definition_for_mime_data)
 
     def add_column_after_current(self) -> None:
         if self.currentIndex().isValid():
@@ -693,6 +787,7 @@ class BaseTable(QTableView):
 
             self.verticalHeader().moveSection(new_logical, visual_current + 1)
 
+    # DELETE
     def add_element(self, element: BaseElementModel) -> None:
         if self.currentIndex().isValid():
             cell = self.currentIndex().data()
@@ -735,7 +830,11 @@ class BaseTable(QTableView):
         print("Editor opened", editor)
         if editor:
             self._editor = editor
-            self.cellEditorOpened.emit(self._editor)
+            self._editor.set_toolset_reference(self._toolset_reference)
+            self._editor.selectionModel().currentChanged.connect(
+                self.currentEditorIndexChanged.emit
+            )
+            self.editingLevelChanged.emit(self.editing_level())
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
@@ -745,6 +844,12 @@ class BaseTable(QTableView):
         print(f"Mouse tracking {enable}")
         self.setMouseTracking(enable)
         self.update()
+
+    def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
+        if not self._toolset_reference:
+            self._toolset_reference = toolsets
+
+    # Event handler
 
     def keyPressEvent(self, e: QKeyEvent):
         print("Table got key press")
@@ -867,6 +972,17 @@ class BaseTable(QTableView):
         else:
             event.ignore()
 
+    # Copy and paste functions
+
+    def can_copy(self) -> bool:
+        return self.currentIndex().isValid()
+
+    def can_paste(self) -> bool:
+        mime_data = QApplication.clipboard().mimeData()
+        if mime_data:
+            return "application/x-teachart" in mime_data.formats()
+        return False
+
     def copy_index(self, index: QModelIndex) -> None:
         if index.isValid():
             if self._editor and self._editor.hasFocus():
@@ -913,7 +1029,7 @@ class BaseTable(QTableView):
         self._editor = None
         self.model().clear_cache()
         self.setCurrentIndex(QModelIndex())
-        self.cellEditorClosed.emit()
+        self.editingLevelChanged.emit(EditingLevel.NoEditing)
 
 
 class Table(BaseTable):
@@ -1022,11 +1138,14 @@ class Table(BaseTable):
         """Connects the cell editor with the signals to notify the editor"""
         print("Editor opened", editor)
         if editor:
+            self._editor = editor
             if self.has_frozen_row():
                 self.frozen_table.close_active_editor()
-            self._editor = editor
-            self._editor.enable_presenter_mode(self._pres_mode)
-            self.cellEditorOpened.emit(self._editor)
+            self._editor.set_toolset_reference(self._toolset_reference)
+            self._editor.selectionModel().currentChanged.connect(
+                self.currentEditorIndexChanged.emit
+            )
+            self.editingLevelChanged.emit(self.editing_level())
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
@@ -1438,12 +1557,6 @@ class Table(BaseTable):
         menu.addAction(remove_column_action)
 
         menu.exec(self.viewport().mapToGlobal(position))
-
-    def closeEditor(
-        self, editor: QWidget | None, hint: QStyledItemDelegate.EndEditHint
-    ) -> None:
-        super().closeEditor(editor, hint)
-        print("An cell editor has been closed", self._can_close_editor, editor, hint)
 
 
 class FrozenRowTable(BaseTable):

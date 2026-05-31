@@ -25,7 +25,13 @@ from PyQt6.QtWidgets import (
 )
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.consts import AppAction, SaveState, TableViewMode
+from tcha.consts import (
+    AppAction,
+    ClipboardContent,
+    EditingLevel,
+    SaveState,
+    TableViewMode,
+)
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
@@ -33,8 +39,8 @@ from tcha.lesson import Lesson
 from tcha.lfio import LessonFile, ProgressLogger
 from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
-from tcha.table import CellEditor, QStyledItemDelegate, Table
-from tcha.tablemodel import CellModel, TableModel
+from tcha.table import CellEditor, Table
+from tcha.tablemodel import TableModel
 from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
 
@@ -110,7 +116,7 @@ class Editor(QMainWindow):
         self.ui.cb_course.setModel(self.courses)
         self.ui.cb_course.setModelColumn(1)
         self.setMouseTracking(True)
-        self.check_clipboard()
+        self.table.check_clipboard()
 
     def initialise_editor(self) -> tuple[LessonFile, ResourceContainer]:
         debug_tag = (
@@ -209,9 +215,11 @@ class Editor(QMainWindow):
 
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
-        self.ui.table.cellEditorOpened.connect(self.on_cell_opened)
-        self.ui.table.cellEditorClosed.connect(self.on_cell_closed)
-        self.ui.table.changeMade.connect(self.set_unsaved)
+        self.ui.table.editingLevelChanged.connect(self.editing_level_changed)
+        self.ui.table.currentEditorIndexChanged.connect(
+            self.current_editor_index_changed
+        )
+        self.ui.table.clipboardChanged.connect(self.clipboard_changed)
 
         self.ui.ac_cell_finish_editing.triggered.connect(self.table.close_active_editor)
         self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
@@ -223,21 +231,15 @@ class Editor(QMainWindow):
             lambda: self.table.remove_column()
         )  # Move to model
 
-        self.ui.ac_del_element.triggered.connect(self.remove_element)  # Move to model
-        self.ui.ac_mov_up.triggered.connect(
-            self.move_element_up
-        )  # Move to table or model
-        self.ui.ac_mov_dwn.triggered.connect(
-            self.move_element_down
-        )  # Move to table or model
+        self.ui.cell_group.triggered.connect(self.table.handle_cell_action)
+        self.ui.menu_elements.triggered.connect(self.table.handle_element_action)
+        self.ui.ac_from_clipboard.triggered.connect(self.table.add_clipboard_data)
 
         self.ui.bg_tools.buttonClicked.connect(self.ui.canvas.set_tool)
         self.ui.bg_colors.buttonClicked.connect(self.ui.canvas.set_color)
 
         self.ui.tb_row_up.clicked.connect(lambda: self.table.scroll_by(-1))
         self.ui.tb_row_down.clicked.connect(lambda: self.table.scroll_by(1))
-
-        QApplication.clipboard().dataChanged.connect(self.check_clipboard)
 
     def path(self) -> str | None:
         return self.lessonfile.path
@@ -486,135 +488,68 @@ class Editor(QMainWindow):
     def resource_path(self) -> Path:
         return self.tablemodel.rescont.temppath
 
-    # TODO: Integratge CellEditor interface more with Table:
-    #       - UI actions are sent directly to table
-    #       - Send minimal information from table to parent editor: Called toolset name...
-    #       - UI: More actions in cell or table group
-    def on_cell_opened(self, editor: CellEditor) -> None:
-        if (
-            self.ui.table.currentIndex().isValid()
-            or self.ui.table.frozen_table.currentIndex().isValid()
-        ) and editor:
-            print(
-                "Index",
-                self.ui.table.currentIndex().row(),
-                "|",
-                self.ui.table.currentIndex().column(),
-                "is valid",
-            )
+    # Handle table signals
+
+    # table.editingLevelChanged
+    def editing_level_changed(self, level: EditingLevel) -> None:
+        print("Editing level: ", level.name)
+        if level & EditingLevel.CellEditing:
             self.ui.table_group.setEnabled(True)
             self.ui.menu_elements.setEnabled(True)
             self.ui.ac_copy.setEnabled(True)
-            self.ui.ac_paste.setEnabled(self.has_index_copied())
-            self.ui.ac_goto_active.setEnabled(True)
+            self.ui.ac_paste.setEnabled(self.table.can_paste())
             self.ui.ac_freeze_row.setEnabled(True)
-
-            self.ui.ac_elem_finish_editing.triggered.connect(
-                lambda: editor.close_active_editor()
-            )
-            self.ui.ac_elem_discard_changes.triggered.connect(
-                lambda: editor.close_active_editor(False)
-            )
+            self.ui.ac_from_clipboard.setEnabled(self.table.can_create_from_clipboard())
 
             if self.table.frozen_table.frozen_row == self.table.currentIndex().row():
                 self.ui.ac_freeze_row.set_text("unfreeze")
             else:
                 self.ui.ac_freeze_row.set_text("freeze")
 
-            editor.connect_toolsets(self.toolsets)
-            editor.currentIndexChanged.connect(self.on_current_changed)
+        if level & EditingLevel.ElementEditing:
+            if self.presenter_mode:
+                model: BaseElementModel | None = self.table.current_model()
+                if model:
+                    gr_item = model.presentable_item()
+                    if gr_item:
+                        self.ui.canvas.change_item(gr_item)
 
-            emodel: CellModel = editor.model()
-            self.ui.menu_elements.triggered.connect(
-                lambda x: emodel.create_model(x.data())
-            )
-            self.ui.ac_from_clipboard.triggered.connect(
-                lambda: emodel.create_from_clipboard(self.def_for_mime_type)
-            )
-            # editor.elementActivated.connect(self.on_element_activated)
+        if level == EditingLevel.NoEditing:
+            self.ui.table_group.setEnabled(False)
+            self.ui.menu_elements.setEnabled(False)
+            self.ui.ac_copy.setEnabled(False)
+            self.ui.ac_paste.setEnabled(False)  # ???
+            self.ui.ac_goto_active.setEnabled(False)
+            self.ui.ac_freeze_row.setEnabled(False)
+            self.ui.ac_freeze_row.set_text("freeze")
+            self.ui.ac_from_clipboard.setEnabled(False)
 
-    def on_cell_closed(self) -> None:
-        self.ui.table_group.setDisabled(True)
-        self.ui.menu_elements.setDisabled(True)
-        self.ui.ac_copy.setEnabled(False)
-        self.ui.ac_paste.setEnabled(False)  # ???
-        self.ui.ac_goto_active.setEnabled(False)
-        self.ui.ac_freeze_row.setEnabled(False)
-        self.ui.ac_freeze_row.set_text("freeze")
+            for toolset in self.toolsets.values():
+                toolset.setVisible(False)
 
-        for signal in (
-            self.ui.ac_elem_finish_editing,
-            self.ui.ac_elem_discard_changes,
-        ):
-            try:
-                signal.disconnect()
-            except TypeError:
-                pass
+    # table.currentEditorIndexChanged
+    @pyqtSlot(QModelIndex)
+    def current_editor_index_changed(self, idx: QModelIndex) -> None:
+        if self.presenter_mode:
+            model: BaseElementModel = idx.data()
+            if model:
+                gr_item = model.presentable_item()
+                if gr_item:
+                    self.ui.canvas.change_item(gr_item)
 
-        for signal in (self.ui.menu_elements, self.ui.ac_from_clipboard):
-            try:
-                signal.disconnect()
-            except TypeError:
-                pass
+    # table.clipboardChanged
+    @pyqtSlot(ClipboardContent)
+    def clipboard_changed(self, changed: ClipboardContent) -> None:
+        if changed == ClipboardContent.NotParsable:
+            self.ui.ac_paste.setEnabled(False)
+            self.ui.ac_from_clipboard.setEnabled(False)
 
-        for toolset in self.toolsets.values():
-            toolset.setVisible(False)
-
-    @pyqtSlot(QAction)
-    def on_element_action(self, action: QAction) -> None:
-        if action.property("is_element_action"):
-            self.add_element(action)
-        else:
-            self.from_clipboard()
-
-    def remove_element(self) -> None:
-        editor = self.table.editor
-        if editor:
-            result = QMessageBox.question(
-                editor,
-                tr("Confirm removal"),
-                tr("Are you sure you want to permanently remove this element?"),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if result == QMessageBox.StandardButton.Yes:
-                model = editor.model()
-                index = editor.currentIndex()
-                editor.setCurrentIndex(QModelIndex())
-                if model.removeRow(index.row()):
-                    if not editor.copied_index().isValid():
-                        clipboard = QApplication.clipboard()
-                        clipboard.mimeData().removeFormat("application/x-teachart")
-                        clipboard.dataChanged.emit()
-
-    def move_element_up(self) -> None:
-        editor = self.table.editor
-        if editor:
-            model = editor.model()
-            index = editor.currentIndex()
-            if index.row() > 0:
-                model.moveRow(
-                    QModelIndex(), index.row(), QModelIndex(), index.row() - 1
-                )
-
-    def move_element_down(self) -> None:
-        editor = self.table.editor
-        if editor:
-            model = editor.model()
-            index = editor.currentIndex()
-            if not index.row() == model.rowCount() - 1:
-                model.moveRow(
-                    QModelIndex(), index.row(), QModelIndex(), index.row() + 1
-                )
-
-    def on_about_to_remove_row(self) -> None:
-        current_row = self.ui.table.currentIndex().row()
-        self.ui.table.setCurrentIndex(QModelIndex())
-        self.tablemodel.removeRow(current_row)
-
-    def on_about_to_remove_column(self) -> None:
-        current_column = self.ui.table.currentIndex().column()
-        self.ui.table.setCurrentIndex(QModelIndex())
-        self.tablemodel.removeColumn(current_column)
+        self.ui.ac_from_clipboard.setEnabled(
+            bool(changed & ClipboardContent.ElementData and self.table.editor)
+        )
+        self.ui.ac_paste.setEnabled(
+            bool(changed & ClipboardContent.CopiedIndex and self.table.editor)
+        )
 
     def print_lesson(self) -> None:
         try:
@@ -687,7 +622,7 @@ class Editor(QMainWindow):
             self.ui.canvas.clear()
             self.presenterClosed.emit()
 
-        self.ui.table.enable_presenter_mode(enabled)
+        self.table.enable_presenter_mode(enabled)
 
     # Dialog opener
 
@@ -699,14 +634,6 @@ class Editor(QMainWindow):
             )
         )
         dialog.open()
-
-    def on_current_changed(self, idx: QModelIndex) -> None:
-        if self.presenter_mode:
-            model: BaseElementModel = idx.data()
-            if model:
-                gr_item = model.presentable_item()
-                if gr_item:
-                    self.ui.canvas.change_item(gr_item)
 
     # Other controls
 
