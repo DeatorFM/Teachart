@@ -4,7 +4,7 @@ import importlib.util as iu
 import os
 import sys
 import typing
-from os.path import abspath, exists
+from os.path import abspath, exists, isfile, split
 from pathlib import Path
 from shutil import rmtree
 from zipimport import zipimporter
@@ -128,6 +128,7 @@ class AppCore(QApplication):
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
+        self._argv = argv
 
         if not self.qsettings.allKeys():
             print("Empty Settings: First initialisation")
@@ -260,28 +261,36 @@ class AppCore(QApplication):
             case AppAction.NoAction:
                 return
             case AppAction.NewFile:
-                self.create_editor()
+                editor = self.create_editor()
+                editor.show()
             case AppAction.OpenFile:
-                self.open_file(value)
+                editor = self.open_file(value)
+                if editor:
+                    editor.show()
             case AppAction.Settings:
                 self.open_settings(value)
             case AppAction.StartDialog:
-                self.open_start_dialog(True)
+                start = self.open_start_dialog(True)
+                start.show()
             case AppAction.CourseExplorer:
                 self.open_course_exp(value)
             case AppAction.AboutTeachart:
                 self.open_about_dialog()
 
-    def startup_window(self, argv=None) -> QWidget:
-        # TODO: Implement argument evaluation on application start
-        startup_window = StartWindow(self._file_model, self._schedule_model)
-        startup_window.appActionTriggered[AppAction, QWidget].connect(
-            self.on_app_action
-        )
-        startup_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
-        startup_window.appActionTriggered[AppAction].connect(self.on_app_action)
-        self._start_dialog = startup_window
-        return startup_window
+    def startup_window(self) -> QWidget:
+        """Returns startup window based on arguments on startup"""
+        if len(self._argv) == 1:
+            start = self.open_start_dialog()
+            return start
+
+        elif len(self._argv) == 2:
+            path = Path(self._argv[1])
+            if path.is_file() and path.suffix == ".tch":
+                editor = self.open_file(path)
+                return editor if editor else self.create_editor()
+            return self.create_editor()
+
+        return self.open_start_dialog()
 
     def opened_editors(self) -> list[Editor]:
         windows = QApplication.topLevelWidgets()
@@ -303,7 +312,7 @@ class AppCore(QApplication):
 
     def create_editor(
         self,
-    ) -> None:
+    ) -> Editor:
         """Creates an editor with a new LessonFile object."""
         lf = LessonFile()
         lf.open("w")
@@ -315,7 +324,6 @@ class AppCore(QApplication):
         editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
         editor_window.presenterActivated.connect(self.open_presenter)
         editor_window.presenterClosed.connect(self.close_presenter)
-        editor_window.show()
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
         self._clean_up_list.append(editor_window.resource_path)
 
@@ -323,7 +331,9 @@ class AppCore(QApplication):
             self._start_dialog.close()
             self._start_dialog = None
 
-    def open_file(self, path: Path) -> None:
+        return editor_window
+
+    def open_file(self, path: Path) -> Editor | None:
         if (
             path
             and path.exists()
@@ -352,7 +362,6 @@ class AppCore(QApplication):
                 )
                 editor_window.presenterActivated.connect(self.open_presenter)
                 editor_window.presenterClosed.connect(self.close_presenter)
-                editor_window.show()
                 editor_window.ui.ac_recent.setMenu(
                     self._file_model.export_recent_as_menu(6)
                 )
@@ -382,7 +391,8 @@ class AppCore(QApplication):
                     ),
                 )
 
-                caller.reset_progress()
+                if caller:
+                    caller.reset_progress()
                 if self._start_dialog:
                     self._start_dialog.close()
                     self._start_dialog = None
@@ -391,6 +401,7 @@ class AppCore(QApplication):
                     editor_window.set_recent_files(
                         self._file_model.export_recent_as_menu(6)
                     )
+                return editor_window
 
         else:
             QMessageBox.information(
@@ -398,6 +409,7 @@ class AppCore(QApplication):
                 tr("Open lesson-file"),
                 tr("File is already open or file does not exist."),
             )
+            return None
 
     def open_course_exp(self, parent=None) -> None:
         dialog = DbManager(self._course_model, self._schedule_model, parent)
@@ -442,9 +454,9 @@ class AppCore(QApplication):
                 window.ui.ac_new.setVisible(False)
                 window.ui.ac_settings.setVisible(False)
                 window.setWindowTitle(f"{tr('Open File')} {debug_tag}")
-            window.show()
+            return window
         else:
-            self.opened_start_dialog().show()
+            return self.opened_start_dialog()
 
     def open_about_dialog(self) -> None:
         for widget in self.topLevelWidgets():

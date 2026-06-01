@@ -180,7 +180,7 @@ class Editor(QMainWindow):
             lambda: self.table.copy_index(self.table.currentIndex())
         )
         self.ui.ac_paste.triggered.connect(
-            lambda: self.ui.table.paste_index(QApplication.clipboard().mimeData())
+            lambda: self.table.paste_index(QApplication.clipboard().mimeData())
         )
         # self.ui.ac_course_rec.triggered.connect()
         self.ui.cb_course.activated.connect(self.set_course)
