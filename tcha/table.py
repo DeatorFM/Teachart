@@ -201,6 +201,16 @@ class CellEditor(QListView):
         if not index.row() == model.rowCount() - 1:
             model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
 
+    def clear_item(self) -> None:
+        result = QMessageBox.question(
+            None,
+            "Confirm deletion",
+            "Are you sure to permanently delete the entire cell's content?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if result == QMessageBox.StandardButton.Yes:
+            self.model().clear()
+
     def can_make_element_from_mime_data(self) -> bool:
         current = frozenset(QApplication.clipboard().mimeData().formats())
         compatible = compatible_mime_types()
@@ -754,6 +764,9 @@ class BaseTable(QTableView):
                     return
                 case CellAction.MoveDown:
                     self.editor.move_element_down()
+                    return
+                case CellAction.Clear:
+                    self.editor.clear_item()
                     return
 
     @pyqtSlot(QAction)

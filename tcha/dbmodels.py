@@ -64,10 +64,14 @@ QUERIES = {
 }
 
 
-def create_database(vernum: str, dir: str = "db") -> QSqlDatabase:
+def create_database(vernum: str) -> QSqlDatabase:
     db = QSqlDatabase.addDatabase("QSQLITE")
     num = QDateTime.currentDateTime().toString("yyyyMMddHHmmss")
-    db.setDatabaseName(f"{dir}/tcha{num}.db")
+
+    from tcha.settings import Settings
+
+    path = Settings.user_path() / f"tcha{num}.tdb"
+    db.setDatabaseName(path.as_posix())
     ok = db.open()
     print("Success", ok)
 

@@ -1,7 +1,11 @@
+from typing import Any
+
 from PyQt6.QtCore import (
+    QAbstractListModel,
     QCoreApplication,
     QEvent,
-    QRangeModel,
+    QLocale,
+    QModelIndex,
     QRegularExpression,
     Qt,
     pyqtSignal,
@@ -26,6 +30,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QStyle,
+    QStyledItemDelegate,
     QTimeEdit,
     QToolBar,
     QToolButton,
@@ -33,7 +38,9 @@ from PyQt6.QtWidgets import (
     QWidgetAction,
 )
 
+from tcha.settings import Settings
 from tcha.styling import SvgIcon
+from tcha.utils import evened
 from ui.commons import ColorMenu, LabeledWidget, SplitButton, SwitchAction
 from ui.StyledWidget import convertColors
 
@@ -51,7 +58,6 @@ class TextToolsetView:
         self.cb_FontSize = FontSizeBox(agent)
         self.cb_FontSize.setMinimumWidth(65)
         self.cb_FontSize.setMaximumHeight(28)
-        self.cb_FontSize.setEditable(True)
         self.cb_FontSize.setObjectName("CB_FontSize")
         self.cb_FontSize.setContentsMargins(5, 0, 5, 0)
         agent.addWidget(self.cb_FontSize)
@@ -468,61 +474,88 @@ class AudioToolsetView:
         self.pair2.set_label_text(_translate("AudioToolset", "Stop"))
 
 
+class FontSizeValidator(QRegularExpressionValidator):
+    def __init__(self, parent=None):
+        super().__init__(
+            QRegularExpression(r"^([1-9]\d?([.,]\d+)?|100([.,]0+)?)$"), parent
+        )
+
+
+class FontSizeModel(QAbstractListModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._sizes = (
+            8.0,
+            9.0,
+            10.5,
+            11.0,
+            12.0,
+            14.0,
+            16.0,
+            18.0,
+            20.0,
+            22.0,
+            24.0,
+            26.0,
+            28.0,
+            36.0,
+            48.0,
+            72.0,
+        )
+        self._locale: QLocale = Settings.value("User/language").to_qlocale()
+        print("Locale is ", self._locale)
+
+    def rowCount(self, parent=None):
+        return len(self._sizes)
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+            evened_num = evened(self._sizes[index.row()])
+            return self._locale.toString(evened_num)
+        elif role == Qt.ItemDataRole.UserRole:
+            return self._sizes[index.row()]
+        else:
+            return None
+
+
 class FontSizeBox(QComboBox):
-    textEntered = pyqtSignal()
+    sizeChanged = pyqtSignal(float)
 
     def __init__(self, parent: None) -> None:
         super().__init__(parent)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.addItems(
-            [
-                "8",
-                "9",
-                self.locale().toString(10.5),
-                "11",
-                "12",
-                "14",
-                "16",
-                "18",
-                "20",
-                "22",
-                "24",
-                "26",
-                "28",
-                "36",
-                "48",
-                "72",
-            ]
-        )
-        self.setLineEdit(QLineEdit())
+        model = FontSizeModel(self)
+        self.setModel(model)
+
+        self.setEditable(True)
+        self.setValidator(FontSizeValidator())
+
+        self.currentIndexChanged.connect(self._on_index_changed)
         self.lineEdit().editingFinished.connect(self.checkEnteredSize)
-        self._setValidator()
 
-    def _setValidator(self) -> None:
-        validator = QRegularExpressionValidator()
-        re = QRegularExpression("(\\d+,\\d+)|(\\d+\\.\\d+)|\\d+")
-        validator.setRegularExpression(re)
-        self.setValidator(validator)
+    def current_font_size(self) -> float:
+        if self.currentIndex() > -1:
+            return self.currentData()
+        text = self.currentText().replace(",", ".")
+        return float(text)
 
-    def currentFontSize(self) -> int | float:
-        fontsize = self.currentText()
-        fontsize = fontsize.replace(",", ".")
-        return float(fontsize)
+    def display_size(self, size: float) -> None:
+        evened_num = evened(size)
+        self.setEditText(self.locale().toString(evened_num))
 
-    def setCurrentFontSize(self, fontsize: int | float):
-        if fontsize % 1 == 0:
-            self.setCurrentText(str(int(fontsize)))
-        else:
-            self.setCurrentText(str(fontsize))
+    def set_current_font_size(self, size: float) -> None:
+        evened_num = evened(size)
+        self.setCurrentText(self.locale().toString(evened_num))
+
+    def _on_index_changed(self, index: int) -> None:
+        if index > -1:
+            print("Emit value of index ", index)
+            self.sizeChanged.emit(self.itemData(index))
 
     def checkEnteredSize(self) -> None:
-        print("Accepted!")
         fontsize = self.currentText().replace(",", ".")
-        if fontsize.startswith("0"):
-            self.setCurrentText("1")
-        elif float(fontsize) > 100:
-            self.setCurrentText(str(100))
-        self.textEntered.emit()
+        print(f"Current font size {fontsize}")
+        self.sizeChanged.emit(float(fontsize))
 
 
 class TableMenu(QMenu):

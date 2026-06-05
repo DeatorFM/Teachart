@@ -4,6 +4,7 @@ import importlib.util as iu
 import os
 import sys
 import typing
+from optparse import Values
 from os.path import abspath, exists, isfile, split
 from pathlib import Path
 from shutil import rmtree
@@ -36,7 +37,7 @@ from tcha.editor import Editor
 from tcha.elements import get_all_definitions
 from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
-from tcha.settings import Defaults, Locale, ReturnFlags, Settings, SettingsDialog
+from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
 from tcha.styling import TchaProxyStyle, make_palette
 from tcha.table import PresenterView
@@ -119,7 +120,7 @@ class AppCore(QApplication):
 
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
-        self.setApplicationVersion(Defaults.AppInfo.app_ver)
+        self.setApplicationVersion(AppInfo.app_ver)
         self.setWindowIcon((QIcon("resources/placeholder_logo.svg")))
 
         self.qsettings = Settings.qsettings()
@@ -153,25 +154,15 @@ class AppCore(QApplication):
         self.screenRemoved.connect(self.on_screen_changed)
 
     def _startup_checks(self) -> None:
-        keys = self.qsettings.allKeys()
-
-        # Check keys
-        for key in Defaults.keys():
-            if key in keys:
-                continue
-            else:
-                print(f"Creating key {key}")
-                Defaults.set_default(self.qsettings, key)
-
         # Check values
-        while True:
-            result = Settings.check_values(self.qsettings)
-            if result:
-                print(f"Invalid value for {result}. Setting default value.")
-                Defaults.set_default(self.qsettings, result)
-                continue
-            print("No invalid values found.")
-            break
+        # while True:
+        #     result = Settings.check_values(self.qsettings)
+        #     if result:
+        #         print(f"Invalid value for {result}. Setting default value.")
+        #         Defaults.set_default(self.qsettings, result)
+        #         continue
+        #     print("No invalid values found.")
+        #     break
 
         if not ErrorLogger.logdir().exists():
             ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
@@ -193,7 +184,7 @@ class AppCore(QApplication):
                         "The database found is invalid. A new database will be created."
                     ),
                 )
-                self._db = create_database(Defaults.AppInfo.db_ver)
+                self._db = create_database(AppInfo.db_ver)
                 self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
         else:
             QMessageBox.information(
@@ -201,11 +192,11 @@ class AppCore(QApplication):
                 tr("Database error"),
                 tr("The database could not be found. A new database will be created."),
             )
-            self._db = create_database(Defaults.AppInfo.db_ver)
+            self._db = create_database(AppInfo.db_ver)
             self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
 
     def _first_time(self) -> None:
-        self.qsettings = Defaults.qsettings()
+        self.qsettings = Values.default_qsettings()
         self.qsettings.setValue("Application/first_startup", False)
         db = create_database()
         print("Database at", abspath(db.databaseName()))
@@ -254,7 +245,7 @@ class AppCore(QApplication):
             for i, value in enumerate(list(Locale)):
                 if value.value.name == language:
                     return Locale.from_int(i)
-        return getattr(Defaults, "language")
+        return Values.default_value("User/language")
 
     def on_app_action(self, action: AppAction, value: typing.Any = None) -> None:
         match action:

@@ -1,14 +1,15 @@
-from dataclasses import asdict, dataclass, field, fields, make_dataclass
+from ast import Call
+from dataclasses import asdict, dataclass, field
 from enum import Enum, Flag, IntEnum, StrEnum
-from functools import cache, lru_cache
+from functools import cache
 from os.path import abspath, dirname, exists
 from pathlib import Path
 from re import L
-from typing import Any, Callable, Self
+from typing import Any, Callable, Self, Type
 
 import PyQt6.uic as uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QLocale, QSettings, Qt
+from PyQt6.QtCore import QLocale, QSettings, QSize, Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
@@ -27,22 +28,27 @@ from tcha.dbmodels import create_database, reset_database
 # Constants
 
 
+class AppInfo:
+    app_ver = "1.0.0-a.1"
+    db_ver = "1"
+
+    def __init__(self):
+        raise NotImplementedError("Cannot be initialised")
+
+
 @dataclass(frozen=True)
 class LocaleValue:
     name: str
     language: QLocale.Language
     region: QLocale.Country
 
-    def __str__(self):
-        return self.name
-
 
 class Locale(Enum):
     EnglishUK = LocaleValue(
-        "English (UK)", QLocale.Language.English, QLocale.Country.UnitedKingdom
+        "English UK", QLocale.Language.English, QLocale.Country.UnitedKingdom
     )
-    German = LocaleValue("Deutsch", QLocale.Language.German, QLocale.Country.Germany)
-    Japanese = LocaleValue("日本語", QLocale.Language.Japanese, QLocale.Country.Japan)
+    German = LocaleValue("German", QLocale.Language.German, QLocale.Country.Germany)
+    Japanese = LocaleValue("Japanese", QLocale.Language.Japanese, QLocale.Country.Japan)
 
     def to_qlocale(self) -> QLocale:
         return QLocale(self.value.language, self.value.region)
@@ -89,14 +95,14 @@ class SettingsDialog(QDialog):
         self.ui = uic.loadUi("ui/settings.ui", self)
         self.qsettings = qsettings
         self.database: QSqlDatabase = db
-        self.settings = Settings.read_settings(qsettings)
+        self.settings = Settings.get_settings(qsettings)
         self._return_flag: ReturnFlags = ReturnFlags.Invalid
         self._settings_map: dict[str, Callable] = {
-            "appearance": self._tick_appearance,
-            "language": self._select_language,
-            "time_format": self._select_time_format,
-            "always_schedule": self._tick_always_schedule,
-            "dbpath": self._set_dblocation,
+            "User/appearance": self._tick_appearance,
+            "User/language": self._select_language,
+            "User/time_format": self._select_time_format,
+            "User/always_schedule": self._tick_always_schedule,
+            "User/dbpath": self._set_dblocation,
         }
         self.ui.pb_edit_ini.setVisible(
             qsettings.value("Application/debug", False, bool)
@@ -108,9 +114,9 @@ class SettingsDialog(QDialog):
     def connect_signals(self) -> None:
         self.ui.rb_light.toggled.connect(lambda: self.set_appearance(Appearance.Light))
         self.ui.rb_dark.toggled.connect(lambda: self.set_appearance(Appearance.Dark))
-        self.ui.cb_language.activated.connect(self.set_language)
-        self.ui.cb_time_format.activated.connect(self.set_time_format)
-        self.ui.cb_always_schedule.toggled.connect(self.set_always_schedule)
+        self.ui.cb_language.activated.connect(self._on_language_set)
+        self.ui.cb_time_format.activated.connect(self._on_time_format_set)
+        self.ui.cb_always_schedule.toggled.connect(self._on_always_schedule_set)
         self.ui.pb_file_dialog.clicked.connect(self.set_dbpath)
         self.ui.pb_new_database.clicked.connect(self.create_new_db)
         self.ui.pb_reset_database.clicked.connect(self.reset_db)
@@ -162,7 +168,7 @@ class SettingsDialog(QDialog):
 
     def _set_ui_for_values(self) -> None:
         """Makes UI reflect the settings' values"""
-        for key, value in asdict(self.settings).items():
+        for key, value in self.settings.items():
             print(key, value)
             self._settings_map[key](value)
 
@@ -198,15 +204,15 @@ class SettingsDialog(QDialog):
         self.settings.appearance = value
         self._return_flag |= ReturnFlags.UpdateStyle
 
-    def set_language(self) -> None:
+    def _on_language_set(self) -> None:
         self.settings.language = self.ui.cb_language.currentData()
         self._return_flag |= ReturnFlags.UpdateLocale
 
-    def set_time_format(self) -> None:
+    def _on_time_format_set(self) -> None:
         self.settings.time_format = self.ui.cb_time_format.currentData()
         self._return_flag |= ReturnFlags.UpdateLocale
 
-    def set_always_schedule(self) -> None:
+    def _on_always_schedule_set(self) -> None:
         self.settings.always_schedule = self.ui.cb_always_schedule.isChecked()
 
     # Database settings
@@ -229,7 +235,7 @@ class SettingsDialog(QDialog):
 
     def create_new_db(self) -> None:
         """Creates new database file without deleting the old one in the standard folder and sets it as the used database."""
-        db = create_database(Defaults.AppInfo.app_ver)
+        db = create_database(AppInfo.db_ver)
         self.settings.dbpath = abspath(db.databaseName())
         self.ui.le_path.setText(self.settings.dbpath)
         self._return_flag |= ReturnFlags.Restart
@@ -250,16 +256,15 @@ class SettingsDialog(QDialog):
 
     def save_all(self) -> None:
         """Saves all current settings in the native format"""
-        for key, value in asdict(self.settings).items():
-            if issubclass(type(value), Enum):
-                self.qsettings.setValue(f"User/{key}", value.name)
-            else:
-                self.qsettings.setValue(f"User/{key}", value)
+        for key, value in self.settings.items():
+            if key.startswith("User"):
+                self.qsettings.setValue(key, value)
+        self.qsettings.sync()
 
     def restore_defaults(self) -> None:
-        dbpath = self.settings.dbpath
-        self.settings = Defaults.user()
-        self.settings.dbpath = dbpath
+        dbpath = self.settings["User/dbpath"]
+        self.settings = Values.defaults()
+        self.settings["User/dbpath"] = dbpath
         self._set_ui_for_values()
         self._return_flag |= ReturnFlags.Restart
 
@@ -306,97 +311,85 @@ class IniEditor(QDialog):
 # Settings object classes
 
 
-@dataclass
 class Settings:
-    """QSettings as a dataclass and extension to return values from an ini-file with the correct type.
-    Convenience class to manage user settings of User-group]"""
-
-    appearance: Appearance
-    language: Locale
-    time_format: TimeFormat
-    always_schedule: bool
-    dbpath: str
-
-    @classmethod
-    def read_settings(cls, qsettings: QSettings) -> Self:
-        """Loads settings from a QSettings class into a Settings dataclass
-        and replaces invalid values with default values."""
-        values = []
-        for field in fields(Settings):
-            print("Field name", field.name)
-            if issubclass(field.type, Enum):
-                rvalue = qsettings.value(f"User/{field.name}", type=str)
-                try:
-                    values.append(field.type[rvalue])
-                except KeyError:
-                    print("Invalid value")
-                    values.append(getattr(Defaults.User, field.name))
-                continue
-            elif field.name == "dbpath":
-                rvalue = qsettings.value(f"User/{field.name}")
-                print("Actual dbpath value", rvalue)
-                values.append(
-                    str(rvalue) if rvalue else getattr(Defaults.User, "dbpath")
-                )
-            else:
-                rvalue = qsettings.value(
-                    f"User/{field.name}",
-                    defaultValue=getattr(Defaults.User, field.name),
-                    type=field.type,
-                )
-                values.append(rvalue)
-            print("Value", rvalue)
-
-        return cls(*values)
+    """Convenience class to manage settings"""
 
     @staticmethod
-    def check_values(qsettings: QSettings) -> str | None:
-        """Checks if the QSettings object's values are valid. If not returns the first wrong key."""
-        checks = asdict(Checks())
-        for key in qsettings.allKeys():
-            print("Checking key", key)
-            rawkey = key.split("/")[1]
-            try:
-                if isinstance(checks[rawkey], Callable):
-                    if checks[rawkey](qsettings, key):
-                        continue
-                    return key
-                else:
-                    if qsettings.value(key, type=str) in checks[rawkey]:
-                        continue
-                    return key
-            except KeyError:
-                # Some keys are checked in a different manner at another place in the appliccation
-                continue
+    def get_settings() -> dict:
+        """Loads settings from a QSettings class into a dictionary
+        and replaces invalid values with default values."""
+        values = {}
+
+        for key in Values.keys():
+            values[key] = Settings.value(key)
+
+        return values
+
+        # for field in fields(Settings):
+        #     print("Field name", field.name)
+        #     if issubclass(field.type, Enum):
+        #         rvalue = qsettings.value(f"User/{field.name}", type=str)
+        #         try:
+        #             values.append(field.type[rvalue])
+        #         except KeyError:
+        #             print("Invalid value")
+        #             values.append(getattr(Defaults.User, field.name))
+        #         continue
+        #     elif field.name == "dbpath":
+        #         rvalue = qsettings.value(f"User/{field.name}")
+        #         print("Actual dbpath value", rvalue)
+        #         values.append(
+        #             str(rvalue) if rvalue else getattr(Defaults.User, "dbpath")
+        #         )
+        #     else:
+        #         rvalue = qsettings.value(
+        #             f"User/{field.name}",
+        #             defaultValue=getattr(Defaults.User, field.name),
+        #             type=field.type,
+        #         )
+        #         values.append(rvalue)
+        #     print("Value", rvalue)
+
+        # return cls(*values)
+
+    @staticmethod
+    def value(key: str) -> Any:
+        """Convenience method to immediately access settings's value."""
+        print("Called settings value")
+        qsettings = Settings.qsettings()
+        definition = Values.definition(key)
+        if definition:
+            if definition.qvariant:
+                value = qsettings.value(key, type=definition.type)
+                if value:
+                    return value
+            else:
+                raw_value = qsettings.value(key)
+                try:
+                    return definition.convert(raw_value)
+                except (ValueError, TypeError) as e:
+                    pass
+
+            Settings.set_default(key)
+            return Settings.value(key)
         return None
 
     @staticmethod
-    def value(name: str) -> Any:
-        """Convenience method to immediately access 'User' settings."""
-        qsettings = QSettings(
-            QSettings.Format.IniFormat,
-            QSettings.Scope.UserScope,
-            "Teachart",
-            "Settings",
-        )
-        raw_value = qsettings.value(f"User/{name}")
-        try:
-            if raw_value and issubclass(Enum, Settings.__annotations__[name]):
-                # Handling enum-type values
-                try:
-                    return Settings.__annotations__[name][raw_value]
-                except KeyError:
-                    return getattr(Defaults.User, name)
-            else:
-                # Handling any other type exept arrays
-                return qsettings.value(
-                    f"User/{name}",
-                    defaultValue=getattr(Defaults.User, name),
-                    type=Settings.__annotations__[name],
-                )
-        except AttributeError:
-            return None
+    def set_value(key: str, value: Any) -> None:
+        if key in Values.keys():
+            if isinstance(value, Enum):
+                value = value.name
+            qsettings = Settings.qsettings()
+            qsettings.setValue(key, value)
+            qsettings.sync()
 
+    @staticmethod
+    def set_default(key: str) -> None:
+        value = Values.default_value(key)
+        if value:
+            Settings.set_value(key, value)
+
+    @cache
     @staticmethod
     def qsettings(
         format: QSettings.Format = QSettings.Format.IniFormat,
@@ -412,145 +405,96 @@ class Settings:
         return path.parent
 
 
-class DefaultValue:
-    value: Any
-    type: Any
-    check: str | None
+@dataclass(frozen=True)
+class Value:
+    """Definition for value handling"""
+
+    default: Any
+    type: Type
+    qvariant: bool
+    convert: Callable | None = field(default=None)
 
 
-class Defaults(object):
-    @dataclass(frozen=True)
-    class AppInfo:
-        app_ver: str = "1.0.0-a.1"
-        db_ver: str = "1"
+class Values:
+    __VALUES: dict[str, Value] = {
+        "AppInfo/app_ver": Value(AppInfo.app_ver, str, True),
+        "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
+        "User/appearance": Value(
+            Appearance.Light, Appearance, False, lambda val: Appearance[val]
+        ),
+        "User/language": Value(
+            Locale.EnglishUK, Locale, False, lambda val: Locale[val]
+        ),
+        "User/time_format": Value(
+            TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]
+        ),
+        "User/always_schedule": Value(False, bool, True),
+        "User/editor.compress": Value(False, bool, True),
+        "User/dbpath": Value("NoDB", str, True),
+        "Application/pinned": Value([], list, True),
+        "Application/recent": Value([], list, True),
+        "Application/first_startup": Value(True, bool, True),
+        "Application/debug": Value(False, bool, True),
+        "Application/editor.window_size": Value(QSize(850, 500), QSize, True),
+    }
 
-    @dataclass(frozen=True)
-    class User:
-        appearance: Appearance = Appearance.Light
-        language: Locale = Locale.EnglishUK
-        time_format: TimeFormat = TimeFormat.TF24
-        always_schedule: bool = False
-        dbpath: str = "NoDB"
-
-    @dataclass(frozen=True)
-    class Application:
-        pinned: list[str] = field(default_factory=[])
-        recent: list[str] = field(default_factory=[])
-        first_startup: bool = True
-        debug: bool = False
-
-    @staticmethod
-    def __class_getitem__(key: str) -> Any:
-        if "/" in key:
-            group_name, k = key.split("/", 2)
-            try:
-                group = Defaults.__dict__[group_name]
-                # field = group.__dataclass_fields__[k]
-                print(group, k, field)
-                value = getattr(group, k)
-                return value  # if value != None else field.default_factory
-            except (KeyError, AttributeError):
-                return None
-        return None
+    def __init__(self):
+        raise NotImplementedError("Defaults cannot be initialised.")
 
     @staticmethod
-    def unified() -> dataclass:
-        """Returns a unified dataclass containing all default values."""
-        unified_fields = []
+    def definition(key: str) -> Value | None:
+        return Values.__VALUES.get(key)
 
-        for f in fields(Defaults.AppInfo):
-            unified_fields.append(
-                (f.name, f.type, field(default=getattr(Defaults.AppInfo, f.name)))
-            )
-
-        for f in fields(Defaults.User):
-            unified_fields.append(
-                (f.name, f.type, field(default=getattr(Defaults.User, f.name)))
-            )
-
-        for f in fields(Defaults.Application):
-            unified_fields.append(
-                (f.name, f.type, field(default=getattr(Defaults.Application, f.name)))
-            )
-
-        UnifiedDefaults = make_dataclass("UnifiedDefaults", unified_fields, frozen=True)
-        return UnifiedDefaults()
-
+    @cache
     @staticmethod
-    def user() -> Settings:
-        """Returns Settings-object with all default values."""
-        return Settings(*asdict(Defaults.User()).values())
+    def default_value(key: str) -> Any:
+        value = Values.__VALUES.get(key)
+        return value.default if value else None
 
     @staticmethod
     def keys() -> tuple[str]:
-        keylist = []
-
-        for field in fields(Defaults.AppInfo):
-            keylist.append(f"AppInfo/{field.name}")
-
-        for field in fields(Defaults.User):
-            keylist.append(f"User/{field.name}")
-
-        for field in fields(Defaults.Application):
-            keylist.append(f"Application/{field.name}")
-
-        return tuple(keylist)
+        return tuple(Values.__VALUES.keys())
 
     @staticmethod
-    def set_default(qsettings: QSettings, key: str) -> bool:
-        """Sets the key to the default value. The key is a group/attribute pair."""
-        value = Defaults[key]
-        print("Set default to", value)
-        if value != None:
-            if isinstance(value, Enum):
-                value = value.name
-            qsettings.setValue(key, value)
-            qsettings.sync()
-            return True
-        return False
+    def defaults() -> dict[str, Any]:
+        return {key: value.default for key, value in Values.__VALUES}
 
     @staticmethod
-    def qsettings(
+    def default_qsettings(
         format: QSettings.Format = QSettings.Format.IniFormat,
         scope: QSettings.Scope = QSettings.Scope.UserScope,
     ) -> QSettings:
         settings = QSettings(format, scope, "Teachart", "settings")
         settings.beginGroup("AppInfo")
-        settings.setValue("app_ver", Defaults.AppInfo.app_ver)
-        settings.setValue("db_ver", Defaults.AppInfo.db_ver)
+        settings.setValue("app_ver", AppInfo.app_ver)
+        settings.setValue("db_ver", AppInfo.db_ver)
         settings.endGroup()
 
         settings.beginGroup("User")
-        settings.setValue("appearance", Defaults.User.appearance.name)
-        settings.setValue("language", Defaults.User.language.name)
-        settings.setValue("time_format", Defaults.User.time_format.name)
-        settings.setValue("always_schedule", Defaults.User.dbpath)
+        settings.setValue("appearance", Values.default_value("User/appearance"))
+        settings.setValue("language", Values.default_value("User/language"))
+        settings.setValue("time_format", Values.default_value("User/time_format"))
         settings.setValue(
-            "dbpath", "D:/Dokumente/Python Scripts/Educhart/db/tcha20250713215136.db"
+            "always_schedule", Values.default_value("User/always_schedule")
         )
+        settings.setValue(
+            "editor.compress_image", Values.default_value("User/editor.compress_image")
+        )
+
+        # TODO: Change before production
+        settings.setValue("dbpath", "NoDB")
         settings.endGroup()
 
         settings.beginGroup("Application")
         settings.setValue("pinned", [])
         settings.setValue("recent", [])
-        settings.setValue("first_startup", True)
-        settings.setValue("debug", False)
+        settings.setValue(
+            "first_startup", Values.default_value("Application/first_startup")
+        )
+        settings.setValue("debug", Values.default_value("Application/debug"))
+        settings.setValue(
+            "editor.window_size", Values.default_value("Application/editor.window_size")
+        )
         settings.endGroup()
         settings.sync()
         return settings
-
-
-@dataclass
-class Checks:
-    appearance: list[str] = field(
-        default_factory=lambda: [value.name for value in Appearance]
-    )
-    language: list[str] = field(
-        default_factory=lambda: [value.name for value in Locale]
-    )
-    time_format: list[str] = field(
-        default_factory=lambda: [value.name for value in TimeFormat]
-    )
-    always_schedule: tuple[str] = ("true", "false")
-    first_startup: tuple[str] = ("true", "false")
-    debug: tuple[str] = ("true", "false")

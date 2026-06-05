@@ -559,9 +559,9 @@ class Ui_Editor(object):
         self.ac_elem_finish_editing = QAction(parent=MainWindow)
         self.ac_elem_finish_editing.setObjectName("elem_finish_editing")
         self.ac_elem_finish_editing.setIcon(icon24)
-        self.ac_elem_finish_editing.setShortcuts(
-            [QKeySequence("Return"), QKeySequence("Ctrl+Return")]
-        )
+        # self.ac_elem_finish_editing.setShortcuts(
+        #     [QKeySequence("Return"), QKeySequence("Ctrl+Return")]
+        # )
         self.ac_elem_finish_editing.setData(CellAction.Accept)
         self.cell_group.addAction(self.ac_elem_finish_editing)
 
@@ -598,7 +598,10 @@ class Ui_Editor(object):
 
         self.ac_clear_cell = QAction(parent=MainWindow)
         self.ac_clear_cell.setObjectName("ac_clear_cell")
+        icon26 = SvgIcon("resources/icons/ic_clear.svg")
+        self.ac_clear_cell.setIcon(icon26)
         self.ac_clear_cell.setData(CellAction.Clear)
+        self.ac_clear_cell.setEnabled(False)
         self.cell_group.addAction(self.ac_clear_cell)
 
         # Other Actions
@@ -737,6 +740,8 @@ class Ui_Editor(object):
         self.tb_table.addSeparator()
         self.tb_table.addAction(self.ac_rmv_row)
         self.tb_table.addAction(self.ac_rmv_column)
+        self.tb_table.addSeparator()
+        self.tb_table.addAction(self.ac_clear_cell)
 
         self.tb_cell.addAction(self.ac_elem_finish_editing)
         self.tb_cell.addAction(self.ac_elem_discard_changes)

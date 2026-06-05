@@ -279,9 +279,10 @@ class CellModel(QAbstractListModel):
                 self.add_model(model)
 
     def clear(self) -> None:
-        while self._data:
-            model = self._data.pop()
-            del model
+        self.beginResetModel()
+        self._data.clear()
+        self._work_data.clear()
+        self.endResetModel()
 
     def removeRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
         try:
@@ -871,21 +872,6 @@ class TableModel(QAbstractTableModel):
             mimedata.setData("application/x-teachart", encoded_data)
 
         return mimedata
-
-        # # Write source info
-        # from tcha.core import AppCore
-
-        # index = indexes[0]
-        # AppCore.set_shared_index(QPersistentModelIndex(index))
-        # if index.isValid():
-        #     stream.writeInt16(self._model_id)  # Model id
-        #     stream.writeInt8(0)  # Level
-        #     print(
-        #         f"Written mime data: Source level 0; Table row {index.row()}; Table column {index.column()}; Cell row None"
-        #     )
-
-        #     mimedata.setData("application/x-teachart", encoded_data)
-        # return mimedata
 
     def canDropMimeData(
         self,

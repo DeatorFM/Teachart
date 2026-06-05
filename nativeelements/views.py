@@ -45,7 +45,6 @@ class TextEditorMenuView:
 
         self.cb_FontSize = FontSizeBox(self.tools_widget)
         self.cb_FontSize.setMinimumSize(QSize(40, 25))
-        self.cb_FontSize.setEditable(True)
         self.cb_FontSize.setObjectName("CB_FontSize")
         self.cb_FontSize.setContentsMargins(5, 0, 5, 0)
         self.row1.addWidget(self.cb_FontSize)

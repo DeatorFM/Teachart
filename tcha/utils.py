@@ -4,6 +4,11 @@ from ctypes import wintypes
 from tcha.consts import DisplayMode
 
 
+def evened(dec: float) -> int | float:
+    """Returns a float as an even integer if possible else input and output are the same"""
+    return dec if dec % 1 > 0 else int(dec)
+
+
 class WinApi:
     SDC_TOPOLOGY_INTERNAL = 0x00000001
     SDC_TOPOLOGY_CLONE = 0x00000002  # Duplicate mode

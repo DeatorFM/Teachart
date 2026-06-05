@@ -297,6 +297,7 @@ class TextEditor(BaseTextElementEditor):
                 case "family":
                     cformat.setFontFamilies(value)
                 case "size":
+                    print(f"Size value: {value}")
                     cformat.setFontPointSize(self.allowed_font_size(value))
                 case "bold":
                     cformat.setFontWeight(self.bool_to_weight(value))
@@ -646,8 +647,7 @@ class TextEditorMenu(QMenu):
 
     def connect_signals(self) -> None:
         self.ui.cb_Font.currentFontChanged.connect(self.on_font_family_set)
-        self.ui.cb_FontSize.currentIndexChanged.connect(self.on_font_size_set)
-        self.ui.cb_FontSize.textEntered.connect(self.on_font_size_set)
+        self.ui.cb_FontSize.sizeChanged.connect(self.on_font_size_set)
         self.ui.tb_Bold.toggled.connect(self.on_bold_set)
         self.ui.tb_Italic.toggled.connect(self.on_italic_set)
         self.ui.tb_Underline.toggled.connect(self.on_underlined_set)
@@ -666,8 +666,8 @@ class TextEditorMenu(QMenu):
                     font.setFamilies(value)
                     self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.setEditText(
-                        str(value)
+                    self.ui.cb_FontSize.display_size(
+                        value
                     )  # QComboBox with point sizes
                 case "bold":
                     self.ui.pb_Bold.setChecked(value)  # Checkable QPushButton
@@ -706,9 +706,9 @@ class TextEditorMenu(QMenu):
         props["family"] = self.ui.cb_Font.currentFont().families()
         self.fontSet.emit(props)
 
-    def on_font_size_set(self) -> None:
+    def on_font_size_set(self, size: float) -> None:
         props = {}
-        props["size"] = float(self.ui.cb_FontSize.currentFontSize())
+        props["size"] = size
         self.fontSet.emit(props)
 
     def on_font_color_set(self, color: QColor) -> None:
@@ -934,8 +934,7 @@ class TextToolset(BaseElementToolset):
 
     def connect_signals(self):
         self.ui.cb_Font.currentFontChanged.connect(self.on_font_family_changed)
-        self.ui.cb_FontSize.currentIndexChanged.connect(self.on_font_size_changed)
-        self.ui.cb_FontSize.textEntered.connect(self.on_font_size_changed)
+        self.ui.cb_FontSize.sizeChanged.connect(self.on_font_size_changed)
         self.ui.ac_bold.toggled.connect(self.on_bold_set)
         self.ui.ac_italic.toggled.connect(self.on_italic_set)
         self.ui.ac_underline.toggled.connect(self.on_underlined_set)
@@ -962,8 +961,8 @@ class TextToolset(BaseElementToolset):
                     font.setFamilies(value)
                     self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.setEditText(
-                        str(value)
+                    self.ui.cb_FontSize.display_size(
+                        value
                     )  # QComboBox with point sizes
                 case "bold":
                     self.ui.ac_bold.setChecked(value)  # Checkable QPushButton
@@ -983,7 +982,7 @@ class TextToolset(BaseElementToolset):
 
     def get_all(self):
         self._fontProperties["family"] = self.ui.cb_Font.currentFont().families()
-        self._fontProperties["size"] = float(self.ui.cb_FontSize.currentFontSize())
+        self._fontProperties["size"] = float(self.ui.cb_FontSize.current_font_size())
         self._fontProperties["bold"] = self.ui.ac_bold.isChecked()
         self._fontProperties["italic"] = self.ui.ac_italic.isChecked()
         self._fontProperties["underlined"] = self.ui.ac_underline.isChecked()
@@ -998,9 +997,9 @@ class TextToolset(BaseElementToolset):
         props["family"] = self.ui.cb_Font.currentFont().families()
         self.fontSet.emit(props)
 
-    def on_font_size_changed(self) -> None:
+    def on_font_size_changed(self, value: float) -> None:
         props = {}
-        props["size"] = float(self.ui.cb_FontSize.currentFontSize())
+        props["size"] = value
         self.fontSet.emit(props)
 
     def on_color_set(self, color: QColor) -> None:

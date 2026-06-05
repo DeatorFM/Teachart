@@ -495,6 +495,7 @@ class Editor(QMainWindow):
         print("Editing level: ", level.name)
         if level & EditingLevel.CellEditing:
             self.ui.table_group.setEnabled(True)
+            self.ui.ac_clear_cell.setEnabled(True)
             self.ui.menu_elements.setEnabled(True)
             self.ui.ac_copy.setEnabled(True)
             self.ui.ac_paste.setEnabled(self.table.can_paste())
@@ -516,6 +517,7 @@ class Editor(QMainWindow):
 
         if level == EditingLevel.NoEditing:
             self.ui.table_group.setEnabled(False)
+            self.ui.ac_clear_cell.setEnabled(False)
             self.ui.menu_elements.setEnabled(False)
             self.ui.ac_copy.setEnabled(False)
             self.ui.ac_paste.setEnabled(False)  # ???
