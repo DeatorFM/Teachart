@@ -7,19 +7,19 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>400</height>
+    <height>470</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>500</width>
-    <height>400</height>
+    <height>470</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>500</width>
-    <height>400</height>
+    <height>470</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -170,15 +170,32 @@
    <item>
     <widget class="QGroupBox" name="gb_document">
      <property name="title">
-      <string>Document</string>
+      <string>Editor</string>
      </property>
      <layout class="QHBoxLayout" name="hl6">
       <item>
        <layout class="QVBoxLayout" name="vl5">
+        <property name="spacing">
+         <number>8</number>
+        </property>
         <item>
          <widget class="QCheckBox" name="cb_always_schedule">
           <property name="text">
            <string>Always schedule lessons</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cb_compress_images">
+          <property name="text">
+           <string>Compress images</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cb_single_selection">
+          <property name="text">
+           <string>Always select single elements of cell</string>
           </property>
          </widget>
         </item>

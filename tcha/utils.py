@@ -9,6 +9,10 @@ def evened(dec: float) -> int | float:
     return dec if dec % 1 > 0 else int(dec)
 
 
+def word_as_bool(word: str) -> bool:
+    return True if word.lower() == "true" else False
+
+
 class WinApi:
     SDC_TOPOLOGY_INTERNAL = 0x00000001
     SDC_TOPOLOGY_CLONE = 0x00000002  # Duplicate mode

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from email.charset import QP
 from pathlib import Path
-from typing import Self, Type
+from typing import Type
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -23,6 +22,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QImage,
     QImageReader,
+    QImageWriter,
     QPainter,
     QPen,
     QPixmap,
@@ -48,11 +48,13 @@ from nativeelements.views import PictureEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import (
+    CompressedResourceObject,
     FileResourceObject,
     ResourceContainer,
     ResourceObject,
     ResourceType,
 )
+from tcha.settings import Settings
 from tcha.styling import SvgIcon
 from ui.element_toolsets import PictureToolsetView
 
@@ -60,7 +62,7 @@ from ui.element_toolsets import PictureToolsetView
 class PictureModel(BaseElementModel):
     def __init__(
         self,
-        resource: ResourceObject,
+        resource: FileResourceObject | CompressedResourceObject,
         width: int = 1,
         height: int = 1,
         rotation: int = 0,
@@ -71,6 +73,12 @@ class PictureModel(BaseElementModel):
         super().__init__(parent)
         self._resource = resource
         self._resource.add_member()
+
+        if Settings.value("User/editor.compress_image") and isinstance(
+            self._resource, CompressedResourceObject
+        ):
+            compressed_file = self.compress_resource()
+            self._resource.set_compressed_file(compressed_file)
 
         reader = QImageReader()
         reader.setDevice(self.resource.qfile())
@@ -570,7 +578,29 @@ class PictureElementDefinitions(BaseElementDefinitions):
             directory=str(Path.home()),
             filter=tr("Image files *.png, *.bmp *.jpeg *.jpg"),
         )
+        if path and Settings.value("User/editor.compress_image"):
+            return PictureElementDefinitions.compress_resource(path)
         return path if path else None
+
+    @staticmethod
+    def compress_resource(original_file: str) -> str:
+        """Compresses image and returns path to file"""
+        path = Path(original_file)
+        if path.exists():
+            image = QImage(path.as_posix())
+            compressed_file = Path(ResourceContainer.tempdir.name) / (
+                path.stem + ".compressed" + path.suffix
+            )
+            writer = QImageWriter(compressed_file.as_posix())
+            if path.suffix.lower() in (".jpg", "jpeg", ".webp"):
+                writer.setQuality(75)
+            elif path.suffix.lower() == ".png":
+                writer.setQuality(100)
+            if writer.write(image):
+                print(f"Compressed successfully to {compressed_file.as_posix()}")
+                return compressed_file.as_posix()
+
+        return original_file
 
     @staticmethod
     def model() -> Type[PictureModel]:
@@ -603,6 +633,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def supports_mime_data(mime_data: QMimeData) -> bool:
+        # TODO: USE QIMAGEWRITER
         if "application/x-qt-image" in mime_data.formats():
             return True
         if "text/uri-list" in mime_data.formats():
@@ -639,6 +670,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
     def model_from_mime_data(
         rescont: ResourceContainer, mime_data: QMimeData
     ) -> PictureModel | None:
+        # TODO: USE QIMAGEWRITER
         if "application/x-qt-image" in mime_data.formats():
             path = rescont.make_path("png")
             image = QImage(mime_data.imageData())

@@ -52,7 +52,7 @@ class ResourceObject(QObject):
         """Decreases member count in case a model stops using this resource"""
         self._member_count -= 1
         if self._member_count == 0:
-            self.resourceExpired.emit(self._name, self._type, self._type_num)
+            self.resourceExpired.emit(self.name, self._type, self._type_num)
             if self._f:
                 self._f.close()
             print("Object is expired")
@@ -186,6 +186,31 @@ class FileResourceObject(UniqueResourceObject):
         return self.path
 
 
+class CompressedResourceObject(FileResourceObject):
+    def __init__(self, num: int, path: str, rtype=ResourceType.NONE, parent=None):
+        """File object with different name and path definition"""
+        super().__init__(num, path, rtype, parent)
+
+        self._name = path
+        self._original_file = path
+        self._compressed = False if ".compressed" not in path else True
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def original_resource(self) -> str:
+        return self._original_file
+
+    def set_compressed_file(self, path: str) -> None:
+        qfile = QFile(path)
+        if qfile.exists():
+            qfile.open(QFile.OpenModeFlag.ReadOnly)
+            self._f = qfile
+            self._compressed = True
+
+
 @dataclass(frozen=True)
 class ResourceTransferObject:
     """Representation of a resource without file i/o. Use to write resources to a tch-file."""
@@ -202,15 +227,18 @@ class ResourceTransferObject:
 class ResourceContainer(QObject):
     """A container with objects linking element model and resource."""
 
+    tempdir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory(
+        ".tmp", "RESC", delete=False
+    )
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._objects: dict[str, ResourceObject] = {}
         self._internal_counter = 0
-        self._tempdir = tempfile.TemporaryDirectory(".tmp", "RESC", delete=False)
 
     @property
     def temppath(self) -> Path:
-        return Path(self._tempdir.name)
+        return Path(self.tempdir.name)
 
     def save(self, restype: ResourceType, path: str) -> ResourceObject:
         """Creates and saves ResourceObject with a file in ResourceContainer and returns an identical object if existing"""

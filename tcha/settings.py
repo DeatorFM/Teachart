@@ -5,7 +5,7 @@ from functools import cache
 from os.path import abspath, dirname, exists
 from pathlib import Path
 from re import L
-from typing import Any, Callable, Self, Type
+from typing import Any, Callable, KeysView, Self, Type
 
 import PyQt6.uic as uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from tcha.dbmodels import create_database, reset_database
+from tcha.utils import word_as_bool
 
 # Constants
 
@@ -95,13 +96,15 @@ class SettingsDialog(QDialog):
         self.ui = uic.loadUi("ui/settings.ui", self)
         self.qsettings = qsettings
         self.database: QSqlDatabase = db
-        self.settings = Settings.get_settings(qsettings)
+        self.settings = Settings.get_settings()
         self._return_flag: ReturnFlags = ReturnFlags.Invalid
         self._settings_map: dict[str, Callable] = {
             "User/appearance": self._tick_appearance,
             "User/language": self._select_language,
             "User/time_format": self._select_time_format,
             "User/always_schedule": self._tick_always_schedule,
+            "User/editor.compress_image": self._tick_compress_image,
+            "User/editor.single_selection": self._tick_single_selection,
             "User/dbpath": self._set_dblocation,
         }
         self.ui.pb_edit_ini.setVisible(
@@ -168,7 +171,9 @@ class SettingsDialog(QDialog):
 
     def _set_ui_for_values(self) -> None:
         """Makes UI reflect the settings' values"""
-        for key, value in self.settings.items():
+        for key, value in filter(
+            lambda x: x[0].startswith("User/"), self.settings.items()
+        ):
             print(key, value)
             self._settings_map[key](value)
 
@@ -195,25 +200,41 @@ class SettingsDialog(QDialog):
     def _tick_always_schedule(self, ticked: bool) -> None:
         self.ui.cb_always_schedule.setChecked(ticked)
 
+    def _tick_compress_image(self, ticked: bool) -> None:
+        self.ui.cb_compress_images.setChecked(ticked)
+
+    def _tick_single_selection(self, ticked: bool) -> None:
+        self.ui.cb_single_selection.setChecked(ticked)
+
     def _set_dblocation(self, path: str) -> None:
         self.ui.le_path.setText(path)
 
     # Setter methods
 
     def set_appearance(self, value: Appearance) -> None:
-        self.settings.appearance = value
+        self.settings["User/appearance"] = value.name
         self._return_flag |= ReturnFlags.UpdateStyle
 
     def _on_language_set(self) -> None:
-        self.settings.language = self.ui.cb_language.currentData()
+        self.settings["User/language"] = self.ui.cb_language.currentData().name
         self._return_flag |= ReturnFlags.UpdateLocale
 
     def _on_time_format_set(self) -> None:
-        self.settings.time_format = self.ui.cb_time_format.currentData()
+        self.settings["User/time_format"] = self.ui.cb_time_format.currentData().name
         self._return_flag |= ReturnFlags.UpdateLocale
 
     def _on_always_schedule_set(self) -> None:
-        self.settings.always_schedule = self.ui.cb_always_schedule.isChecked()
+        self.settings["User/always_schedule"] = self.ui.cb_always_schedule.isChecked()
+
+    def _on_compress_images_set(self) -> None:
+        self.settings["User/editor.compress_image"] = (
+            self.ui.cb_compress_images.isClicked()
+        )
+
+    def _on_single_selection_set(self) -> None:
+        self.settings["User/editor.single_selection"] = (
+            self.ui.cb_single_selection.isClicked()
+        )
 
     # Database settings
 
@@ -246,7 +267,7 @@ class SettingsDialog(QDialog):
             self,
             tr("Resetting database"),
             tr(
-                "Resetting the database will delete all course, schedule and student record.\nDo you still want to proceed?"
+                "Resetting the database will delete all course, schedule and student records.\nDo you still want to proceed?"
             ),
         )
         if response == QMessageBox.StandardButton.Yes:
@@ -258,7 +279,7 @@ class SettingsDialog(QDialog):
         """Saves all current settings in the native format"""
         for key, value in self.settings.items():
             if key.startswith("User"):
-                self.qsettings.setValue(key, value)
+                Settings.set_value(key, value)
         self.qsettings.sync()
 
     def restore_defaults(self) -> None:
@@ -274,7 +295,7 @@ class SettingsDialog(QDialog):
         dialog = IniEditor(self.qsettings.fileName(), self)
         dialog.exec()
         self.qsettings = Settings.qsettings()
-        self.settings = Settings.read_settings(self.qsettings)
+        self.settings = Settings.get_settings()
         self._set_ui_for_values()
         self._return_flag |= ReturnFlags.Restart
 
@@ -321,39 +342,13 @@ class Settings:
         values = {}
 
         for key in Values.keys():
+            print(f"Getting key {key}")
             values[key] = Settings.value(key)
 
         return values
 
-        # for field in fields(Settings):
-        #     print("Field name", field.name)
-        #     if issubclass(field.type, Enum):
-        #         rvalue = qsettings.value(f"User/{field.name}", type=str)
-        #         try:
-        #             values.append(field.type[rvalue])
-        #         except KeyError:
-        #             print("Invalid value")
-        #             values.append(getattr(Defaults.User, field.name))
-        #         continue
-        #     elif field.name == "dbpath":
-        #         rvalue = qsettings.value(f"User/{field.name}")
-        #         print("Actual dbpath value", rvalue)
-        #         values.append(
-        #             str(rvalue) if rvalue else getattr(Defaults.User, "dbpath")
-        #         )
-        #     else:
-        #         rvalue = qsettings.value(
-        #             f"User/{field.name}",
-        #             defaultValue=getattr(Defaults.User, field.name),
-        #             type=field.type,
-        #         )
-        #         values.append(rvalue)
-        #     print("Value", rvalue)
-
-        # return cls(*values)
-
     @staticmethod
-    def value(key: str) -> Any:
+    def value[T](key: str) -> T:
         """Convenience method to immediately access settings's value."""
         print("Called settings value")
         qsettings = Settings.qsettings()
@@ -366,10 +361,10 @@ class Settings:
             else:
                 raw_value = qsettings.value(key)
                 try:
-                    return definition.convert(raw_value)
-                except (ValueError, TypeError) as e:
+                    return definition.get(raw_value)
+                except (ValueError, TypeError):
                     pass
-
+            print(f"Key {key} not existing. Adding as default")
             Settings.set_default(key)
             return Settings.value(key)
         return None
@@ -412,7 +407,7 @@ class Value:
     default: Any
     type: Type
     qvariant: bool
-    convert: Callable | None = field(default=None)
+    get: Callable | None = field(default=None)
 
 
 class Values:
@@ -428,13 +423,22 @@ class Values:
         "User/time_format": Value(
             TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]
         ),
-        "User/always_schedule": Value(False, bool, True),
-        "User/editor.compress": Value(False, bool, True),
+        "User/always_schedule": Value(
+            False, bool, False, lambda val: word_as_bool(val)
+        ),
+        "User/editor.compress_image": Value(
+            False, bool, False, lambda val: word_as_bool(val)
+        ),
+        "User/editor.single_selection": Value(
+            False, bool, False, lambda val: word_as_bool(val)
+        ),
         "User/dbpath": Value("NoDB", str, True),
         "Application/pinned": Value([], list, True),
         "Application/recent": Value([], list, True),
-        "Application/first_startup": Value(True, bool, True),
-        "Application/debug": Value(False, bool, True),
+        "Application/first_startup": Value(
+            True, bool, False, lambda val: word_as_bool(val)
+        ),
+        "Application/debug": Value(False, bool, False, lambda val: word_as_bool(val)),
         "Application/editor.window_size": Value(QSize(850, 500), QSize, True),
     }
 
@@ -452,8 +456,8 @@ class Values:
         return value.default if value else None
 
     @staticmethod
-    def keys() -> tuple[str]:
-        return tuple(Values.__VALUES.keys())
+    def keys() -> KeysView[str]:
+        return Values.__VALUES.keys()
 
     @staticmethod
     def defaults() -> dict[str, Any]:
@@ -479,6 +483,10 @@ class Values:
         )
         settings.setValue(
             "editor.compress_image", Values.default_value("User/editor.compress_image")
+        )
+        settings.setValue(
+            "editor.single_selection",
+            Values.default_value("User/editor.compress_image"),
         )
 
         # TODO: Change before production
