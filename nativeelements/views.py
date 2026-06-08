@@ -1,3 +1,5 @@
+from enum import Enum
+
 from PyQt6.QtCore import QCoreApplication, QSize, Qt
 from PyQt6.QtGui import QActionGroup, QColor
 from PyQt6.QtWidgets import (
@@ -331,6 +333,68 @@ class AudioEditorView:
         )
         # self.le_name.setMaximumWidth(300)
         self.frame_layout.addWidget(self.le_name)
+
+
+
+class PictureLabel(QLabel):
+    resized = pyqtSignal(QSize)
+
+    class ResizingState(Enum):
+        Inactive = 0
+        StartPosSet = 1
+        Moving = 2
+    
+    def __init__(parent=None, Qt.WindowType.Widget) -> None:
+        self.setScaledContents(True)
+        self.setShape(QLabel.Shape.Box)
+        self.setSizePolicy(QSizePolicy.Policy.FixedSize, QSizePolicy.Policy.FixedSize)
+
+        self.control_points = {}
+        self.cursor_map = {"cb": Qt.CursorShape.SizeVerCursor, "br" : Qt.CursorShape.SizeFDiagCursor, "cr" : Qt.CursorShape.SizeHorCursor}
+        self.control_points["cb"], self.control_points["br"], self.control_points["cr"] = self.get_control_rects()
+        self._resizing_state = PictureLabel.ResizingState.Inactive
+
+        self._drag_start_pos = QPoint()
+
+    def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
+        rect = self.rect()
+        center_bottom = QPoint(rect.center().x() -3, rect.bottom()-3)
+        bottom_right = QPoint(rect.bottomRight().x() - 3, rect.bottomRight().y() -3)
+        center_right = QPoint(rect.right() -3, rect.center().y() -3) 
+
+        return QRect(self.center_bottom, QSize(6,6)), QRect(self.bottom_right, QSize(6,6)), QRect(self.center_right, QSize(6,6))
+    
+    def intersected_control_rect(self, point: QPoint) -> tuple[str, QRect] | tuple[None, None]:
+        for location, rect in self.control_point.items():
+            if rect.contains(point): 
+                return location, rect
+        return None, None
+
+    def mousePressEvent(self, ev: QMouseEvent) -> None:
+        if ev.buttons() == Qt.MouseButton.LeftButton:
+            self._drag_start_pos = ev.pos()
+        super().mousePressEvent(ev)
+    
+    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
+        location, control_rect = self.intersected_control_rect(ev.pos())
+        if control_rect or self._user_moving:
+            self.setCursor(self.cursor_shape[location])
+            if ev.buttons() == Qt.MouseButton.LeftButton and PictureLabel.ResizingState.StartPosSet:
+                self._user_moving = True
+        else:
+            self.unsetCursor()
+                
+        super().mouseMoveEvent(ev)
+
+    
+
+    def paintEvent(self, ev: QPaintEvent) -> None:
+        painter = QPainter(self)    
+
+        painter.drawRects([self.cb_rect, self.br_rect, self.cr_rect])
+        
+        super().paintEvent(ev)
+        
 
 
 class PictureEditorView:
