@@ -344,6 +344,8 @@ class AudioEditorView:
 
 
 class ResizeOverlay(QFrame):
+    resized = pyqtSignal(QSize)
+    
     class State(Enum):
         Inactive = 0
         StartPosSet = 1
@@ -355,7 +357,7 @@ class ResizeOverlay(QFrame):
         BottomRight = 2
         Right = 3
 
-    def __init__(self, init_rect: QRect, parent=None):
+    def __init__(self, init_rect: QRect, init_aspect_ratio: float, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -376,10 +378,15 @@ class ResizeOverlay(QFrame):
             self._control_rects[ResizeOverlay.Section.Right],
         ) = self.get_control_rects()
 
-        self._max_width = 0
+        self._max_width = init_rect.width()
+        self._aspect_ratio = init_aspect_ratio
+        
         self._resizing_state = ResizeOverlay.State.Inactive
         self._current_section = ResizeOverlay.Section.NoSection
         self._start_pos = QPoint()
+
+    def set_aspect_ratio(self, aspect_ratio: float) -> None:
+        self._aspect_ratio = aspect_ratio
 
     def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
         rect = self.rect()
@@ -399,20 +406,55 @@ class ResizeOverlay(QFrame):
                 return section
         return ResizeOverlay.Section.NoSection
 
-    def drag_to_resize(self, new_pos: QPoint) -> None: ...
-
+    def drag_to_resize(self, new_pos: QPoint, keep_aspect_ratio=False) -> None:
+        if self._current_section == ResizeOverlay.Section.Bottom:
+            old_y = self._start_pos.y()
+            new_y = new_pos.y()
+            new_height = self.height() - (old_y - new_y) if not keep_aspect_ratio else round(
+                self.width() * ((self.height() - (old_y - new_y)) / self.height())
+            )
+            self.setFixedSize(self.width(), new_height))
+        elif self._current_section == ResizeOverlay.Section.BottomRight:
+            old_x = self._start_pos.x()
+            new_x = new_pos.x()
+            new_width = self.width() - (old_x - new_x) 
+            if new_width > self._max_width: return
+            old_y = self._start_pos.y()
+            new_y = new_pos.y()
+            new_height = self.height() - (old_y - new_y) if not keep_aspect_ratio else round(
+                new_width * ((self.height() - (old_y - new_y)) / self.height())
+            )
+            self.setFixedSize(new_width, new_height)
+        elif self._current_section == ResizeOverlay.Section.Right:
+            old_x = self._start_pos.x()
+            new_x = new_pos.x()
+            new_width = self.width() - (old_x - new_x) if not keep_aspect_ratio else round(
+                self.height() * ((self.width() - (old_x - new_x)) / self.width())
+            )
+            if new_width > self._max_width: return
+            self.setFixedSize(new_width, self.height())
+            
     def mousePressEvent(self, ev: QMouseEvent):
         if ev.button() == Qt.MouseButton.LeftButton and self._current_section:
             self._start_pos = ev.pos()
             self._resizing_state == ResizeOverlay.State.StartPosSet
         return super().mousePressEvent(ev)
 
+    def mouseReleaseEvent(self, ev: QMouseEvent):
+        if ev.button() == Qt.MouseButton.LeftButton and self._resizing_state == ResizeOverlay.State.Moving:
+            self.resized.emit(self.size())
+            self._resizing_state = ResizeOverlay.State.Inactive
+            self._start_pos = QPoint()
+        super().mouseReleaseEvent(ev)
+
     def mouseMoveEvent(self, ev: QMouseEvent):
-        self._current_section = self.get_current_section(ev.pos())
-        self.setCursor(self._cursor_map[self._cursor_map])
+        if self._resizing_state != ResizeOverlay.State.Moving:
+            self._current_section = self.get_current_section(ev.pos())
+        cursor = self._cursor_map[self._current_section] 
+        self.setCursor(cursor)
         if ev.button() == Qt.MouseButton.LeftButton and self._resizing_state:
             self._resizing_state = ResizeOverlay.State.Moving
-            self.drag_to_resize(ev.pos())
+            self.drag_to_resize(ev.pos(), ev.modifier() == Qt.KeyboardModifier.ShiftModifier)
         return super().mouseMoveEvent(ev)
 
     def paintEvent(self, ev: QPaintEvent):
