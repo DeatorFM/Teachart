@@ -1,12 +1,14 @@
 from enum import Enum
 
-from PyQt6.QtCore import Q, QCoreApplication, QPoint, QRect, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QPoint, QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QActionGroup,
+    QBrush,
     QColor,
     QMouseEvent,
     QPainter,
     QPaintEvent,
+    QPen,
     QResizeEvent,
 )
 from PyQt6.QtWidgets import (
@@ -345,7 +347,7 @@ class AudioEditorView:
 
 class ResizeOverlay(QFrame):
     resized = pyqtSignal(QSize)
-    
+
     class State(Enum):
         Inactive = 0
         StartPosSet = 1
@@ -357,13 +359,15 @@ class ResizeOverlay(QFrame):
         BottomRight = 2
         Right = 3
 
-    def __init__(self, init_rect: QRect, init_aspect_ratio: float, parent=None):
+    def __init__(self, init_rect: QRect, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setShape(QLabel.Shape.Box)
-        self.setWindowOpacity(0.4)
+        # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFrameShape(QLabel.Shape.NoFrame)
+        self.setLineWidth(2)
+        # self.setWindowOpacity(0.4)
         self.setGeometry(init_rect)
+        self.setStyleSheet("border-radius: 1px;")
 
         self._cursor_map = {
             ResizeOverlay.Section.NoSection: Qt.CursorShape.ArrowCursor,
@@ -379,8 +383,7 @@ class ResizeOverlay(QFrame):
         ) = self.get_control_rects()
 
         self._max_width = init_rect.width()
-        self._aspect_ratio = init_aspect_ratio
-        
+
         self._resizing_state = ResizeOverlay.State.Inactive
         self._current_section = ResizeOverlay.Section.NoSection
         self._start_pos = QPoint()
@@ -389,7 +392,7 @@ class ResizeOverlay(QFrame):
         self._aspect_ratio = aspect_ratio
 
     def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
-        rect = self.rect()
+        rect = self.rect().adjusted(5, 5, -5, -5)
         center_bottom = QPoint(rect.center().x() - 3, rect.bottom() - 3)
         bottom_right = QPoint(rect.bottomRight().x() - 3, rect.bottomRight().y() - 3)
         center_right = QPoint(rect.right() - 3, rect.center().y() - 3)
@@ -410,30 +413,46 @@ class ResizeOverlay(QFrame):
         if self._current_section == ResizeOverlay.Section.Bottom:
             old_y = self._start_pos.y()
             new_y = new_pos.y()
-            new_height = self.height() - (old_y - new_y) if not keep_aspect_ratio else round(
-                self.width() * ((self.height() - (old_y - new_y)) / self.height())
+            new_height = (
+                self.height() - (old_y - new_y)
+                if not keep_aspect_ratio
+                else round(
+                    self.width() * ((self.height() - (old_y - new_y)) / self.height())
+                )
             )
-            self.setFixedSize(self.width(), new_height))
+            self.setFixedSize(self.width(), new_height)
+
         elif self._current_section == ResizeOverlay.Section.BottomRight:
             old_x = self._start_pos.x()
             new_x = new_pos.x()
-            new_width = self.width() - (old_x - new_x) 
-            if new_width > self._max_width: return
+            new_width = self.width() - (old_x - new_x)
+            if new_width > self._max_width:
+                return
             old_y = self._start_pos.y()
             new_y = new_pos.y()
-            new_height = self.height() - (old_y - new_y) if not keep_aspect_ratio else round(
-                new_width * ((self.height() - (old_y - new_y)) / self.height())
+            new_height = (
+                self.height() - (old_y - new_y)
+                if not keep_aspect_ratio
+                else round(
+                    new_width * ((self.height() - (old_y - new_y)) / self.height())
+                )
             )
             self.setFixedSize(new_width, new_height)
+
         elif self._current_section == ResizeOverlay.Section.Right:
             old_x = self._start_pos.x()
             new_x = new_pos.x()
-            new_width = self.width() - (old_x - new_x) if not keep_aspect_ratio else round(
-                self.height() * ((self.width() - (old_x - new_x)) / self.width())
+            new_width = (
+                self.width() - (old_x - new_x)
+                if not keep_aspect_ratio
+                else round(
+                    self.height() * ((self.width() - (old_x - new_x)) / self.width())
+                )
             )
-            if new_width > self._max_width: return
+            if new_width > self._max_width:
+                return
             self.setFixedSize(new_width, self.height())
-            
+
     def mousePressEvent(self, ev: QMouseEvent):
         if ev.button() == Qt.MouseButton.LeftButton and self._current_section:
             self._start_pos = ev.pos()
@@ -441,26 +460,37 @@ class ResizeOverlay(QFrame):
         return super().mousePressEvent(ev)
 
     def mouseReleaseEvent(self, ev: QMouseEvent):
-        if ev.button() == Qt.MouseButton.LeftButton and self._resizing_state == ResizeOverlay.State.Moving:
+        if (
+            ev.button() == Qt.MouseButton.LeftButton
+            and self._resizing_state == ResizeOverlay.State.Moving
+        ):
             self.resized.emit(self.size())
             self._resizing_state = ResizeOverlay.State.Inactive
             self._start_pos = QPoint()
         super().mouseReleaseEvent(ev)
 
     def mouseMoveEvent(self, ev: QMouseEvent):
-        if self._resizing_state != ResizeOverlay.State.Moving:
+        if self._resizing_state.value < ResizeOverlay.State.StartPosSet.value:
             self._current_section = self.get_current_section(ev.pos())
-        cursor = self._cursor_map[self._current_section] 
+        cursor = self._cursor_map[self._current_section]
         self.setCursor(cursor)
         if ev.button() == Qt.MouseButton.LeftButton and self._resizing_state:
             self._resizing_state = ResizeOverlay.State.Moving
-            self.drag_to_resize(ev.pos(), ev.modifier() == Qt.KeyboardModifier.ShiftModifier)
+            self.drag_to_resize(
+                ev.pos(), ev.modifier() == Qt.KeyboardModifier.ShiftModifier
+            )
         return super().mouseMoveEvent(ev)
 
     def paintEvent(self, ev: QPaintEvent):
         painter = QPainter(self)
-        painter.drawRects(self._control_rects.values())
-        return super().paintEvent(ev)
+
+        painter.setPen(QPen(Qt.GlobalColor.black, 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(self.rect().adjusted(5, 5, -5, -5))
+
+        painter.setPen(QPen(Qt.GlobalColor.black, 1))
+        painter.setBrush(Qt.GlobalColor.white)
+        painter.drawRects(tuple(self._control_rects.values()))
 
     def resizeEvent(self, ev: QResizeEvent):
         (
@@ -472,91 +502,19 @@ class ResizeOverlay(QFrame):
 
 
 class PictureLabel(QLabel):
-    resized = pyqtSignal(QSize)
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent, Qt.WindowType.Widget)
-        self.setMouseTracking(True)
-        self.setScaledContents(True)
-        self.setShape(QLabel.Shape.Box)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setMargin(5)
+        self._overlay = ResizeOverlay(self.rect(), self)
+        self._overlay.resized.connect(self.setFixedSize)
 
-        self._max_width = 0
-        self.control_points = {}
-        self.cursor_map = {
-            "cb": Qt.CursorShape.SizeVerCursor,
-            "br": Qt.CursorShape.SizeFDiagCursor,
-            "cr": Qt.CursorShape.SizeHorCursor,
-        }
-        (
-            self.control_points["cb"],
-            self.control_points["br"],
-            self.control_points["cr"],
-        ) = self.get_control_rects()
-        self._current_section = PictureLabel.Section.NoSection
-        self._resizing_state = PictureLabel.ResizingState.Inactive
-        self._intersecting_rect: str | None = None
-        self._drag_start_pos = QPoint()
+    @property
+    def overlay(self) -> ResizeOverlay:
+        return self._overlay
 
-    def set_max_width(self, width: int) -> None:
-        self._max_width = width
-
-    def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
-        rect = self.rect()
-        center_bottom = QPoint(rect.center().x() - 3, rect.bottom() - 3)
-        bottom_right = QPoint(rect.bottomRight().x() - 3, rect.bottomRight().y() - 3)
-        center_right = QPoint(rect.right() - 3, rect.center().y() - 3)
-
-        return (
-            QRect(center_bottom, QSize(6, 6)),
-            QRect(bottom_right, QSize(6, 6)),
-            QRect(center_right, QSize(6, 6)),
-        )
-
-    def intersected_control_rect(
-        self, point: QPoint
-    ) -> tuple[str, QRect] | tuple[None, None]:
-        for location, rect in self.control_point.items():
-            if rect.contains(point):
-                return location, rect
-        return None, None
-
-    def mousePressEvent(self, ev: QMouseEvent) -> None:
-        if ev.buttons() == Qt.MouseButton.LeftButton and self._intersecting_rect:
-            self._drag_start_pos = ev.pos()
-            self._resizing_state = PictureLabel.ResizingState.StartPosSet
-        super().mousePressEvent(ev)
-
-    def mouseReleaseEvent(self, ev: QMouseEvent):
-        if (
-            ev.buttons() == Qt.MouseButton.LeftButton
-            and self._resizing_state == PictureLabel.ResizingState.Moving
-        ):
-            self._resizing_state = PictureLabel.ResizingState.Inactive
-            self.resized.emit(self.size())
-
-        return super().mouseReleaseEvent(ev)
-
-    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
-        self._intersecting_rect, control_rect = self.intersected_control_rect(ev.pos())
-        if control_rect or self._user_moving:
-            self.setCursor(self.cursor_map[location])
-            if (
-                ev.buttons() == Qt.MouseButton.LeftButton
-                and PictureLabel.ResizingState.StartPosSet
-            ):
-                self._user_moving = True
-        else:
-            self.unsetCursor()
-
-        super().mouseMoveEvent(ev)
-
-    def paintEvent(self, ev: QPaintEvent) -> None:
-        painter = QPainter(self)
-
-        painter.drawRects([self.cb_rect, self.br_rect, self.cr_rect])
-
-        super().paintEvent(ev)
+    def resizeEvent(self, a0):
+        self._overlay.setGeometry(self.rect())
+        return super().resizeEvent(a0)
 
 
 class PictureEditorView:
@@ -566,14 +524,8 @@ class PictureEditorView:
         agent.setObjectName("PictureElement")
         self.main_layout = QVBoxLayout(agent)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.main_layout.setContentsMargins(3, 3, 3, 3)
         self.main_layout.setSpacing(0)
 
-        # self.piclabel = PictureLabel(self)
-        # self.piclabel.resized.connect(self.fitToPicture)
-        # self.main_layout.addWidget(self.piclabel)
-
-        agent.setLayout(self.main_layout)
-
-    def fitToPicture(self) -> None:
-        self.setFixedSize(self.piclabel.width() + 6, self.piclabel.height() + 6)
+        self.piclabel = PictureLabel(self)
+        self.overlay = self.piclabel.overlay
+        self.main_layout.addWidget(self.piclabel)
