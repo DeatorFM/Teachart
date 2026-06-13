@@ -10,7 +10,7 @@ def evened(dec: float) -> int | float:
 
 
 def word_as_bool(word: str) -> bool:
-    return True if word.lower() == "true" else False
+    return {"true": True, "false": False}.get(word, False)
 
 
 class WinApi:

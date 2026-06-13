@@ -39,7 +39,7 @@ from tcha.lesson import Lesson
 from tcha.lfio import LessonFile, ProgressLogger
 from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
-from tcha.table import CellEditor, Table
+from tcha.table import Table
 from tcha.tablemodel import TableModel
 from tcha.utils import WinApi
 from ui.editor_view import Ui_Editor
@@ -222,6 +222,8 @@ class Editor(QMainWindow):
         self.ui.table.clipboardChanged.connect(self.clipboard_changed)
 
         self.ui.ac_cell_finish_editing.triggered.connect(self.table.close_active_editor)
+        self.ui.ac_append_row.triggered.connect(self.table.add_row_at_end)
+        self.ui.ac_append_column.triggered.connect(self.table.add_column_at_end)
         self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
         self.ui.ac_add_column.triggered.connect(self.table.add_column_after_current)
         self.ui.ac_rmv_row.triggered.connect(

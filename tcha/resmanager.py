@@ -211,7 +211,7 @@ class CompressedResourceObject(FileResourceObject):
             self._compressed = True
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ResourceTransferObject:
     """Representation of a resource without file i/o. Use to write resources to a tch-file."""
 

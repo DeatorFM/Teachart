@@ -782,24 +782,36 @@ class BaseTable(QTableView):
             self.editor.model().create_from_clipboard(self._definition_for_mime_data)
 
     def add_column_after_current(self) -> None:
-        if self.currentIndex().isValid():
-            logical_current = self.currentIndex().column()
+        current = self.currentIndex()
+        if current.isValid():
+            logical_current = current.column()
             visual_current = self.horizontalHeader().visualIndex(logical_current)
 
             new_logical = self.model().columnCount()
             self.model().insertColumn(new_logical)
 
             self.horizontalHeader().moveSection(new_logical, visual_current + 1)
+            self.setCurrentIndex(current)
+
+    def add_column_at_end(self) -> None:
+        new_logical = self.model().columnCount()
+        self.model().insertColumn(new_logical)
 
     def add_row_after_current(self) -> None:
-        if self.currentIndex().isValid():
-            logical_current = self.currentIndex().row()
+        current = self.currentIndex()
+        if current.isValid():
+            logical_current = current.row()
             visual_current = self.verticalHeader().visualIndex(logical_current)
 
             new_logical = self.model().rowCount()
             self.model().insertRow(new_logical)
 
             self.verticalHeader().moveSection(new_logical, visual_current + 1)
+            self.setCurrentIndex(current)
+
+    def add_row_at_end(self) -> None:
+        new_logical = self.model().rowCount()
+        self.model().insertRow(new_logical)
 
     # DELETE
     def add_element(self, element: BaseElementModel) -> None:

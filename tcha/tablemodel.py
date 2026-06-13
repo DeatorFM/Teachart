@@ -74,7 +74,7 @@ class MimeData:
     element_data: QByteArray | None = field(default=None)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class IndexPoint:
     """Stores cell index at table and cell level as well as the selected mouse position inside a table."""
 
