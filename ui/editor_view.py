@@ -42,7 +42,7 @@ from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAct
 class Ui_Editor(object):
     def setupUi(self, MainWindow: QMainWindow):
         MainWindow.setObjectName("EditorView")
-        MainWindow.resize(850, 500)
+        MainWindow.resize(Settings.value("Application/editor.window_size"))
         MainWindow.setDocumentMode(True)
         MainWindow.setDockOptions(
             QMainWindow.DockOption.AllowTabbedDocks

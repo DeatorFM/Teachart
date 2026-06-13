@@ -347,6 +347,8 @@ class AudioEditorView:
 
 
 class PictureLabel(QLabel):
+    resized = pyqtSignal(QSize)
+
     class State(IntEnum):
         Inactive = 0
         StartPosSet = 1
@@ -360,9 +362,10 @@ class PictureLabel(QLabel):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent, Qt.WindowType.Widget)
-        self.setMargin(5)
+        self.setMargin(4)
         self.setScaledContents(True)
         self.setMouseTracking(True)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         self._control_rects: dict[PictureLabel.Section, QRect] = {}
         (
@@ -382,12 +385,17 @@ class PictureLabel(QLabel):
     def overlay(self) -> "ResizeOverlay":
         return self._overlay
 
+    def set_max_width(self, width: int) -> None:
+        self._max_width = width
+
     def setPixmap(self, a0):
         super().setPixmap(a0)
-        self._max_width = self.pixmap().width() + 10
+        # self.setMaximumWidth()
+        # self._max_width = self.pixmap().width() + 10
 
     def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
-        rect = self.rect().adjusted(5, 5, -5, -5)
+        margin = self.margin()
+        rect = self.rect().adjusted(margin, margin, -margin, -margin)
         center_bottom = QPoint(rect.center().x() - 3, rect.bottom() - 3)
         bottom_right = QPoint(rect.bottomRight().x() - 3, rect.bottomRight().y() - 3)
         center_right = QPoint(rect.right() - 3, rect.center().y() - 3)
@@ -414,13 +422,14 @@ class PictureLabel(QLabel):
 
     def mouseReleaseEvent(self, ev: QMouseEvent):
         if ev.button() == Qt.MouseButton.LeftButton and self._state.value > 0:
-            new_size = self._overlay.size()
-            self._overlay.deleteLater()
-            self._overlay = None
-            self.setFixedSize(new_size)
-            self._state = PictureLabel.State.Inactive
-            self._section = PictureLabel.Section.NoSection
-            self.repaint()
+            if self._overlay:
+                new_size = self._overlay.size()
+                self._overlay.deleteLater()
+                self._overlay = None
+                # self.resize(new_size)
+                self._state = PictureLabel.State.Inactive
+                self._section = PictureLabel.Section.NoSection
+                self.resized.emit(new_size)
         super().mouseReleaseEvent(ev)
 
     def mouseMoveEvent(self, ev: QMouseEvent):
@@ -461,7 +470,11 @@ class PictureLabel(QLabel):
             painter = QPainter(self)
             painter.setPen(QPen(Qt.GlobalColor.black, 1))
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawRect(self.rect().adjusted(5, 5, -5, -5))
+            painter.drawRect(
+                self.rect().adjusted(
+                    self.margin(), self.margin(), -self.margin(), -self.margin()
+                )
+            )
             painter.setBrush(Qt.GlobalColor.white)
             painter.drawRects(tuple(self._control_rects.values()))
 
@@ -497,13 +510,14 @@ class ResizeOverlay(QFrame):
             self._control_rects[PictureLabel.Section.Right],
         ) = self.get_control_rects()
 
-        self.max_width = max_width
+        self.setMinimumSize(10, 10)
+        self.setMaximumWidth(max_width)
 
     def set_aspect_ratio(self, aspect_ratio: float) -> None:
         self._aspect_ratio = aspect_ratio
 
     def get_control_rects(self) -> tuple[QRect, QRect, QRect]:
-        rect = self.rect().adjusted(5, 5, -5, -5)
+        rect = self.rect().adjusted(3, 3, -3, -3)
         center_bottom = QPoint(rect.center().x() - 3, rect.bottom() - 3)
         bottom_right = QPoint(rect.bottomRight().x() - 3, rect.bottomRight().y() - 3)
         center_right = QPoint(rect.right() - 3, rect.center().y() - 3)
@@ -527,18 +541,18 @@ class ResizeOverlay(QFrame):
             old_y = old_pos.y()
             new_y = new_pos.y()
             new_height = self.height() - (old_y - new_y)
-            if new_height < 10:
-                return
+            # if new_height < 10:
+            #     return
             if keep_aspect_ratio:
                 new_width = round(new_height * aspect_ratio)
-                if new_width > self.max_width:
-                    new_width = self.max_width
-                    new_height = round(new_width / aspect_ratio)
-                    if new_height < 10:
-                        return
-                self.setFixedSize(new_width, new_height)
+                # if new_width > self.max_width:
+                new_width = self.max_width
+                new_height = round(new_width / aspect_ratio)
+                # if new_height < 10:
+                #     return
+                self.resize(new_width, new_height)
             else:
-                self.setFixedSize(self.width(), new_height)
+                self.resize(self.width(), new_height)
 
         elif section == PictureLabel.Section.BottomRight:
             old_x = old_pos.x()
@@ -546,8 +560,8 @@ class ResizeOverlay(QFrame):
             difference_x = old_x - new_x
             new_width = self.width() - difference_x
 
-            if 10 > new_width > self.max_width:
-                return
+            # if new_width > self.max_width:
+            #     return
 
             old_y = old_pos.y()
             new_y = new_pos.y()
@@ -560,8 +574,8 @@ class ResizeOverlay(QFrame):
                 else:
                     new_width = round(new_height * aspect_ratio)
 
-            if 10 > new_width > self.max_width or new_height < 10:
-                return
+            # if new_width > self.max_width or new_width < 10 or new_height < 10:
+            #     return
 
             self.resize(new_width, new_height)
 
@@ -570,13 +584,13 @@ class ResizeOverlay(QFrame):
             new_x = new_pos.x()
             new_width = self.width() - (old_x - new_x)
 
-            if 10 > new_width > self.max_width:
-                return
+            # if new_width > self.max_width:
+            #     return
 
             if keep_aspect_ratio:
                 new_height = round(new_width / aspect_ratio)
-                if new_height < 10:
-                    return
+                # if new_height < 10:
+                #     return
                 self.resize(new_width, new_height)
             else:
                 self.resize(new_width, self.height())
@@ -586,7 +600,7 @@ class ResizeOverlay(QFrame):
         painter.setBrush(Qt.GlobalColor.darkBlue)
         painter.setOpacity(0.75)
         painter.setPen(QPen(Qt.GlobalColor.black, 1))
-        painter.drawRect(self.rect().adjusted(5, 5, -5, -5))
+        painter.drawRect(self.rect().adjusted(3, 3, -3, -3))
 
         painter.setBrush(Qt.GlobalColor.white)
         painter.drawRects(tuple(self._control_rects.values()))
@@ -603,12 +617,13 @@ class ResizeOverlay(QFrame):
 class PictureEditorView:
     def setUi(self, agent: QWidget):
         agent.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        agent.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        agent.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         agent.setObjectName("PictureElement")
+        agent.setStyleSheet("background-color: white;")
+        agent.setAutoFillBackground(True)
         self.main_layout = QVBoxLayout(agent)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.piclabel = PictureLabel(self)
-        self.overlay = self.piclabel.overlay
+        self.piclabel = PictureLabel(agent)
         self.main_layout.addWidget(self.piclabel)

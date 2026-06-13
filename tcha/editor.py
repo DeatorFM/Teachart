@@ -707,6 +707,8 @@ class Editor(QMainWindow):
                 ev.ignore()
                 return
 
+        Settings.set_value("Application/editor.window_size", self.size())
+
         if self.presenter_mode:
             self.presenterClosed.emit()
 

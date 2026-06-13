@@ -134,12 +134,12 @@ class CellItem(list):
     @property
     def height(self) -> int:
         if len(self) > 0:
-            return sum(map(lambda x: x.item_size.height() + 8, self))
+            return sum(map(lambda x: x.item_size.height() + 3, self))
         return 30
 
     @property
     def width(self) -> int:
-        return self._header.section_size - 4
+        return self._header.section_size - 9
 
     @property
     def header(self) -> HeaderDataItem:
@@ -354,6 +354,7 @@ class CellModel(QAbstractListModel):
         if index.isValid():
             if role == Qt.ItemDataRole.EditRole:
                 self._data[index.row()] = value
+                self._data.recalculate_items()
                 self.dataChanged.emit(index, index, [role])
                 print("Data saved to the model")
                 return True

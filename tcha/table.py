@@ -102,6 +102,7 @@ class CellEditor(QListView):
         self.setSelectionMode(QListView.SelectionMode.SingleSelection)
         self.setEditTriggers(QListView.EditTrigger.CurrentChanged)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setStyleSheet("background-color: white;")
         self.setAutoFillBackground(True)
 
         self.setDragEnabled(True)
