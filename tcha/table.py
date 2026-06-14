@@ -233,14 +233,13 @@ class CellEditor(QListView):
     def copy_index(self, index: QModelIndex) -> None:
         # TODO: Implement function for TextEditor
         if index.isValid():
-            if self.editor and not self.editor.can_copy():
-                return
             clipboard = QApplication.clipboard()
             mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
             clipboard.setMimeData(mime_data)
 
     def copy_current_index(self) -> None:
-        self.copy_index(self.currentIndex())
+        if self.editor and self.editor.can_copy():
+            self.copy_index(self.currentIndex())
 
     def copied_index(self) -> QModelIndex:
         return QModelIndex
