@@ -32,6 +32,7 @@ from PyQt6.QtGui import (
     QFont,
     QIcon,
     QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QPen,
@@ -829,12 +830,19 @@ class TextDelegate(BaseElementDelegate):
         if isinstance(object, TextEditor) and isinstance(event, QKeyEvent):
             if event.type() == QEvent.Type.KeyPress:
                 if (
+                    event.matches(QKeySequence.StandardKey.Copy)
+                    and object.textCursor().hasSelection()
+                ):
+                    object.copy()
+
+                if (
                     event.keyCombination().keyboardModifiers()
-                    == Qt.KeyboardModifier.ControlModifier
+                    & Qt.KeyboardModifier.ControlModifier
                     and event.key() == Qt.Key.Key_Return
                 ):
                     self.commitData.emit(object)
                     self.closeEditor.emit(object)
+                    event.accept()
                     return True
 
         return super().eventFilter(object, event)

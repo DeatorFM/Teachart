@@ -91,12 +91,7 @@ class IndexPoint:
         )
 
     def isValid(self) -> bool:
-        return (
-            self.row > -1
-            and self.column > -1
-            and self.erow > -1
-            and not self.point.isNull()
-        )
+        return self.row + self.column + self.erow > -1 and not self.point.isNull()
 
 
 class CellItem(list):
@@ -192,9 +187,6 @@ class CellItem(list):
         writer.writeEndElement()
         return writer
 
-    def __repr__(self):
-        return f"CellItem: {super().__repr__()}"
-
     def __str__(self):
         return f"CellItem: {super().__str__()}"
 
@@ -222,9 +214,7 @@ class CellModel(QAbstractListModel):
         super().__init__(parent)
         self._data: CellItem[BaseElementModel] = data
         self._work_data = data.copy()
-        self.cell_index: QPersistentModelIndex = (
-            index  # TODO: Change this to persistent index
-        )
+        self.cell_index: QPersistentModelIndex = index
 
     @property
     def tablemodel(self) -> TableModel:

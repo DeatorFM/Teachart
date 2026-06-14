@@ -175,6 +175,11 @@ class BaseElementEditor(QFrame):
     def focusOutEvent(self, a0):
         return
 
+    @abstractmethod
+    def can_copy(self) -> bool:
+        """Check to avoid copy conflicts betweem Table/CellEditor and element editor"""
+        return True
+
 
 class BaseTextElementEditor(QTextEdit):
     def __init__(self, parent=None):
@@ -190,6 +195,11 @@ class BaseTextElementEditor(QTextEdit):
 
     def focusOutEvent(self, e):
         return
+
+    @abstractmethod
+    def can_copy(self) -> bool:
+        """Check to avoid copy conflicts betweem Table/CellEditor and element editor"""
+        return True
 
 
 class BaseElementDelegate(QStyledItemDelegate):

@@ -6,7 +6,7 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
 )
-from PyQt6.QtGui import QAction, QActionGroup, QKeySequence
+from PyQt6.QtGui import QAction, QActionGroup, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QButtonGroup,

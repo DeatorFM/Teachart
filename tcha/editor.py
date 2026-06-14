@@ -176,9 +176,7 @@ class Editor(QMainWindow):
             )
         )
         self.ui.ac_course_rec.triggered.connect(self.open_course_record)
-        self.ui.ac_copy.triggered.connect(
-            lambda: self.table.copy_index(self.table.currentIndex())
-        )
+        self.ui.ac_copy.triggered.connect(self.table.copy_current_index)
         self.ui.ac_paste.triggered.connect(
             lambda: self.table.paste_index(QApplication.clipboard().mimeData())
         )

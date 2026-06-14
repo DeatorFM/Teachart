@@ -24,6 +24,7 @@ from PyQt6.QtGui import (
     QDrag,
     QDropEvent,
     QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QPainterPath,
@@ -55,7 +56,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -231,10 +231,16 @@ class CellEditor(QListView):
             self.geometriesChanged.emit()
 
     def copy_index(self, index: QModelIndex) -> None:
+        # TODO: Implement function for TextEditor
         if index.isValid():
+            if self.editor and not self.editor.can_copy():
+                return
             clipboard = QApplication.clipboard()
             mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
             clipboard.setMimeData(mime_data)
+
+    def copy_current_index(self) -> None:
+        self.copy_index(self.currentIndex())
 
     def copied_index(self) -> QModelIndex:
         return QModelIndex
@@ -246,14 +252,10 @@ class CellEditor(QListView):
 
     def keyPressEvent(self, e: QKeyEvent):
         print("Cell Editor got key press")
-        if (
-            Qt.KeyboardModifier.ControlModifier
-            in e.keyCombination().keyboardModifiers()
-        ):
-            if e.key() == Qt.Key.Key_C:
-                if self.currentIndex().isValid():
-                    self.copy_index(self.currentIndex())
-                    e.accept()
+        if e.matches(QKeySequence.StandardKey.Copy):
+            if self.currentIndex().isValid():
+                self.copy_index(self.currentIndex())
+                e.accept()
 
         return super().keyPressEvent(e)
 
@@ -340,11 +342,11 @@ class CellEditor(QListView):
 
 class CellDelegate(QStyledItemDelegate):
     editorOpened = pyqtSignal(QListView)
+    last_idx = IndexPoint(-1, -1, -1, QPoint())
 
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
         self.extra_emit = False
-        self.last_idx = IndexPoint(-1, -1, -1, QPoint())
         self._open_editor_index = QModelIndex()
 
     def paint(
@@ -418,7 +420,7 @@ class CellDelegate(QStyledItemDelegate):
             editor.setGeometry(editor_rect)
             editor.viewport().update()
 
-    def setEditorData(self, editor: QListView | None, index: QModelIndex) -> None:
+    def setEditorData(self, editor: CellEditor | None, index: QModelIndex) -> None:
         if editor:
             model: CellItem = index.data(Qt.ItemDataRole.EditRole)
             editor.setModel(model)
@@ -427,6 +429,8 @@ class CellDelegate(QStyledItemDelegate):
                 print("Open child editor")
                 selected = model.index(self.last_idx.erow, 0)
                 editor.edit(selected)
+                self.last_idx = IndexPoint(-1, -1, -1, QPoint())
+                return
             print("IndexPoint invalid")
 
     def setModelData(self, editor: CellEditor, model: TableModel, index: QModelIndex):
@@ -559,9 +563,6 @@ class BaseTable(QTableView):
     editingLevelChanged = pyqtSignal(EditingLevel)
     currentEditorIndexChanged = pyqtSignal(QModelIndex)
     clipboardChanged = pyqtSignal(ClipboardContent)
-
-    # cellEditorOpened = pyqtSignal(CellEditor)
-    # cellEditorClosed = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -875,6 +876,22 @@ class BaseTable(QTableView):
 
     # Event handler
 
+    def get_index_point(self, pos: QPoint) -> IndexPoint:
+        idx = self.indexAt(pos)
+        if idx.isValid():
+            cell_rect = self.visualRect(idx)
+            relative_mouse_pos = QPoint(
+                pos.x() - cell_rect.x(), pos.y() - cell_rect.y()
+            )
+            erow = idx.data().row_for_pos(relative_mouse_pos.y())
+            return IndexPoint(
+                idx.row(),
+                idx.column(),
+                erow,
+                self.viewport().mapFromParent(pos),
+            )
+        return IndexPoint(-1, -1, -1, QPoint())
+
     def keyReleaseEvent(self, ev: QKeyEvent):
         if (
             ev.keyCombination().keyboardModifiers()
@@ -896,31 +913,19 @@ class BaseTable(QTableView):
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
 
-        if (
-            event.modifiers() & Qt.KeyboardModifier.ControlModifier
-            or self._element_selection
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier or (
+            self._element_selection
+            and not event.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
-            mouse_pos = event.pos()
-            idx = self.indexAt(event.pos())
-            if idx.isValid():
-                cell_rect = self.visualRect(idx)
-                relative_mouse_pos = QPoint(
-                    mouse_pos.x() - cell_rect.x(), mouse_pos.y() - cell_rect.y()
-                )
-                erow = idx.data().row_for_pos(relative_mouse_pos.y())
-                trindex = IndexPoint(
-                    idx.row(),
-                    idx.column(),
-                    erow,
-                    self.viewport().mapFromParent(event.pos()),
-                )
-                if trindex != self.itemDelegate().last_idx:
-                    self.itemDelegate().last_idx = trindex
-                    self.viewport().update()
-                else:
-                    self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
-        else:
-            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
+            # TODO: Fix changing between editors
+            ipoint = self.get_index_point(event.pos())
+
+            if ipoint != self.itemDelegate().last_idx:
+                self.itemDelegate().last_idx = ipoint
+                self.viewport().update()
+                print(f"Set index point to {ipoint}")
+            else:
+                self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
         super().mouseMoveEvent(event)
 
@@ -992,7 +997,7 @@ class BaseTable(QTableView):
 
     def copy_index(self, index: QModelIndex) -> None:
         if index.isValid():
-            if self._editor and self._editor.hasFocus():
+            if self._editor and self._editor.state() == QListView.State.EditingState:
                 element_index = self._editor.currentIndex()
                 if element_index.isValid():
                     # Copy the individual element
@@ -1004,6 +1009,12 @@ class BaseTable(QTableView):
         mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
         clipboard.setMimeData(mime_data)
         print(f"Copied entire cell at {index.row()}, {index.column()}")
+
+    def copy_current_index(self) -> None:
+        if self.editing_level() & EditingLevel.ElementEditing:
+            self.editor.copy_current_index()
+        elif self.editing_level() & EditingLevel.CellEditing:
+            self.copy_index(self.currentIndex)
 
     def paste_index(self, mime_data: QMimeData) -> None:
         if mime_data and not set(mime_data.formats()).isdisjoint(
@@ -1029,7 +1040,7 @@ class BaseTable(QTableView):
     ) -> None:
         if self._editor and self._editor.state() != QListView.State.EditingState:
             print("Close CellEditor's editors")
-            self._editor.setCurrentIndex(QModelIndex())
+            self._editor.close_active_editor()
         super().closeEditor(editor, hint)
         print("An cell editor has been closed", editor, hint)
         self.verticalHeader().resizeSections()
