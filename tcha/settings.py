@@ -120,6 +120,8 @@ class SettingsDialog(QDialog):
         self.ui.cb_language.activated.connect(self._on_language_set)
         self.ui.cb_time_format.activated.connect(self._on_time_format_set)
         self.ui.cb_always_schedule.toggled.connect(self._on_always_schedule_set)
+        self.ui.cb_compress_images.toggled.connect(self._on_compress_images_set)
+        self.ui.cb_single_selection.toggled.connect(self._on_single_selection_set)
         self.ui.pb_file_dialog.clicked.connect(self.set_dbpath)
         self.ui.pb_new_database.clicked.connect(self.create_new_db)
         self.ui.pb_reset_database.clicked.connect(self.reset_db)
@@ -228,12 +230,12 @@ class SettingsDialog(QDialog):
 
     def _on_compress_images_set(self) -> None:
         self.settings["User/editor.compress_image"] = (
-            self.ui.cb_compress_images.isClicked()
+            self.ui.cb_compress_images.isChecked()
         )
 
     def _on_single_selection_set(self) -> None:
         self.settings["User/editor.single_selection"] = (
-            self.ui.cb_single_selection.isClicked()
+            self.ui.cb_single_selection.isChecked()
         )
 
     # Database settings
@@ -333,6 +335,9 @@ class IniEditor(QDialog):
 
 
 class Settings:
+    __qsettings = QSettings(
+        QSettings.Format.IniFormat, QSettings.Scope.UserScope, "Teachart", "settings"
+    )
     """Convenience class to manage settings"""
 
     @staticmethod
@@ -350,7 +355,6 @@ class Settings:
     @staticmethod
     def value[T](key: str) -> T:
         """Convenience method to immediately access settings's value."""
-        print("Called settings value")
         qsettings = Settings.qsettings()
         definition = Values.definition(key)
         if definition:
@@ -384,13 +388,12 @@ class Settings:
         if value:
             Settings.set_value(key, value)
 
-    @cache
     @staticmethod
     def qsettings(
         format: QSettings.Format = QSettings.Format.IniFormat,
         scope: QSettings.Scope = QSettings.Scope.UserScope,
     ) -> QSettings:
-        return QSettings(format, scope, "Teachart", "settings")
+        return Settings.__qsettings
 
     @cache
     @staticmethod

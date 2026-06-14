@@ -90,6 +90,14 @@ class IndexPoint:
             and self.erow == value.erow
         )
 
+    def isValid(self) -> bool:
+        return (
+            self.row > -1
+            and self.column > -1
+            and self.erow > -1
+            and not self.point.isNull()
+        )
+
 
 class CellItem(list):
     """Describes the raw data of a cell."""
@@ -172,6 +180,7 @@ class CellItem(list):
             if y_pos >= y_offset and y_pos <= y_offset + model.item_size.height() + 8:
                 return row
             y_offset += model.item_size.height() + 8
+        return -1
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeStartElement("cell")

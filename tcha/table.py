@@ -15,7 +15,6 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
-    QTimer,
     pyqtSignal,
     pyqtSlot,
 )
@@ -56,6 +55,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -76,6 +76,7 @@ from tcha.elements import (
     compatible_mime_types,
     definition_for_mime_data,
 )
+from tcha.settings import Settings
 from tcha.tablemodel import (
     CellItem,
     CellModel,
@@ -343,14 +344,13 @@ class CellDelegate(QStyledItemDelegate):
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
         self.extra_emit = False
-        self.element_selection = False
         self.last_idx = IndexPoint(-1, -1, -1, QPoint())
         self._open_editor_index = QModelIndex()
 
     def paint(
         self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
-        if not self.element_selection:
+        if not self.last_idx.isValid():
             painter.save()
             super().paint(painter, option, QModelIndex())
             painter.restore()
@@ -384,7 +384,7 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        if self.element_selection and self.last_idx == trindex:
+                        if self.last_idx.isValid() and self.last_idx == trindex:
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
@@ -423,9 +423,11 @@ class CellDelegate(QStyledItemDelegate):
             model: CellItem = index.data(Qt.ItemDataRole.EditRole)
             editor.setModel(model)
             self.editorOpened.emit(editor)
-            if self.element_selection and self.last_idx:
+            if self.last_idx.isValid():
+                print("Open child editor")
                 selected = model.index(self.last_idx.erow, 0)
                 editor.edit(selected)
+            print("IndexPoint invalid")
 
     def setModelData(self, editor: CellEditor, model: TableModel, index: QModelIndex):
         model.setData(index, editor.model().item)
@@ -570,6 +572,7 @@ class BaseTable(QTableView):
         self._visible_row = -1
         self._definition_for_mime_data = None
         self._toolset_reference: dict[str, BaseElementDefinitions] | None = None
+        self._element_selection = Settings.value("User/editor.single_selection")
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -577,6 +580,7 @@ class BaseTable(QTableView):
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
         self.setCornerButtonEnabled(False)
+        self.setMouseTracking(True)
 
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
@@ -865,47 +869,17 @@ class BaseTable(QTableView):
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
 
-    def enable_element_selection(self, enable: bool) -> None:
-        self.itemDelegate().element_selection = enable
-        print(f"Mouse tracking {enable}")
-        self.setMouseTracking(enable)
-        self.update()
-
     def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
         if not self._toolset_reference:
             self._toolset_reference = toolsets
 
     # Event handler
 
-    def keyPressEvent(self, e: QKeyEvent):
-        print("Table got key press")
-        if e.key() == Qt.Key.Key_Control:
-            self.enable_element_selection(True)
-
-        if (
-            Qt.KeyboardModifier.ControlModifier
-            in e.keyCombination().keyboardModifiers()
-        ):
-            if e.key() == Qt.Key.Key_C:
-                self.copy_index(self.currentIndex())
-                e.accept()
-                return
-            elif e.key() == Qt.Key.Key_V:
-                self.paste_index(QApplication.clipboard().mimeData())
-                e.accept()
-                return
-
-        print("Handled KeyEvent in Table")
-
-        super().keyPressEvent(e)
-
     def keyReleaseEvent(self, ev: QKeyEvent):
         if (
-            ev.key() == Qt.Key.Key_Control
-            or Qt.KeyboardModifier.ControlModifier
-            in ev.keyCombination().keyboardModifiers()
+            ev.keyCombination().keyboardModifiers()
+            & Qt.KeyboardModifier.ControlModifier
         ):
-            self.enable_element_selection(False)
             self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
         super().keyReleaseEvent(ev)
@@ -922,7 +896,10 @@ class BaseTable(QTableView):
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
 
-        if self.itemDelegate().element_selection:
+        if (
+            event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            or self._element_selection
+        ):
             mouse_pos = event.pos()
             idx = self.indexAt(event.pos())
             if idx.isValid():
@@ -940,6 +917,10 @@ class BaseTable(QTableView):
                 if trindex != self.itemDelegate().last_idx:
                     self.itemDelegate().last_idx = trindex
                     self.viewport().update()
+                else:
+                    self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
+        else:
+            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
 
         super().mouseMoveEvent(event)
 

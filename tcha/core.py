@@ -413,7 +413,7 @@ class AppCore(QApplication):
     def open_settings(self, parent=None) -> None:
         print("Open Settings")
         return_flags = SettingsDialog.get_settings(
-            parent, self._course_model.database(), Settings.qsettings()
+            None, self._course_model.database(), Settings.qsettings()
         )
         print("Return flags: ", return_flags)
         if return_flags & ReturnFlags.Restart:
