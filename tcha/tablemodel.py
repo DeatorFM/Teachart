@@ -16,6 +16,7 @@ from PyQt6.QtCore import (
     QObject,
     QPersistentModelIndex,
     QPoint,
+    QRect,
     QSize,
     Qt,
     QVariant,
@@ -103,6 +104,7 @@ class CellItem(list):
             raise ValueError("HeaderDataItem must have a horizontal orientation.")
         self._internal_counter = len(self)
         self._header = hheader_item
+        self._rects = [QRect()] * len(self)
         self._num = num
 
     def append(self, object: BaseElementModel):
@@ -129,6 +131,8 @@ class CellItem(list):
         raise TypeError(
             f"Argument must be of type of BaseElementModel but type is {type(object)}"
         )
+
+    def rects(self, top_left: QPoint) -> list[QRect]: ...
 
     @property
     def current_size(self) -> QSize:

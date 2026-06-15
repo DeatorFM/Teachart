@@ -220,6 +220,9 @@ class TextEditor(BaseTextElementEditor):
     def model(self) -> TextModel:
         return self.document()
 
+    def can_copy(self) -> bool:
+        return False if self.textCursor().hasSelection() else True
+
     def connect_signals(self) -> None:
         self.currentCharFormatChanged.connect(self.on_char_format_changed)
         self.cursorPositionChanged.connect(self.on_cursor_position_changed)
@@ -341,11 +344,12 @@ class TextEditor(BaseTextElementEditor):
         if self.textCursor().currentList():
             if e.key() == Qt.Key.Key_Tab:
                 self.change_indentation()
+                e.accept()
                 return None
             elif e.key() == Qt.Key.Key_Backtab:
                 self.change_indentation(-1)
+                e.accept()
                 return None
-        print("Handles KeyEvent in TextEditor")
         super().keyPressEvent(e)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:

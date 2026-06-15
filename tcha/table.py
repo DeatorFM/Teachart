@@ -231,14 +231,16 @@ class CellEditor(QListView):
             self.geometriesChanged.emit()
 
     def copy_index(self, index: QModelIndex) -> None:
-        # TODO: Implement function for TextEditor
+        # TODO: Implement function for element editors
         if index.isValid():
             clipboard = QApplication.clipboard()
             mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
             clipboard.setMimeData(mime_data)
 
     def copy_current_index(self) -> None:
-        if self.editor and self.editor.can_copy():
+        if (
+            self.editor and self.editor.can_copy()
+        ):  # Copy permission check to avoid overwriting copied data of active editor
             self.copy_index(self.currentIndex())
 
     def copied_index(self) -> QModelIndex:
@@ -249,14 +251,14 @@ class CellEditor(QListView):
         current = self.currentIndex()
         self.change_index(current)
 
-    def keyPressEvent(self, e: QKeyEvent):
-        print("Cell Editor got key press")
-        if e.matches(QKeySequence.StandardKey.Copy):
-            if self.currentIndex().isValid():
-                self.copy_index(self.currentIndex())
-                e.accept()
+    # def keyPressEvent(self, e: QKeyEvent):
+    #     print("Cell Editor got key press")
+    #     if e.matches(QKeySequence.StandardKey.Copy):
+    #         if self.currentIndex().isValid():
+    #             self.copy_index(self.currentIndex())
+    #             e.accept()
 
-        return super().keyPressEvent(e)
+    #     return super().keyPressEvent(e)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         print("My mouse has clicked yeah")
@@ -341,12 +343,15 @@ class CellEditor(QListView):
 
 class CellDelegate(QStyledItemDelegate):
     editorOpened = pyqtSignal(QListView)
-    last_idx = IndexPoint(-1, -1, -1, QPoint())
 
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
         self.extra_emit = False
         self._open_editor_index = QModelIndex()
+        self.last_idx = IndexPoint(-1, -1, -1, QPoint())
+
+        self.element_selection = False
+        self.mouse_pos = QPoint()
 
     def paint(
         self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
@@ -372,7 +377,6 @@ class CellDelegate(QStyledItemDelegate):
             if cell:
                 cmodel = CellModel(cell, index)
                 for i, model in enumerate(cell):
-                    trindex = IndexPoint(index.row(), index.column(), i, QPoint())
                     if model:
                         # print("Cell width", cell_rect.width())
                         delegate: BaseElementDelegate = model.delegate(
@@ -385,7 +389,9 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        if self.last_idx.isValid() and self.last_idx == trindex:
+                        if self.element_selection and sub_option.rect.contains(
+                            self.mouse_pos
+                        ):
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
@@ -642,6 +648,9 @@ class BaseTable(QTableView):
 
     def model(self) -> TableModel:
         return super().model()
+
+    def itemDelegate(self) -> CellDelegate:
+        return super().itemDelegate()
 
     def setModel(self, model: QAbstractItemModel | None) -> bool:
         if model:
@@ -916,15 +925,10 @@ class BaseTable(QTableView):
             self._element_selection
             and not event.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
-            # TODO: Fix changing between editors
-            ipoint = self.get_index_point(event.pos())
-
-            if ipoint != self.itemDelegate().last_idx:
-                self.itemDelegate().last_idx = ipoint
-                self.viewport().update()
-                print(f"Set index point to {ipoint}")
-            else:
-                self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
+            self.itemDelegate().element_selection = True
+            self.itemDelegate().mouse_pos = self.viewport().mapFromParent(event.pos())
+        else:
+            self.itemDelegate().element_selection = False
 
         super().mouseMoveEvent(event)
 
@@ -935,6 +939,8 @@ class BaseTable(QTableView):
             if self._editor:
                 self.close_active_editor()
                 if index.isValid():
+                    self.itemDelegate().last_idx = self.get_index_point(e.pos())
+                    print(f"Set Index Point: {self.itemDelegate().last_idx}")
                     self.setCurrentIndex(index)
                 e.accept()
                 return
