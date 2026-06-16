@@ -1,3 +1,5 @@
+import bisect
+from itertools import accumulate
 from math import sqrt
 from typing import Iterator
 
@@ -56,6 +58,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -81,9 +84,41 @@ from tcha.tablemodel import (
     CellItem,
     CellModel,
     IndexModel,
-    IndexPoint,
     TableModel,
+    Trindex,
 )
+
+
+class CellGeometry:
+    """Object that defines the geometry of a cell"""
+
+    def __init__(self, index: QModelIndex):
+        self._index = index
+
+        if index.isValid():
+            item: CellItem = index.data()
+            self._height_range = item.height + 1
+            self._positions: tuple[int] = tuple(
+                accumulate(map(lambda model: model.item_size.height(), item))
+            )
+        else:
+            self._height_range = range(-1)
+            self._positions = tuple()
+
+    @property
+    def index(self) -> QModelIndex:
+        return self._index
+
+    def get_cell_index(self, gcell_top_left: QPoint, gmouse_pos: QPoint) -> int:
+        ypos = gmouse_pos.y() - gcell_top_left.y()
+        print(f"Subtracted positions = {ypos} VS. max height {self._height_range}")
+        if ypos < self._height_range:
+            return bisect.bisect_left(self._positions, ypos)
+
+        return -1
+
+    def __str__(self):
+        return f"CellGeometry.positions = {self._positions}"
 
 
 class CellEditor(QListView):
@@ -348,7 +383,7 @@ class CellDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.extra_emit = False
         self._open_editor_index = QModelIndex()
-        self.last_idx = IndexPoint(-1, -1, -1, QPoint())
+        self.hovered_index = Trindex(QModelIndex(), -1)
 
         self.element_selection = False
         self.mouse_pos = QPoint()
@@ -356,7 +391,7 @@ class CellDelegate(QStyledItemDelegate):
     def paint(
         self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
-        if not self.last_idx.isValid():
+        if not self.hovered_index:
             painter.save()
             super().paint(painter, option, QModelIndex())
             painter.restore()
@@ -389,9 +424,7 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        if self.element_selection and sub_option.rect.contains(
-                            self.mouse_pos
-                        ):
+                        if Trindex(index, i) == self.hovered_index:
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
@@ -430,13 +463,11 @@ class CellDelegate(QStyledItemDelegate):
             model: CellItem = index.data(Qt.ItemDataRole.EditRole)
             editor.setModel(model)
             self.editorOpened.emit(editor)
-            if self.last_idx.isValid():
-                print("Open child editor")
-                selected = model.index(self.last_idx.erow, 0)
+
+            if self.hovered_index.table_index == index:
+                selected = model.index(self.hovered_index.cell_index, 0)
                 editor.edit(selected)
-                self.last_idx = IndexPoint(-1, -1, -1, QPoint())
                 return
-            print("IndexPoint invalid")
 
     def setModelData(self, editor: CellEditor, model: TableModel, index: QModelIndex):
         model.setData(index, editor.model().item)
@@ -574,11 +605,11 @@ class BaseTable(QTableView):
         self._painting = True
         self._editor: CellEditor | None = None
         self._drag_start_position: QPoint | None = None
-        self._last_painted = IndexPoint(-1, -1, -1, QPoint())
         self._visible_row = -1
         self._definition_for_mime_data = None
         self._toolset_reference: dict[str, BaseElementDefinitions] | None = None
         self._element_selection = Settings.value("User/editor.single_selection")
+        self._entered_cell = CellGeometry(QModelIndex())
 
         self.setEditTriggers(QTableView.EditTrigger.CurrentChanged)
         self.setDragEnabled(True)
@@ -588,8 +619,11 @@ class BaseTable(QTableView):
         self.setCornerButtonEnabled(False)
         self.setMouseTracking(True)
 
+        self.entered.connect(self._on_entered)
+
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.verticalScrollBar().setSingleStep(10)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -690,8 +724,15 @@ class BaseTable(QTableView):
 
         return False
 
+    # Signal Handler
+
     def on_model_changed(self) -> None:
         self.changeMade.emit()
+
+    def _on_entered(self, index: QModelIndex) -> None:
+        print(f"Entered index {index.row()=} | {index.column()=}")
+        self._entered_cell = CellGeometry(index)
+        print(self._entered_cell)
 
     def _on_row_removed(self, parent: QModelIndex, first: int, last: int) -> None:
         for row in range(first, self.model().rowCount()):
@@ -884,28 +925,14 @@ class BaseTable(QTableView):
 
     # Event handler
 
-    def get_index_point(self, pos: QPoint) -> IndexPoint:
-        idx = self.indexAt(pos)
-        if idx.isValid():
-            cell_rect = self.visualRect(idx)
-            relative_mouse_pos = QPoint(
-                pos.x() - cell_rect.x(), pos.y() - cell_rect.y()
-            )
-            erow = idx.data().row_for_pos(relative_mouse_pos.y())
-            return IndexPoint(
-                idx.row(),
-                idx.column(),
-                erow,
-                self.viewport().mapFromParent(pos),
-            )
-        return IndexPoint(-1, -1, -1, QPoint())
-
     def keyReleaseEvent(self, ev: QKeyEvent):
         if (
             ev.keyCombination().keyboardModifiers()
             & Qt.KeyboardModifier.ControlModifier
         ):
-            self.itemDelegate().last_idx = IndexPoint(-1, -1, -1, QPoint())
+            updated_index = self.itemDelegate().hovered_index.table_index
+            self.itemDelegate().hovered_index = Trindex(QModelIndex(), -1)
+            self.update(updated_index)
 
         super().keyReleaseEvent(ev)
 
@@ -925,10 +952,23 @@ class BaseTable(QTableView):
             self._element_selection
             and not event.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
-            self.itemDelegate().element_selection = True
-            self.itemDelegate().mouse_pos = self.viewport().mapFromParent(event.pos())
+            index = self.indexAt(event.pos())
+            cell_rect = self.visualRect(index)
+            cell_idx = self._entered_cell.get_cell_index(
+                cell_rect.topLeft(), event.pos()
+            )
+            trindex = Trindex(index, cell_idx)
+            if trindex != self.itemDelegate().hovered_index:
+                self.itemDelegate().hovered_index = trindex
+                self.update(index)
+
         else:
-            self.itemDelegate().element_selection = False
+            self.itemDelegate().hovered_index = Trindex(QModelIndex(), -1)
+
+        #     self.itemDelegate().element_selection = True
+        #     self.itemDelegate().mouse_pos = self.viewport().mapFromParent(event.pos())
+        # else:
+        #     self.itemDelegate().element_selection = False
 
         super().mouseMoveEvent(event)
 
@@ -939,8 +979,6 @@ class BaseTable(QTableView):
             if self._editor:
                 self.close_active_editor()
                 if index.isValid():
-                    self.itemDelegate().last_idx = self.get_index_point(e.pos())
-                    print(f"Set Index Point: {self.itemDelegate().last_idx}")
                     self.setCurrentIndex(index)
                 e.accept()
                 return
@@ -1085,8 +1123,6 @@ class Table(BaseTable):
 
         self.frozen_table = FrozenRowTable(self)
 
-        # self.frozen_table.cellEditorOpened.connect(self._relay_frozen_editor_opened)
-        # self.frozen_table.cellEditorClosed.connect(self._relay_frozen_editor_closed)
         self.frozen_table.changeMade.connect(self.changeMade.emit)
         self.frozen_table.horizontalHeader().sectionResized.connect(
             self.close_active_editor
@@ -1172,6 +1208,10 @@ class Table(BaseTable):
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
+
+    def set_toolset_reference(self, toolsets):
+        super().set_toolset_reference(toolsets)
+        self.frozen_table.set_toolset_reference(toolsets)
 
     # Scrolling behaviour
 
@@ -1658,7 +1698,7 @@ class FrozenRowTable(BaseTable):
             return
         self._table.close_active_editor()
         super().on_editor_opened(editor)
-        self._table.cellEditorOpened.emit(editor)
+        self._table.editingLevelChanged.emit(self.editing_level())
 
     def paste_index(self, mime_data):
         super().paste_index(mime_data)
@@ -1904,7 +1944,6 @@ class PresenterCanvas(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-        # self.setMouseTracking(True)
 
     def change_item(self, item: QGraphicsItem):
         self.scene().lines.clear()

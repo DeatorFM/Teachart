@@ -75,24 +75,13 @@ class MimeData:
     element_data: QByteArray | None = field(default=None)
 
 
-@dataclass(frozen=True, slots=True)
-class IndexPoint:
-    """Stores cell index at table and cell level as well as the selected mouse position inside a table."""
+@dataclass(frozen=True)
+class Trindex:
+    table_index: QModelIndex
+    cell_index: int
 
-    row: int
-    column: int
-    erow: int
-    point: QPoint
-
-    def __eq__(self, value: IndexPoint):
-        return (
-            self.row == value.row
-            and self.column == value.column
-            and self.erow == value.erow
-        )
-
-    def isValid(self) -> bool:
-        return self.row + self.column + self.erow > -1 and not self.point.isNull()
+    def __bool__(self) -> bool:
+        return self.table_index.isValid() and self.cell_index > -1
 
 
 class CellItem(list):
@@ -132,14 +121,14 @@ class CellItem(list):
             f"Argument must be of type of BaseElementModel but type is {type(object)}"
         )
 
-    def rects(self, top_left: QPoint = QPoint(0,0)) -> list[QRect]:
+    def rects(self, top_left: QPoint = QPoint(0, 0)) -> list[QRect]:
         y_offset = 0
         rects = []
         for model in self:
             rects.append(QRect(top_left.x(), top_left.y() + y_offset, model.item_size))
             y_offset += model.item_size.height()
         return rects
-            
+
     @property
     def current_size(self) -> QSize:
         return QSize(self.width, self.height)
@@ -701,6 +690,8 @@ class TableModel(QAbstractTableModel):
                 return model
             elif role == Qt.ItemDataRole.SizeHintRole:
                 return item.current_size
+            elif role == Qt.ItemDataRole.ToolTipRole:
+                return None
             return item
         return None
 
