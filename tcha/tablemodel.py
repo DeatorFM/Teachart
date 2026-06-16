@@ -132,8 +132,14 @@ class CellItem(list):
             f"Argument must be of type of BaseElementModel but type is {type(object)}"
         )
 
-    def rects(self, top_left: QPoint) -> list[QRect]: ...
-
+    def rects(self, top_left: QPoint = QPoint(0,0)) -> list[QRect]:
+        y_offset = 0
+        rects = []
+        for model in self:
+            rects.append(QRect(top_left.x(), top_left.y() + y_offset, model.item_size))
+            y_offset += model.item_size.height()
+        return rects
+            
     @property
     def current_size(self) -> QSize:
         return QSize(self.width, self.height)
