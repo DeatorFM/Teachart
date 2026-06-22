@@ -3,17 +3,12 @@ from __future__ import annotations
 import argparse
 import importlib.util as imputil
 import json
+import pprint
 import zipfile
 from pathlib import Path
+from typing import Any, Type
 
 from PyQt6.QtCore import QByteArray, QDataStream, QIODevice, qChecksum
-
-
-# CHECKSUM LIGHT.TASTE: 54659
-class PropertyAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        print(parser, namespace, values, option_string)
-        return super().__call__(parser, namespace, values, option_string)
 
 
 def convert_to_bin(destination: Path, res_file: Path) -> int:
@@ -117,23 +112,84 @@ def get_parser() -> argparse.ArgumentParser:
     parser_bin.set_defaults(func=handle_bin)
 
     parser_taste = subparsers.add_parser("taste", help="Edit taste-file")
+    parser_taste.add_argument_group("taste", "Edit taste-file")
+
     parser_taste.add_argument(
-        "--properties",
-        "-p",
-        nargs="+",
-        metavar="[KEY] [VALUE]",
-        action=PropertyAction,
-        help="Specify a KEY to show the current value and optionally a VALUE to be changed in the theme's properties file",
+        "path",
+        type=str,
+        help="The target path of the taste-file e.g.: taste [Path]",
     )
 
-    # action = parser.add_argument(
-    #     "--taste",
-    #     "-t",
-    #     type=str,
-    #     nargs=2,
-    #     help="Access and modify taste-file",
-    # )
+    parser_taste.add_argument(
+        "--property",
+        nargs="+",
+        type=str,
+        metavar=("KEY", "VALUE"),
+        help="Specify a KEY to show the current value and optionally a VALUE to change the value of KEY.",
+    )
+    parser_taste.set_defaults(func=handle_taste)
+
     return parser
+
+
+def handle_taste(namespace: argparse.Namespace) -> None:
+    print(namespace)
+    taste_file = Path(namespace.path)
+    if taste_file.exists():
+        zipf = zipfile.ZipFile(taste_file, "r")
+
+        if hasattr(namespace, "property"):
+            with zipf.open("properties.json", "r") as read_props:
+                props: dict = json.load(read_props)
+            new_props = handle_properties(props, namespace)
+
+            print(zipf)
+            zipf.close()
+
+    else:
+        print(f"'{e.filename}' could not be found.")
+
+
+def handle_properties(props: dict, namespace: argparse.Namespace) -> dict:
+    def prepare_value(val: str) -> Any:
+        if val == "True":
+            return True
+        if val == "False":
+            return False
+        return val
+
+    if namespace.property:
+        key = namespace.property[0]
+        if key == "colors":
+            print("Value 'colors' cannot be changed")
+            return props
+
+        if len(namespace.property) == 1:
+            pprint.pprint(props.get(key, "Key not existing"))
+            return props
+
+        elif len(namespace.property) == 2:
+            if key not in ("palette", "colors") and props.get(key):
+                value = prepare_value(namespace.property[1])
+                val_type = type(props.get(key))
+                try:
+                    props[key] = val_type(value)
+                    return props
+
+                except (ValueError, TypeError):
+                    print(f"Incorrect argument for key '{key}'")
+                    return props
+            else:
+                print("Key not existing")
+                return props
+
+        else:
+            print("Too many arguments. Only max. 2 allowed.")
+            return props
+
+    else:
+        pprint.pprint(props)
+        return props
 
 
 def handle_bin(namespace: argparse.Namespace) -> None:
@@ -162,7 +218,8 @@ def handle_pack(namespace: argparse.Namespace):
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    args.func(args)
+    if hasattr(args, "func"):
+        args.func(args)
 
 
 if __name__ == "__main__":
