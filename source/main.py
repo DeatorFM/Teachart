@@ -1,0 +1,28 @@
+import os
+import sys
+
+from PyQt6.QtCore import QCoreApplication, QDir, QProcess
+
+from tcha.core import AppCore
+
+
+def restart() -> None:
+    QCoreApplication.quit()
+    status = QProcess.startDetached(sys.executable, sys.argv)
+    print(status)
+
+
+def main() -> None:
+    app = AppCore(sys.argv)
+    app.restartRequested.connect(restart)
+    root = os.path.dirname(os.path.abspath(__file__))
+    QDir.addSearchPath("icons", os.path.join(root, "resources/icons"))
+    QDir.addSearchPath("stylesheet", os.path.join(root, "resources/stylesheets"))
+    mw = app.startup_window()
+    mw.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
+5

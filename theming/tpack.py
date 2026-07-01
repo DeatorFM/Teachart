@@ -3,12 +3,24 @@ from __future__ import annotations
 import argparse
 import importlib.util as imputil
 import json
+import os
 import pprint
+import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 
 from PyQt6.QtCore import QByteArray, QDataStream, QIODevice, qChecksum
+
+MUTABLE_PROPERTIES = ("name", "stylesheet", "resources", "applyFullPalette", "chksum")
+
+PROPERTIES = ["colors", "palette"] + list(MUTABLE_PROPERTIES)
+
+
+def check_properties(props: dict) -> bool:
+    if set(props.keys()) == set(PROPERTIES):
+        return True
+    return False
 
 
 def convert_to_bin(destination: Path, res_file: Path) -> int:
@@ -59,20 +71,31 @@ def pack_theme(
         if (
             destination.suffix == ".taste"
             and properties.suffix == ".json"
-            and bin.suffix == ".bin"
+            and bin.suffix in (".bin", ".dat")
             and stylesheet.suffix == ".qss"
         ):
-            with open(properties.as_posix(), "r", encoding="utf-8") as json_f:
+            with (
+                open(properties.as_posix(), "r", encoding="utf-8") as json_f,
+                open(bin.as_posix(), "rb") as bin_f,
+            ):
                 json_properties = json.load(json_f)
-            file = zipfile.ZipFile(destination.as_posix(), mode="w")
-            file.write(properties.as_posix(), "properties.json")
-            file.write(bin.as_posix(), json_properties["resources"])
-            file.write(stylesheet.as_posix(), json_properties["stylesheet"])
-            file.close()
-            return True
+                check = check_properties(json_properties)
+                if not check:
+                    print(
+                        "This 'properties.json' file is missing keys.\n Check if one of the following keys is missing:"
+                    )
+                    print(PROPERTIES)
+                    return False
+                json_properties["chksum"] = qChecksum(bin_f.read())
+
+            with zipfile.ZipFile(destination.as_posix(), mode="w") as file_:
+                file_.writestr("properties.json", json.dumps(json_properties))
+                file_.write(bin.as_posix(), json_properties["resources"])
+                file_.write(stylesheet.as_posix(), json_properties["stylesheet"])
+                return True
 
         print(
-            "Either one or more files have the wrong type: \ndestination : taste\nproperties : json\nresources : bin\nstylesheet : qss "
+            "Either one or more files have the wrong type: \ndestination : taste\nproperties : json\nresources : bin/dat\nstylesheet : qss "
         )
         return False
 
@@ -121,9 +144,17 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser_taste.add_argument(
+        "--keep-old",
+        required=False,
+        action="store_true",
+        help="Keeps old taste-file if changed",
+    )
+
+    parser_taste.add_argument(
         "--property",
         nargs="+",
         type=str,
+        required=False,
         metavar=("KEY", "VALUE"),
         help="Specify a KEY to show the current value and optionally a VALUE to change the value of KEY.",
     )
@@ -135,28 +166,73 @@ def get_parser() -> argparse.ArgumentParser:
 def handle_taste(namespace: argparse.Namespace) -> None:
     print(namespace)
     taste_file = Path(namespace.path)
+    temp_descr, temp_file_str = tempfile.mkstemp(
+        suffix=".taste.temp", dir=taste_file.parent.as_posix()
+    )
+    os.close(temp_descr)
+    temp_file = Path(temp_file_str)
+
     if taste_file.exists():
-        zipf = zipfile.ZipFile(taste_file, "r")
+        with (
+            zipfile.ZipFile(taste_file, "r") as rzip,
+            zipfile.ZipFile(temp_file, "w") as wzip,
+        ):
+            raw = rzip.read("properties.json")
+            if not raw:
+                print("Couldn't find or read 'properties.json'")
+                return
+            props: dict = json.loads(raw)
+            new_props = props
 
-        if hasattr(namespace, "property"):
-            with zipf.open("properties.json", "r") as read_props:
-                props: dict = json.load(read_props)
-            new_props = handle_properties(props, namespace)
+            if hasattr(namespace, "property"):
+                new_props = handle_properties(props, namespace)
+            else:
+                print(rzip)
+                temp_file.unlink(missing_ok=True)
+                return
 
-            print(zipf)
-            zipf.close()
+            # Write new taste
+            wzip.writestr(
+                "properties.json", json.dumps(new_props, indent=4).encode("utf-8")
+            )
+            try:
+                for file_ in rzip.filelist:
+                    if file_.filename.endswith((".bin", ".dat")):
+                        wzip.writestr(
+                            new_props["resources"], rzip.read(props["resources"])
+                        )
+                    elif file_.filename.endswith(".qss"):
+                        wzip.writestr(
+                            new_props["stylesheet"], rzip.read(props["stylesheet"])
+                        )
+            except KeyError:
+                print(
+                    "Faulty 'properties.json'. Please repack taste-file with json containing all keys"
+                )
+                temp_file.unlink(missing_ok=True)
+                return
+
+        if not getattr(namespace, "keep_old", False):
+            temp_file.replace(taste_file)
+        else:
+            old_file = taste_file.parent / f"old_{taste_file.name}"
+            taste_file.replace(old_file)
+            temp_file.replace(taste_file)
 
     else:
-        print(f"'{e.filename}' could not be found.")
+        print(f"'{taste_file.name}' could not be found.")
 
 
 def handle_properties(props: dict, namespace: argparse.Namespace) -> dict:
     def prepare_value(val: str) -> Any:
-        if val == "True":
+        if not isinstance(val, str):
+            return val
+        if val.lower() == "true":
             return True
-        if val == "False":
+        if val.lower() == "false":
             return False
-        return val
+        if val.isnumeric():
+            return int(val)
 
     if namespace.property:
         key = namespace.property[0]
@@ -166,30 +242,25 @@ def handle_properties(props: dict, namespace: argparse.Namespace) -> dict:
 
         if len(namespace.property) == 1:
             pprint.pprint(props.get(key, "Key not existing"))
-            return props
 
         elif len(namespace.property) == 2:
-            if key not in ("palette", "colors") and props.get(key):
+            if key not in MUTABLE_PROPERTIES and props.get(key):
                 value = prepare_value(namespace.property[1])
                 val_type = type(props.get(key))
                 try:
                     props[key] = val_type(value)
-                    return props
 
                 except (ValueError, TypeError):
                     print(f"Incorrect argument for key '{key}'")
-                    return props
             else:
                 print("Key not existing")
-                return props
 
         else:
             print("Too many arguments. Only max. 2 allowed.")
-            return props
 
     else:
         pprint.pprint(props)
-        return props
+    return props
 
 
 def handle_bin(namespace: argparse.Namespace) -> None:
@@ -206,9 +277,7 @@ def handle_pack(namespace: argparse.Namespace):
         lambda path: Path(path), namespace.paths
     )
     print(f"Files: {destination}", properties, resources, stylesheet, sep=", ")
-    result = pack_theme(
-        destination.name, properties.name, resources.name, stylesheet.name
-    )
+    result = pack_theme(destination, properties, resources, stylesheet)
     if result:
         print("Successfully composed taste-file")
     else:

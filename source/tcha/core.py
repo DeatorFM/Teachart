@@ -5,7 +5,7 @@ import os
 import sys
 import typing
 from optparse import Values
-from os.path import abspath, exists, isfile, split
+from os.path import abspath, exists
 from pathlib import Path
 from shutil import rmtree
 from zipimport import zipimporter
