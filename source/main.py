@@ -2,7 +2,6 @@ import os
 import sys
 
 from PyQt6.QtCore import QCoreApplication, QDir, QProcess
-
 from tcha.core import AppCore
 
 
@@ -25,4 +24,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-5
