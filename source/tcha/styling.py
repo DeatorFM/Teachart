@@ -1,18 +1,33 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import os.path as osp
 import platform
 import re
 import sys
 import tempfile
+import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
 from typing import NewType
 from xml.etree import ElementTree as ET
 
-from PyQt6.QtCore import QFile, QPoint, QRect, QRectF, QSize, Qt, QXmlStreamWriter
+from PyQt6.QtCore import (
+    QByteArray,
+    QFile,
+    QPoint,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+    QXmlStreamWriter,
+    qChecksum,
+    qRegisterResourceData,
+)
 from PyQt6.QtGui import (
     QColor,
     QGuiApplication,
@@ -22,172 +37,198 @@ from PyQt6.QtGui import (
     QPainter,
     QPalette,
     QPixmap,
-    QRgba64,
 )
 from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtWidgets import QProxyStyle, QStyleOption, QWidget
+from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyleOption, QWidget
+from themes.properties import NTHEME_PROPERTIES
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
+from tcha.settings import Settings, Values
 
 ColorModifier = NewType("ColorModifier", tuple[float, float, float])
 
 ET.register_namespace("", "http://www.w3.org/2000/svg")
 
 
-def make_palette(color_def: dict[str, QRgba64]) -> QPalette:
+def get_external_theme_names() -> Iterator[tuple[str, str]]:
+    theme_path = Settings.user_path() / "themes"
+
+    if not theme_path.exists():
+        return
+
+    for file in theme_path.iterdir():
+        if file.suffix == ".taste" and "native:" not in file.stem:
+            try:
+                with zipfile.ZipFile(file, "r") as zf:
+                    properties_data = zf.read("properties.json")
+                    properties = json.loads(properties_data)
+
+                    if "name" in properties:
+                        yield file.stem, properties["name"]
+            except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
+                # Skip invalid .taste files
+                print(f"Warning: Could not read theme from {file.name}: {e}")
+                continue
+
+
+def make_palette(
+    color_def: dict[str, list[int, int, int, int]], apply_all=False
+) -> QPalette:
     palette = QPalette()
-    # palette.setColor(
-    #     QPalette.ColorRole.WindowText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Button,
-    #     QColor.fromRgba64(color_def.get('<c k="treeSectionHeader.background"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.ButtonText,
-    #     QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Base,
-    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Window,
-    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Highlight,
-    #     QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.HighlightedText,
-    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.AlternateBase,
-    #     QColor.fromRgba64(color_def.get('<c k="list.alternateBackground"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.ToolTipBase,
-    #     QColor.fromRgba64(color_def.get('<c k="background:base" state="popup"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.ToolTipText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
-    # )
-    # if hasattr(QPalette.ColorRole, "Foreground"):
-    #     palette.setColor(
-    #         QPalette.ColorRole.Foreground,  # type: ignore
-    #         QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
-    #     )
 
-    # palette.setColor(
-    #     QPalette.ColorRole.Light,
-    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Midlight,
-    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Dark,
-    #     QColor.fromRgba64(color_def.get('<c k="background:base"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Mid, QColor.fromRgba64(color_def.get('<c k="border:base"/>'))
-    # )
-    # palette.setColor(
-    #     QPalette.ColorRole.Shadow,
-    #     QColor.fromRgba64(color_def.get('<c k="border:base"/>')),
-    # )
+    # Mapping from string names to QPalette.ColorRole enums
+    color_role_map = {
+        "WindowText": QPalette.ColorRole.WindowText,
+        "Button": QPalette.ColorRole.Button,
+        "Light": QPalette.ColorRole.Light,
+        "Dark": QPalette.ColorRole.Dark,
+        "Mid": QPalette.ColorRole.Mid,
+        "Text": QPalette.ColorRole.Text,
+        "Base": QPalette.ColorRole.Base,
+        "Window": QPalette.ColorRole.Window,
+        "Shadow": QPalette.ColorRole.Shadow,
+        "Highlight": QPalette.ColorRole.Highlight,
+        "HighlightedText": QPalette.ColorRole.HighlightedText,
+        "Link": QPalette.ColorRole.Link,
+        "LinkVisited": QPalette.ColorRole.LinkVisited,
+        "AlternateBase": QPalette.ColorRole.AlternateBase,
+        "ToolTipBase": QPalette.ColorRole.ToolTipBase,
+        "ToolTipText": QPalette.ColorRole.ToolTipText,
+        "ButtonText": QPalette.ColorRole.ButtonText,
+        "BrightText": QPalette.ColorRole.BrightText,
+        "Midlight": QPalette.ColorRole.Midlight,
+        "PlaceholderText": QPalette.ColorRole.PlaceholderText,
+    }
 
-    # # disabled
-    # palette.setColor(
-    #     QPalette.ColorGroup.Disabled,
-    #     QPalette.ColorRole.WindowText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorGroup.Disabled,
-    #     QPalette.ColorRole.ButtonText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorGroup.Disabled,
-    #     QPalette.ColorRole.Highlight,
-    #     QColor.fromRgba64(
-    #         color_def.get(
-    #             '<c k="foreground:base" state="disabledSelectionBackground"/>'
-    #         )
-    #     ),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorGroup.Disabled,
-    #     QPalette.ColorRole.HighlightedText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
-    # )
+    # Mapping from string names to QPalette.ColorGroup enums
+    color_group_map = {
+        "Disabled": QPalette.ColorGroup.Disabled,
+        "Inactive": QPalette.ColorGroup.Inactive,
+        "Active": QPalette.ColorGroup.Active,
+    }
 
-    # # inactive
-    # palette.setColor(
-    #     QPalette.ColorGroup.Inactive,
-    #     QPalette.ColorRole.Highlight,
-    #     QColor.fromRgba64(
-    #         color_def.get(
-    #             '<c k="primary:base" state="list.inactiveSelectionBackground"/>'
-    #         )
-    #     ),
-    # )
-    # palette.setColor(
-    #     QPalette.ColorGroup.Inactive,
-    #     QPalette.ColorRole.HighlightedText,
-    #     QColor.fromRgba64(color_def.get('<c k="foreground:base"/>')),
-    # )
+    # Essential roles to apply when apply_full_palette is False
+    essential_roles = {
+        "Text",
+        "Base",
+        "Window",
+        "WindowText",
+        "Button",
+        "ButtonText",
+        "Highlight",
+        "HighlightedText",
+        "Link",
+        "LinkVisited",
+        "AlternateBase",
+        "ToolTipBase",
+        "ToolTipText",
+        "PlaceholderText",
+    }
 
-    palette.setColor(
-        QPalette.ColorRole.Text,
-        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="icon"/>')),
-    )
-    palette.setColor(
-        QPalette.ColorGroup.Disabled,
-        QPalette.ColorRole.Text,
-        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
-    )
-    palette.setColor(
-        QPalette.ColorRole.Link,
-        QColor.fromRgba64(color_def.get('<c k="primary:base"/>')),
-    )
-    palette.setColor(
-        QPalette.ColorRole.LinkVisited,
-        QColor.fromRgba64(color_def.get('<c k="linkVisited"/>')),
-    )
-    if hasattr(QPalette.ColorRole, "PlaceholderText"):
-        palette.setColor(
-            QPalette.ColorRole.PlaceholderText,
-            QColor.fromRgba64(
-                color_def.get('<c k="foreground:base" state="input.placeholder"/>')
-            ),
-        )
+    for key, rgba_values in color_def.items():
+        # Parse the key to extract color group and role
+        parts = key.split(".")
+        if len(parts) == 2:
+            # Format: "ColorGroup.ColorRole" (e.g., "Disabled.Text")
+            group_name, role_name = parts
+            color_group = color_group_map.get(group_name)
+            color_role = color_role_map.get(role_name)
+        else:
+            # Format: "ColorRole" (e.g., "Base")
+            role_name = parts[0]
+            color_group = None  # All groups
+            color_role = color_role_map.get(role_name)
 
-    palette.setColor(
-        QPalette.ColorGroup.Disabled,
-        QPalette.ColorRole.Link,
-        QColor.fromRgba64(
-            color_def.get(
-                '<c k="foreground:base" state="disabledSelectionBackground"/>'
-            )
-        ),
-    )
-    palette.setColor(
-        QPalette.ColorGroup.Disabled,
-        QPalette.ColorRole.LinkVisited,
-        QColor.fromRgba64(color_def.get('<c k="foreground:base" state="disabled"/>')),
-    )
+        # Skip if we don't recognize the role or if not applying full palette
+        if color_role is None:
+            continue
+
+        if not apply_all and role_name not in essential_roles:
+            continue
+
+        # Create QColor from RGBA values
+        if len(rgba_values) == 4:
+            r, g, b, a = rgba_values
+            color = QColor(r, g, b, a)
+        elif len(rgba_values) == 3:
+            r, g, b = rgba_values
+            color = QColor(r, g, b)
+        else:
+            continue
+
+        # Set the color in the palette
+        if color_group is not None:
+            palette.setColor(color_group, color_role, color)
+        else:
+            # Set for all color groups
+            palette.setColor(color_role, color)
 
     return palette
 
 
-def transform_color(color: QColor, alteration: tuple[int, int, int]) -> QColor:
+def load_theme(identifier: str) -> None:
+    if identifier.startswith("native:"):
+        name = identifier.removeprefix("native:")
+        return _load_native_theme(name)
+
+    if not _load_extern_theme():
+        return _load_native_theme()
+
+
+def _load_native_theme(name: str) -> bool:
+    if name in NTHEME_PROPERTIES:
+        app: QApplication = QApplication.instance()
+        app.setPalette(
+            make_palette(
+                NTHEME_PROPERTIES[name]["palette"],
+                NTHEME_PROPERTIES[name]["applyFullPalette"],
+            ),
+        )
+
+        import_module(f"themes.{NTHEME_PROPERTIES[name]['resources']}")
+        stylesheets = import_module("themes.stylesheets")
+        app.setStylesheet(stylesheets.STYLESHEETS[name])
+        return True
+
+    load_theme(Values.default_value("User/appearance"))
+
+
+def _load_extern_theme(fname: str) -> bool:
+    taste_file = Settings.user_path() / "themes" / f"{fname}.taste"
+    try:
+        with zipfile.ZipFile(taste_file, "r") as f_taste:
+            app: QApplication = QApplication.instance()
+            properties = json.loads(f_taste.read("properties.json"))
+            palette = make_palette(
+                properties["palette"], properties["applyFullPalette"]
+            )
+            app.setPalette(palette)
+            res_data = f_taste.read(properties["resources"], "")
+            if qChecksum(res_data) == properties["chksum"]:
+                qt_resource_data, qt_resource_name, qt_resource_struct = (
+                    restructure_resource_data(res_data)
+                )
+                qRegisterResourceData(
+                    0x03, qt_resource_data, qt_resource_name, qt_resource_struct
+                )
+                stylesheet = f_taste.read(properties["stylesheet"])
+                app.setStyleSheet(stylesheet.decode())
+                return True
+            return False
+
+    except zipfile.BadZipFile:
+        print("taste-file is corrupted and cannot be opened.")
+    except FileNotFoundError:
+        print("taste-file not found in User folder or taste-file is missing subfile")
+    except (KeyError, ValueError, TypeError):
+        print("taste-file has invalid data or structure")
+    return False
+
+
+def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]: ...
+
+
+def transform_color(color: QColor, alteration: tuple[float, float, float]) -> QColor:
     """Applies the transformation values to a QColor class."""
     for i, val in enumerate(alteration):
         if val > 0.0:

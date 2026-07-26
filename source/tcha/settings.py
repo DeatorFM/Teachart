@@ -1,13 +1,14 @@
-from ast import Call
-from dataclasses import asdict, dataclass, field
-from enum import Enum, Flag, IntEnum, StrEnum
+from __future__ import annotations
+
+from collections.abc import Callable, KeysView
+from dataclasses import dataclass, field
+from enum import Enum, Flag, StrEnum
 from functools import cache
 from os.path import abspath, dirname, exists
 from pathlib import Path
-from re import L
-from typing import Any, Callable, KeysView, Self, Type
+from typing import Any, ClassVar, Self
 
-import PyQt6.uic as uic
+from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QLocale, QSettings, QSize, Qt
 from PyQt6.QtGui import QCloseEvent
@@ -22,9 +23,31 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from themes.properties import NATIVE_THEMES
 
 from tcha.dbmodels import create_database, reset_database
+from tcha.styling import get_external_theme_names
 from tcha.utils import word_as_bool
+
+
+def get_themes() -> list[ThemeValue]:
+    themes = []
+    for name, theme in NATIVE_THEMES.values():
+        themes.append(
+            ThemeValue(
+                theme["name"].get(Settings.value("User/language")), f"native:{name}"
+            )
+        )
+
+    for fname, theme_name in get_external_theme_names():
+        themes.append(ThemeValue(theme_name, fname))
+
+
+@dataclass(frozen=True)
+class ThemeValue:
+    name: str
+    value: str
+
 
 # Constants
 
@@ -63,18 +86,12 @@ class Locale(Enum):
         try:
             return list(cls)[i]
         except IndexError:
-            cls.EnglishUK
+            return cls.EnglishUK
 
 
 class TimeFormat(StrEnum):
     TF24 = "HH:mm"
     TF12 = "h:mm ap"
-
-
-class Appearance(IntEnum):
-    Light = 0
-    Dark = 1
-    System = 2
 
 
 class ReturnFlags(Flag):
@@ -115,8 +132,7 @@ class SettingsDialog(QDialog):
         self.connect_signals()
 
     def connect_signals(self) -> None:
-        self.ui.rb_light.toggled.connect(lambda: self.set_appearance(Appearance.Light))
-        self.ui.rb_dark.toggled.connect(lambda: self.set_appearance(Appearance.Dark))
+        self.ui.cb_themes.activated.connect(self.set_appearance)
         self.ui.cb_language.activated.connect(self._on_language_set)
         self.ui.cb_time_format.activated.connect(self._on_time_format_set)
         self.ui.cb_always_schedule.toggled.connect(self._on_always_schedule_set)
@@ -164,7 +180,10 @@ class SettingsDialog(QDialog):
     # UI setup to settings
 
     def _import_options(self) -> None:
-        """Populates combo boxes for language and time format"""
+        """Populates combo boxes for language and time format and themes"""
+        for theme in get_themes():
+            self.cb_themes.insertItem(self.cb_themes.count(), theme.name, theme.value)
+
         for value in Locale.__members__.values():
             self.ui.cb_language.addItem(value.name, value)
 
@@ -179,14 +198,13 @@ class SettingsDialog(QDialog):
             print(key, value)
             self._settings_map[key](value)
 
-    def _tick_appearance(self, value: Appearance | int) -> None:
+    def _select_appearance(self, value: str) -> None:
         """Set appearance option based on Appearance value or int."""
-        if value == Appearance.Light:
-            self.ui.rb_light.setChecked(True)
-        elif value == Appearance.Dark:
-            self.ui.rb_dark.setChecked(True)
+        i = self.cb_themes.findData(value)
+        if i > -1:
+            self.cb_themes.setCurrentIndex(i)
         else:
-            self.ui.rb_dark.setChecked(True)
+            self.cb_themes.setCurrentIndex(0)
 
     def _select_language(self, locale: Locale) -> None:
         """Set language ComboBox for Locale value"""
@@ -213,8 +231,8 @@ class SettingsDialog(QDialog):
 
     # Setter methods
 
-    def set_appearance(self, value: Appearance) -> None:
-        self.settings["User/appearance"] = value.name
+    def set_appearance(self, index: int) -> None:
+        self.settings["User/appearance"] = self.cb_themes.itemData(index)
         self._return_flag |= ReturnFlags.UpdateStyle
 
     def _on_language_set(self) -> None:
@@ -346,7 +364,7 @@ class Settings:
         and replaces invalid values with default values."""
         values = {}
 
-        for key in Values.keys():
+        for key in Values:
             print(f"Getting key {key}")
             values[key] = Settings.value(key)
 
@@ -408,18 +426,16 @@ class Value:
     """Definition for value handling"""
 
     default: Any
-    type: Type
+    type: type
     qvariant: bool
     get: Callable | None = field(default=None)
 
 
 class Values:
-    __VALUES: dict[str, Value] = {
+    __VALUES: ClassVar[dict[str, Value]] = {
         "AppInfo/app_ver": Value(AppInfo.app_ver, str, True),
         "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
-        "User/appearance": Value(
-            Appearance.Light, Appearance, False, lambda val: Appearance[val]
-        ),
+        "User/appearance": Value("native:light", str, False),
         "User/language": Value(
             Locale.EnglishUK, Locale, False, lambda val: Locale[val]
         ),

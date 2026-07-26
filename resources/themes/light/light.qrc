@@ -1,1 +1,64 @@
-<RCC><qresource prefix=""><file alias="arrow_drop_up_#00000040_0.svg">D:/Coding/light/arrow_drop_up_#00000040_0.svg</file><file alias="arrow_drop_up_#00000040_180.svg">D:/Coding/light/arrow_drop_up_#00000040_180.svg</file><file alias="arrow_drop_up_#00000040_270.svg">D:/Coding/light/arrow_drop_up_#00000040_270.svg</file><file alias="arrow_drop_up_#00000040_90.svg">D:/Coding/light/arrow_drop_up_#00000040_90.svg</file><file alias="arrow_drop_up_#00000060_0.svg">D:/Coding/light/arrow_drop_up_#00000060_0.svg</file><file alias="arrow_drop_up_#00000060_180.svg">D:/Coding/light/arrow_drop_up_#00000060_180.svg</file><file alias="arrow_drop_up_#00000060_270.svg">D:/Coding/light/arrow_drop_up_#00000060_270.svg</file><file alias="arrow_drop_up_#00000060_90.svg">D:/Coding/light/arrow_drop_up_#00000060_90.svg</file><file alias="arrow_drop_up_#4d515766_0.svg">D:/Coding/light/arrow_drop_up_#4d515766_0.svg</file><file alias="arrow_drop_up_#4d515766_180.svg">D:/Coding/light/arrow_drop_up_#4d515766_180.svg</file><file alias="arrow_drop_up_#4d5157ff_0.svg">D:/Coding/light/arrow_drop_up_#4d5157ff_0.svg</file><file alias="arrow_drop_up_#4d5157ff_180.svg">D:/Coding/light/arrow_drop_up_#4d5157ff_180.svg</file><file alias="arrow_upward_#4d5157ff_0.svg">D:/Coding/light/arrow_upward_#4d5157ff_0.svg</file><file alias="arrow_upward_#4d5157ff_270.svg">D:/Coding/light/arrow_upward_#4d5157ff_270.svg</file><file alias="arrow_upward_#4d5157ff_90.svg">D:/Coding/light/arrow_upward_#4d5157ff_90.svg</file><file alias="calendar_today_#4d515766_0.svg">D:/Coding/light/calendar_today_#4d515766_0.svg</file><file alias="calendar_today_#4d5157ff_0.svg">D:/Coding/light/calendar_today_#4d5157ff_0.svg</file><file alias="check_#4d5157ff_0.svg">D:/Coding/light/check_#4d5157ff_0.svg</file><file alias="check_box_#1a73e8ff_0.svg">D:/Coding/light/check_box_#1a73e8ff_0.svg</file><file alias="check_box_#4d515766_0.svg">D:/Coding/light/check_box_#4d515766_0.svg</file><file alias="check_box_outline_blank_#4d515766_0.svg">D:/Coding/light/check_box_outline_blank_#4d515766_0.svg</file><file alias="check_box_outline_blank_#4d5157ff_0.svg">D:/Coding/light/check_box_outline_blank_#4d5157ff_0.svg</file><file alias="chevron_right_#4d515766_0.svg">D:/Coding/light/chevron_right_#4d515766_0.svg</file><file alias="chevron_right_#4d515766_180.svg">D:/Coding/light/chevron_right_#4d515766_180.svg</file><file alias="chevron_right_#4d515799_180.svg">D:/Coding/light/chevron_right_#4d515799_180.svg</file><file alias="chevron_right_#4d5157ff_0.svg">D:/Coding/light/chevron_right_#4d5157ff_0.svg</file><file alias="chevron_right_#4d5157ff_180.svg">D:/Coding/light/chevron_right_#4d5157ff_180.svg</file><file alias="close_#4d515766_0.svg">D:/Coding/light/close_#4d515766_0.svg</file><file alias="close_#4d515799_0.svg">D:/Coding/light/close_#4d515799_0.svg</file><file alias="close_#4d5157ff_0.svg">D:/Coding/light/close_#4d5157ff_0.svg</file><file alias="create_new_folder_#4d5157ff_0.svg">D:/Coding/light/create_new_folder_#4d5157ff_0.svg</file><file alias="double_arrow_#4d5157ff_0.svg">D:/Coding/light/double_arrow_#4d5157ff_0.svg</file><file alias="drag_handle_#4d515766_90.svg">D:/Coding/light/drag_handle_#4d515766_90.svg</file><file alias="drag_handle_#4d5157ff_90.svg">D:/Coding/light/drag_handle_#4d5157ff_90.svg</file><file alias="drag_indicator_#4d515766_0.svg">D:/Coding/light/drag_indicator_#4d515766_0.svg</file><file alias="drag_indicator_#4d515766_90.svg">D:/Coding/light/drag_indicator_#4d515766_90.svg</file><file alias="drag_indicator_#4d5157ff_0.svg">D:/Coding/light/drag_indicator_#4d5157ff_0.svg</file><file alias="drag_indicator_#4d5157ff_90.svg">D:/Coding/light/drag_indicator_#4d5157ff_90.svg</file><file alias="east_#4d5157ff_0.svg">D:/Coding/light/east_#4d5157ff_0.svg</file><file alias="expand_less_#4d515766_0.svg">D:/Coding/light/expand_less_#4d515766_0.svg</file><file alias="expand_less_#4d515766_180.svg">D:/Coding/light/expand_less_#4d515766_180.svg</file><file alias="expand_less_#4d5157ff_0.svg">D:/Coding/light/expand_less_#4d5157ff_0.svg</file><file alias="expand_less_#4d5157ff_180.svg">D:/Coding/light/expand_less_#4d5157ff_180.svg</file><file alias="flip_to_front_#4d5157ff_0.svg">D:/Coding/light/flip_to_front_#4d5157ff_0.svg</file><file alias="fullscreen_#4d5157ff_0.svg">D:/Coding/light/fullscreen_#4d5157ff_0.svg</file><file alias="grid_view_#4d5157ff_0.svg">D:/Coding/light/grid_view_#4d5157ff_0.svg</file><file alias="horizontal_rule_#4d515766_0.svg">D:/Coding/light/horizontal_rule_#4d515766_0.svg</file><file alias="horizontal_rule_#4d515766_90.svg">D:/Coding/light/horizontal_rule_#4d515766_90.svg</file><file alias="horizontal_rule_#4d5157ff_0.svg">D:/Coding/light/horizontal_rule_#4d5157ff_0.svg</file><file alias="horizontal_rule_#4d5157ff_90.svg">D:/Coding/light/horizontal_rule_#4d5157ff_90.svg</file><file alias="indeterminate_check_box_#1a73e8ff_0.svg">D:/Coding/light/indeterminate_check_box_#1a73e8ff_0.svg</file><file alias="indeterminate_check_box_#4d515766_0.svg">D:/Coding/light/indeterminate_check_box_#4d515766_0.svg</file><file alias="list_#4d5157ff_0.svg">D:/Coding/light/list_#4d5157ff_0.svg</file><file alias="minimize_#4d5157ff_0.svg">D:/Coding/light/minimize_#4d5157ff_0.svg</file><file alias="radio_button_checked_#1a73e8ff_0.svg">D:/Coding/light/radio_button_checked_#1a73e8ff_0.svg</file><file alias="radio_button_checked_#4d515766_0.svg">D:/Coding/light/radio_button_checked_#4d515766_0.svg</file><file alias="radio_button_unchecked_#4d515766_0.svg">D:/Coding/light/radio_button_unchecked_#4d515766_0.svg</file><file alias="radio_button_unchecked_#4d5157ff_0.svg">D:/Coding/light/radio_button_unchecked_#4d5157ff_0.svg</file><file alias="vertical_line_#00000030_0.svg">D:/Coding/light/vertical_line_#00000030_0.svg</file><file alias="vertical_line_#00000050_0.svg">D:/Coding/light/vertical_line_#00000050_0.svg</file></qresource></RCC>
+<RCC>
+    <qresource>
+        <file alias="arrow_drop_up_#00000040_0.svg">svg/arrow_drop_up_#00000040_0.svg</file>
+        <file alias="arrow_drop_up_#00000040_180.svg">svg/arrow_drop_up_#00000040_180.svg</file>
+        <file alias="arrow_drop_up_#00000040_270.svg">svg/arrow_drop_up_#00000040_270.svg</file>
+        <file alias="arrow_drop_up_#00000040_90.svg">svg/arrow_drop_up_#00000040_90.svg</file>
+        <file alias="arrow_drop_up_#00000060_0.svg">svg/arrow_drop_up_#00000060_0.svg</file>
+        <file alias="arrow_drop_up_#00000060_180.svg">svg/arrow_drop_up_#00000060_180.svg</file>
+        <file alias="arrow_drop_up_#00000060_270.svg">svg/arrow_drop_up_#00000060_270.svg</file>
+        <file alias="arrow_drop_up_#00000060_90.svg">svg/arrow_drop_up_#00000060_90.svg</file>
+        <file alias="arrow_drop_up_#4d515766_0.svg">svg/arrow_drop_up_#4d515766_0.svg</file>
+        <file alias="arrow_drop_up_#4d515766_180.svg">svg/arrow_drop_up_#4d515766_180.svg</file>
+        <file alias="arrow_drop_up_#4d5157ff_0.svg">svg/arrow_drop_up_#4d5157ff_0.svg</file>
+        <file alias="arrow_drop_up_#4d5157ff_180.svg">svg/arrow_drop_up_#4d5157ff_180.svg</file>
+        <file alias="arrow_upward_#4d5157ff_0.svg">svg/arrow_upward_#4d5157ff_0.svg</file>
+        <file alias="arrow_upward_#4d5157ff_270.svg">svg/arrow_upward_#4d5157ff_270.svg</file>
+        <file alias="arrow_upward_#4d5157ff_90.svg">svg/arrow_upward_#4d5157ff_90.svg</file>
+        <file alias="calendar_today_#4d515766_0.svg">svg/calendar_today_#4d515766_0.svg</file>
+        <file alias="calendar_today_#4d5157ff_0.svg">svg/calendar_today_#4d5157ff_0.svg</file>
+        <file alias="check_#4d5157ff_0.svg">svg/check_#4d5157ff_0.svg</file>
+        <file alias="check_box_#1a73e8ff_0.svg">svg/check_box_#1a73e8ff_0.svg</file>
+        <file alias="check_box_#4d515766_0.svg">svg/check_box_#4d515766_0.svg</file>
+        <file alias="check_box_outline_blank_#4d515766_0.svg">svg/check_box_outline_blank_#4d515766_0.svg</file>
+        <file alias="check_box_outline_blank_#4d5157ff_0.svg">svg/check_box_outline_blank_#4d5157ff_0.svg</file>
+        <file alias="chevron_right_#4d515766_0.svg">svg/chevron_right_#4d515766_0.svg</file>
+        <file alias="chevron_right_#4d515766_180.svg">svg/chevron_right_#4d515766_180.svg</file>
+        <file alias="chevron_right_#4d515799_180.svg">svg/chevron_right_#4d515799_180.svg</file>
+        <file alias="chevron_right_#4d5157ff_0.svg">svg/chevron_right_#4d5157ff_0.svg</file>
+        <file alias="chevron_right_#4d5157ff_180.svg">svg/chevron_right_#4d5157ff_180.svg</file>
+        <file alias="close_#4d515766_0.svg">svg/close_#4d515766_0.svg</file>
+        <file alias="close_#4d515799_0.svg">svg/close_#4d515799_0.svg</file>
+        <file alias="close_#4d5157ff_0.svg">svg/close_#4d5157ff_0.svg</file>
+        <file alias="create_new_folder_#4d5157ff_0.svg">svg/create_new_folder_#4d5157ff_0.svg</file>
+        <file alias="double_arrow_#4d5157ff_0.svg">svg/double_arrow_#4d5157ff_0.svg</file>
+        <file alias="drag_handle_#4d515766_90.svg">svg/drag_handle_#4d515766_90.svg</file>
+        <file alias="drag_handle_#4d5157ff_90.svg">svg/drag_handle_#4d5157ff_90.svg</file>
+        <file alias="drag_indicator_#4d515766_0.svg">svg/drag_indicator_#4d515766_0.svg</file>
+        <file alias="drag_indicator_#4d515766_90.svg">svg/drag_indicator_#4d515766_90.svg</file>
+        <file alias="drag_indicator_#4d5157ff_0.svg">svg/drag_indicator_#4d5157ff_0.svg</file>
+        <file alias="drag_indicator_#4d5157ff_90.svg">svg/drag_indicator_#4d5157ff_90.svg</file>
+        <file alias="east_#4d5157ff_0.svg">svg/east_#4d5157ff_0.svg</file>
+        <file alias="expand_less_#4d515766_0.svg">svg/expand_less_#4d515766_0.svg</file>
+        <file alias="expand_less_#4d515766_180.svg">svg/expand_less_#4d515766_180.svg</file>
+        <file alias="expand_less_#4d5157ff_0.svg">svg/expand_less_#4d5157ff_0.svg</file>
+        <file alias="expand_less_#4d5157ff_180.svg">svg/expand_less_#4d5157ff_180.svg</file>
+        <file alias="flip_to_front_#4d5157ff_0.svg">svg/flip_to_front_#4d5157ff_0.svg</file>
+        <file alias="fullscreen_#4d5157ff_0.svg">svg/fullscreen_#4d5157ff_0.svg</file>
+        <file alias="grid_view_#4d5157ff_0.svg">svg/grid_view_#4d5157ff_0.svg</file>
+        <file alias="horizontal_rule_#4d515766_0.svg">svg/horizontal_rule_#4d515766_0.svg</file>
+        <file alias="horizontal_rule_#4d515766_90.svg">svg/horizontal_rule_#4d515766_90.svg</file>
+        <file alias="horizontal_rule_#4d5157ff_0.svg">svg/horizontal_rule_#4d5157ff_0.svg</file>
+        <file alias="horizontal_rule_#4d5157ff_90.svg">svg/horizontal_rule_#4d5157ff_90.svg</file>
+        <file alias="indeterminate_check_box_#1a73e8ff_0.svg">svg/indeterminate_check_box_#1a73e8ff_0.svg</file>
+        <file alias="indeterminate_check_box_#4d515766_0.svg">svg/indeterminate_check_box_#4d515766_0.svg</file>
+        <file alias="list_#4d5157ff_0.svg">svg/list_#4d5157ff_0.svg</file>
+        <file alias="minimize_#4d5157ff_0.svg">svg/minimize_#4d5157ff_0.svg</file>
+        <file alias="radio_button_checked_#1a73e8ff_0.svg">svg/radio_button_checked_#1a73e8ff_0.svg</file>
+        <file alias="radio_button_checked_#4d515766_0.svg">svg/radio_button_checked_#4d515766_0.svg</file>
+        <file alias="radio_button_unchecked_#4d515766_0.svg">svg/radio_button_unchecked_#4d515766_0.svg</file>
+        <file alias="radio_button_unchecked_#4d5157ff_0.svg">svg/radio_button_unchecked_#4d5157ff_0.svg</file>
+        <file alias="vertical_line_#00000030_0.svg">svg/vertical_line_#00000030_0.svg</file>
+        <file alias="vertical_line_#00000050_0.svg">svg/vertical_line_#00000050_0.svg</file>
+    </qresource>
+</RCC>

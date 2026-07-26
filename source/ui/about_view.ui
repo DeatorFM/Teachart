@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>563</width>
+    <width>572</width>
     <height>314</height>
    </rect>
   </property>
@@ -16,6 +16,12 @@
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <widget class="QLabel" name="lb_logo">
+     <property name="minimumSize">
+      <size>
+       <width>185</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="maximumSize">
       <size>
        <width>180</width>
@@ -26,7 +32,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>../resources/placeholder_logo.svg</pixmap>
+      <pixmap>../../resources/images/logo.svg</pixmap>
      </property>
      <property name="scaledContents">
       <bool>true</bool>
@@ -49,7 +55,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>365</width>
+        <width>369</width>
         <height>300</height>
        </rect>
       </property>

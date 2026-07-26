@@ -23,7 +23,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
-
 from tcha.consts import AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
@@ -154,16 +153,6 @@ class AppCore(QApplication):
         self.screenRemoved.connect(self.on_screen_changed)
 
     def _startup_checks(self) -> None:
-        # Check values
-        # while True:
-        #     result = Settings.check_values(self.qsettings)
-        #     if result:
-        #         print(f"Invalid value for {result}. Setting default value.")
-        #         Defaults.set_default(self.qsettings, result)
-        #         continue
-        #     print("No invalid values found.")
-        #     break
-
         if not ErrorLogger.logdir().exists():
             ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
 
