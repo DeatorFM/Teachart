@@ -18,7 +18,9 @@ from xml.etree import ElementTree as ET
 
 from PyQt6.QtCore import (
     QByteArray,
+    QDataStream,
     QFile,
+    QIODevice,
     QPoint,
     QRect,
     QRectF,
@@ -44,6 +46,7 @@ from themes.properties import NTHEME_PROPERTIES
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
 from tcha.settings import Settings, Values
+from tcha.error import BinReadError
 
 ColorModifier = NewType("ColorModifier", tuple[float, float, float])
 
@@ -220,13 +223,24 @@ def _load_extern_theme(fname: str) -> bool:
         print("taste-file is corrupted and cannot be opened.")
     except FileNotFoundError:
         print("taste-file not found in User folder or taste-file is missing subfile")
+    except BinReadError:
+        print("Resource file corrupted.)
     except (KeyError, ValueError, TypeError):
         print("taste-file has invalid data or structure")
     return False
 
 
-def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]: ...
-
+def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]:
+    bytearr = QByteArray(data)
+    stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
+    magic_header = stream.readBytes()
+    if magic_header == b"tcha-qrc":
+        qt_resource_data = stream.readBytes()
+        qt_resource_name = stream.readBytes()
+        qt_resource_struct = stream.readBytes()
+        if stream.atEnd():
+            return qt_resource_data, qt_resource_name, qt_resource_struct
+    raise BinReadError("Wrong magic header")
 
 def transform_color(color: QColor, alteration: tuple[float, float, float]) -> QColor:
     """Applies the transformation values to a QColor class."""
