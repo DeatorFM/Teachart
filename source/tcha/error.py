@@ -158,6 +158,10 @@ class CopyError(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
+class BinReadError(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
 
 class ErrorCode(Enum):
     NoError = 0
