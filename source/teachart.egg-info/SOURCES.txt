@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+source/teachart.egg-info/PKG-INFO
+source/teachart.egg-info/SOURCES.txt
+source/teachart.egg-info/dependency_links.txt
+source/teachart.egg-info/entry_points.txt
+source/teachart.egg-info/requires.txt
+source/teachart.egg-info/top_level.txt

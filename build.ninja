@@ -1,0 +1,116 @@
+# Teachart Ninja Build Configuration
+
+# Variables
+python = python
+pyside6_rcc = pyside6-rcc
+pyside6_linguist = pyside6-linguist
+pyside6_lupdate = pyside6-lupdate
+pyside6_lrelease = pyside6-lrelease
+
+# Rules
+rule run_python
+  command = $python $in $args
+  description = Running Python: $desc
+
+rule pyside_rcc
+  command = $pyside6_rcc $in -o $out
+  description = Compiling Qt resources: $in -> $out
+
+rule pack_theme
+  command = $python theming/tpack.py $args
+  description = $desc
+
+rule pytest
+  command = pytest $args
+  description = Running tests: $args
+
+rule qt_tool
+  command = $cmd
+  description = $desc
+
+# Development targets
+build dev: run_python source/main.py
+  desc = Starting Teachart (dev mode)
+
+build debug: run_python source/main.py
+  args = --debug
+  desc = Starting Teachart (debug mode)
+
+build clean: run_python source/main.py
+  args = --clean
+  desc = Cleaning Teachart
+
+build debug-clean: run_python source/main.py
+  args = --debug --clean
+  desc = Starting Teachart (debug + clean)
+
+build test-tch: run_python source/main.py
+  args = Test.tch
+  desc = Running with Test.tch
+
+# Compile resources
+build source/themes/light.py: pyside_rcc resources/themes/light/light.qrc
+
+build source/themes/dark.py: pyside_rcc resources/themes/dark/dark.qrc
+
+build compile-light: phony source/themes/light.py
+
+build compile-dark: phony source/themes/dark.py
+
+build compile-all: phony compile-light compile-dark
+
+# Pack themes - light
+build resources/themes/light/resources.bin: pack_theme source/themes/light.py
+  args = bin resources/themes/light/resources.bin source/themes/light.py
+  desc = Packing light theme resources
+
+build resources/themes/packed/light.taste: pack_theme resources/themes/light/resources.bin
+  args = pack resources/themes/packed/light.taste resources/themes/light/properties.json resources/themes/light/resources.bin resources/themes/light/light.qss
+  desc = Creating light.taste package
+
+build pack-light: phony resources/themes/packed/light.taste
+
+# Pack themes - dark
+build resources/themes/dark/resources.bin: pack_theme source/themes/dark.py
+  args = bin resources/themes/dark/resources.bin source/themes/dark.py
+  desc = Packing dark theme resources
+
+build resources/themes/packed/dark.taste: pack_theme resources/themes/dark/resources.bin
+  args = pack resources/themes/packed/dark.taste resources/themes/dark/properties.json resources/themes/dark/resources.bin resources/themes/dark/dark.qss
+  desc = Creating dark.taste package
+
+build pack-dark: phony resources/themes/packed/dark.taste
+
+build pack-all: phony pack-light pack-dark
+
+build build-res: phony compile-all pack-all
+
+# Testing
+build test: pytest
+  args = tests/
+
+build testv: pytest
+  args = tests/ -v
+
+# Qt Toolchain
+build linguist-de: qt_tool
+  cmd = $pyside6_linguist translations/de.ts
+  desc = Opening Qt Linguist for German translations
+
+build lupdate: qt_tool
+  cmd = $pyside6_lupdate source/ -ts translations/de.ts
+  desc = Updating translation files
+
+build lrelease: qt_tool translations/compiled/de.qm
+  cmd = $pyside6_lrelease translations/de.ts -qm translations/compiled/de.qm
+  desc = Compiling translations
+
+build translations/compiled/de.qm: qt_tool translations/de.ts
+  cmd = $pyside6_lrelease translations/de.ts -qm translations/compiled/de.qm
+  desc = Compiling German translations
+
+# Default target
+default build-res
+
+# Convenience phony targets
+build all: phony build-res test

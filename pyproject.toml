@@ -6,46 +6,25 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "PyQt6>=6.6.10",
-    "pytest>=9.1.1",
 ]
 
+[project.scripts]
+teachart = "main:main"
+tpack = "theming.tpack:main"
 
 [dependency-groups]
 dev = [
     "PySide6>=6.6.0",
     "pytest>=9.1.1",
-    "ruff>=0.16.0"
+    "ruff>=0.16.0",
+    "ninja>=1.13.0"
 ]
 build = ["pyinstaller>=6.0.0"]
 
-[tool.uv.scripts]
-dev = "python source/main.py"
-debug = "python source/main.py --debug"  # Starts teachart with debug-functions enabled
-clean = "python source/main.py --clean"
-debug-clean = "python source/main.py --debug --clean"
-test-tch = "python source/main.py Test.tch"
-
-# Compile resources with rcc
-compile-light = "pyside6-rcc resources/themes/light/light.qrc -o source/themes/light.py"
-compile-dark = "pyside6-rcc resources/themes/dark/dark.qrc -o source/themes/dark.py"
-compile-all = ["compile-light", "compile-dark"]
-
-# Pack themes into .taste-files
-pack-light = ["python theming/tpack.py bin resources/themes/light/resources.bin source/themes/light.py", "python theming/tpack.py pack resources/themes/packed/light.taste resources/themes/light/properties.json resources/themes/light/resources.bin resources/themes/light/light.qss"]
-pack-dark = ["python theming/tpack.py bin resources/themes/dark/resources.bin source/themes/dark.py", "python theming/tpack.py pack resources/themes/packed/dark.taste resources/themes/dark/properties.json resources/themes/dark/resources.bin resources/themes/dark/dark.qss"]
-pack-all = ["pack-light", "pack-dark"]
-
-build-res = ["compile-all", "pack-all"]
-
-# Testing
-test = "pytest tests/"
-testv = "pytest tests/ -v"
-
-# Qt Toolchain
-linguist-de = "pyside6-linguist translations/de.ts"
-lupdate = ["pyside6-lupdate source/ -ts translations/de.ts"]
-lrelease = ["pyside6-lrelease translations/de.ts -qm translations/compiled/de.qm"]
-
+[tool.setuptools]
+packages = ["tcha", "ui", "themes", "nativeelements", "resources", "theming"]
+py-modules = ["main"]
+package-dir = {"tcha" = "source/tcha","ui" = "source/ui","themes" = "source/themes","nativeelements" = "source/nativeelements","resources" = "source/resources", "main" = "source"}
 
 [tool.pytest.ini_options]
 pythonpath = ["source"]
@@ -55,3 +34,6 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

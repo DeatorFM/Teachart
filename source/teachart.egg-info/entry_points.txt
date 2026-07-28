@@ -1,0 +1,3 @@
+[console_scripts]
+teachart = main:main
+tpack = theming.tpack:main
