@@ -45,8 +45,8 @@ from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyleOption, QWidget
 from themes.properties import NTHEME_PROPERTIES
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
-from tcha.settings import Settings, Values
 from tcha.error import BinReadError
+from tcha.settings import Settings, Values
 
 ColorModifier = NewType("ColorModifier", tuple[float, float, float])
 
@@ -224,7 +224,7 @@ def _load_extern_theme(fname: str) -> bool:
     except FileNotFoundError:
         print("taste-file not found in User folder or taste-file is missing subfile")
     except BinReadError:
-        print("Resource file corrupted.)
+        print("Resource file corrupted.")
     except (KeyError, ValueError, TypeError):
         print("taste-file has invalid data or structure")
     return False
@@ -241,6 +241,7 @@ def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]:
         if stream.atEnd():
             return qt_resource_data, qt_resource_name, qt_resource_struct
     raise BinReadError("Wrong magic header")
+
 
 def transform_color(color: QColor, alteration: tuple[float, float, float]) -> QColor:
     """Applies the transformation values to a QColor class."""

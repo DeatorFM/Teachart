@@ -18,9 +18,7 @@ PROPERTIES = ["colors", "palette"] + list(MUTABLE_PROPERTIES)
 
 
 def check_properties(props: dict) -> bool:
-    if set(props.keys()) == set(PROPERTIES):
-        return True
-    return False
+    return set(props.keys()) == set(PROPERTIES)
 
 
 def convert_to_bin(destination: Path, res_file: Path) -> int:
