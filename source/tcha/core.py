@@ -38,7 +38,7 @@ from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
-from tcha.styling import TchaProxyStyle, make_palette
+from tcha.styling import TchaProxyStyle, make_palette, load_theme, apply_style
 from tcha.table import PresenterView
 from tcha.utils import WinApi
 
@@ -135,7 +135,9 @@ class AppCore(QApplication):
             self._first_time()
         else:
             self._startup_checks()
-        self._load_theme(self.qsettings.value("User/appearance"))
+
+        load_theme(self.qsettings.value("User/appearance"), self)
+        apply_style(self)
 
         self._course_model = CourseModel(self._db)
         self._schedule_model = ScheduleModel(self._db)
@@ -192,33 +194,7 @@ class AppCore(QApplication):
         self.qsettings.setValue("User/dbpath", abspath(db.databaseName()))
         language = self.language_dialog()
         print("Selected language", language)
-        self.qsettings.setValue("User/language", language.name)
-
-    def _load_theme(self, theme: str, native=True) -> None:
-        if native:
-            path = Path("nativethemes") / f"{theme}.zip"
-            importer = zipimporter(str(path))
-
-            spec = importer.find_spec("theme")
-            module = iu.module_from_spec(spec)
-            sys.modules["theme"] = module
-            spec.loader.exec_module(module)
-
-            res_spec = importer.find_spec("res")
-            res_module = iu.module_from_spec(res_spec)
-            sys.modules["res"] = res_module
-            spec.loader.exec_module(res_module)
-
-            stylesheet_data = importer.get_data(module.STYLESHEET)
-            self.setStyleSheet(str(stylesheet_data, encoding="utf-8"))
-            palette = make_palette(module.PALETTE_COLORS)
-            self.setPalette(palette)
-
-            if isinstance(self.style(), TchaProxyStyle):
-                self.style().polish()
-            else:
-                style = TchaProxyStyle()
-                self.setStyle(style)
+        self.qsettings.setValue("User/language", language.name)            
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)

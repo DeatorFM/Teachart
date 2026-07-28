@@ -1,8 +1,6 @@
-from tcha.settings import Locale
-
 NTHEME_PROPERTIES = {
     "light": {
-        "name": {Locale.EnglishUK: "Light", Locale.German: "Hell"},
+        "name": {"EnglishUK": "Light", "German": "Hell"},
         "resources": "light",
         "applyFullPalette": False,
         "palette": {
