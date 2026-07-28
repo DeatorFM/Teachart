@@ -68,8 +68,8 @@ def get_external_theme_names() -> Iterator[tuple[str, str]]:
 
                     if "name" in properties:
                         yield file.stem, properties["name"]
+
             except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
-                # Skip invalid .taste files
                 print(f"Warning: Could not read theme from {file.name}: {e}")
                 continue
 
@@ -168,8 +168,15 @@ def make_palette(
 
     return palette
 
+def apply_style(app: QApplication) -> None:
+    if isinstance(aoo.style(), TchaProxyStyle):
+        self.style().polish()
+    else:
+        style = TchaProxyStyle()
+        app.setStyle(style)
+    
 
-def load_theme(identifier: str) -> None:
+def load_theme(identifier: str, app: QApplication) -> None:
     if identifier.startswith("native:"):
         name = identifier.removeprefix("native:")
         return _load_native_theme(name)
@@ -178,9 +185,8 @@ def load_theme(identifier: str) -> None:
         return _load_native_theme()
 
 
-def _load_native_theme(name: str) -> bool:
+def _load_native_theme(name: str, app: QApplication) -> bool:
     if name in NTHEME_PROPERTIES:
-        app: QApplication = QApplication.instance()
         app.setPalette(
             make_palette(
                 NTHEME_PROPERTIES[name]["palette"],
@@ -191,16 +197,16 @@ def _load_native_theme(name: str) -> bool:
         import_module(f"themes.{NTHEME_PROPERTIES[name]['resources']}")
         stylesheets = import_module("themes.stylesheets")
         app.setStylesheet(stylesheets.STYLESHEETS[name])
+
         return True
 
-    load_theme(Values.default_value("User/appearance"))
+    load_theme(Values.default_value("User/appearance"), app)
 
 
-def _load_extern_theme(fname: str) -> bool:
+def _load_extern_theme(fname: str, app: QApplication) -> bool:
     taste_file = Settings.user_path() / "themes" / f"{fname}.taste"
     try:
         with zipfile.ZipFile(taste_file, "r") as f_taste:
-            app: QApplication = QApplication.instance()
             properties = json.loads(f_taste.read("properties.json"))
             palette = make_palette(
                 properties["palette"], properties["applyFullPalette"]

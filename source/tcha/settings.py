@@ -35,7 +35,7 @@ def get_themes() -> list[ThemeValue]:
     for name, theme in NATIVE_THEMES.values():
         themes.append(
             ThemeValue(
-                theme["name"].get(Settings.value("User/language")), f"native:{name}"
+                theme["name"].get(Settings.value("User/language").name), f"native:{name}"
             )
         )
 
