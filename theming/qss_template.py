@@ -1,4 +1,4 @@
-"""Template stylesheet."""
+"""Template stylesheet adapted from PyQtDarkTheme by 5yutan5"""
 
 TEMPLATE_STYLESHEET = """
 QWidget {

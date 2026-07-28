@@ -9,7 +9,6 @@ import re
 import sys
 import tempfile
 import zipfile
-from collections.abc import Iterator
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
@@ -42,41 +41,17 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyleOption, QWidget
+from tcha.error import BinReadError
 from themes.properties import NTHEME_PROPERTIES
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
-from tcha.error import BinReadError
-from tcha.settings import Settings, Values
 
 ColorModifier = NewType("ColorModifier", tuple[float, float, float])
 
 ET.register_namespace("", "http://www.w3.org/2000/svg")
 
 
-def get_external_theme_names() -> Iterator[tuple[str, str]]:
-    theme_path = Settings.user_path() / "themes"
-
-    if not theme_path.exists():
-        return
-
-    for file in theme_path.iterdir():
-        if file.suffix == ".taste" and "native:" not in file.stem:
-            try:
-                with zipfile.ZipFile(file, "r") as zf:
-                    properties_data = zf.read("properties.json")
-                    properties = json.loads(properties_data)
-
-                    if "name" in properties:
-                        yield file.stem, properties["name"]
-
-            except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
-                print(f"Warning: Could not read theme from {file.name}: {e}")
-                continue
-
-
-def make_palette(
-    color_def: dict[str, list[int, int, int, int]], apply_all=False
-) -> QPalette:
+def make_palette(color_def: dict[str, list[int, int, int, int]], apply_all=False) -> QPalette:
     palette = QPalette()
 
     # Mapping from string names to QPalette.ColorRole enums
@@ -168,20 +143,21 @@ def make_palette(
 
     return palette
 
+
 def apply_style(app: QApplication) -> None:
-    if isinstance(aoo.style(), TchaProxyStyle):
-        self.style().polish()
+    if isinstance(app.style(), TchaProxyStyle):
+        app.style().polish()
     else:
         style = TchaProxyStyle()
         app.setStyle(style)
-    
+
 
 def load_theme(identifier: str, app: QApplication) -> None:
     if identifier.startswith("native:"):
         name = identifier.removeprefix("native:")
-        return _load_native_theme(name)
+        return _load_native_theme(name, app)
 
-    if not _load_extern_theme():
+    if not _load_extern_theme(identifier, app):
         return _load_native_theme()
 
 
@@ -196,30 +172,30 @@ def _load_native_theme(name: str, app: QApplication) -> bool:
 
         import_module(f"themes.{NTHEME_PROPERTIES[name]['resources']}")
         stylesheets = import_module("themes.stylesheets")
-        app.setStylesheet(stylesheets.STYLESHEETS[name])
+        app.setStyleSheet(stylesheets.STYLESHEETS[name])
 
         return True
+
+    from tcha.settings import Values
 
     load_theme(Values.default_value("User/appearance"), app)
 
 
 def _load_extern_theme(fname: str, app: QApplication) -> bool:
+    from tcha.settings import Settings
+
     taste_file = Settings.user_path() / "themes" / f"{fname}.taste"
     try:
         with zipfile.ZipFile(taste_file, "r") as f_taste:
             properties = json.loads(f_taste.read("properties.json"))
-            palette = make_palette(
-                properties["palette"], properties["applyFullPalette"]
-            )
+            palette = make_palette(properties["palette"], properties["applyFullPalette"])
             app.setPalette(palette)
             res_data = f_taste.read(properties["resources"], "")
             if qChecksum(res_data) == properties["chksum"]:
-                qt_resource_data, qt_resource_name, qt_resource_struct = (
-                    restructure_resource_data(res_data)
+                qt_resource_data, qt_resource_name, qt_resource_struct = restructure_resource_data(
+                    res_data
                 )
-                qRegisterResourceData(
-                    0x03, qt_resource_data, qt_resource_name, qt_resource_struct
-                )
+                qRegisterResourceData(0x03, qt_resource_data, qt_resource_name, qt_resource_struct)
                 stylesheet = f_taste.read(properties["stylesheet"])
                 app.setStyleSheet(stylesheet.decode())
                 return True
@@ -463,14 +439,12 @@ class SvgIconEngine(QIconEngine):
         self._svg = svg
         self._paths: dict[str, QColor] = {}
 
-    def paint(
-        self, painter: QPainter, rect: QRect, mode: QIcon.Mode, state: QIcon.State
-    ):
+    def paint(self, painter: QPainter, rect: QRect, mode: QIcon.Mode, state: QIcon.State):
         # Work with a deep copy to avoid mutating the original SVG
         svg = Svg(copy.deepcopy(self._svg._tree))
 
         if self._paths:
-            for path in self._paths.keys():
+            for path in self._paths:
                 svg = svg.path_colored(path, self._paths[path])
 
         """Paint the icon int ``rect`` using ``painter``."""
@@ -524,8 +498,8 @@ class Svg:
 
     @classmethod
     def from_file(cls: Svg, path: str) -> Svg:
-        path_obj = Path(path)
-        return cls(path_obj.read_text("utf-8"))
+        path_obj = QFile(path)
+        return cls(path_obj.readData())
 
     def colored(self, color: QColor) -> Svg:
         hex_color = color.name(QColor.NameFormat.HexRgb)

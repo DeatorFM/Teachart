@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from tcha.dbmodels import CourseModel
 from tcha.styling import SvgIcon
 from ui.commons import IconButton
@@ -124,16 +123,12 @@ class DbManagerView:
         hl3.setContentsMargins(-1, 0, -1, -1)
         hl3.setObjectName("hl3")
 
-        self.pb_new_course = IconButton(
-            SvgIcon("resources/icons/ic_new.svg"), dbmanager
-        )
+        self.pb_new_course = IconButton(SvgIcon("icons:ic_new.svg"), dbmanager)
         self.pb_new_course.setText("")
         self.pb_new_course.setObjectName("pb_new_course")
         hl3.addWidget(self.pb_new_course)
 
-        self.pb_remove_course = IconButton(
-            SvgIcon("resources/icons/ic_trash.svg"), dbmanager
-        )
+        self.pb_remove_course = IconButton(SvgIcon("icons:ic_trash.svg"), dbmanager)
         self.pb_remove_course.setText("")
         self.pb_remove_course.setObjectName("pb_remove_course")
         hl3.addWidget(self.pb_remove_course)
@@ -172,24 +167,18 @@ class DbManagerView:
         hl2.setContentsMargins(-1, 0, -1, -1)
         hl2.setObjectName("hl2")
 
-        self.pb_assign_students = IconButton(
-            SvgIcon("resources/icons/ic_assign.svg"), self.student_tab
-        )
+        self.pb_assign_students = IconButton(SvgIcon("icons:ic_assign.svg"), self.student_tab)
         self.pb_assign_students.setText("")
         self.pb_assign_students.setObjectName("pb_assign_students")
         hl2.addWidget(self.pb_assign_students)
 
-        self.pb_unassign_student = IconButton(
-            SvgIcon("resources/icons/ic_unassign.svg"), self.student_tab
-        )
+        self.pb_unassign_student = IconButton(SvgIcon("icons:ic_unassign.svg"), self.student_tab)
         self.pb_unassign_student.setText("")
         self.pb_unassign_student.setObjectName("pb_unassign_student")
         self.pb_unassign_student.setEnabled(False)
         hl2.addWidget(self.pb_unassign_student)
 
-        self.pb_remove_student = IconButton(
-            SvgIcon("resources/icons/ic_trash.svg"), self.student_tab
-        )
+        self.pb_remove_student = IconButton(SvgIcon("icons:ic_trash.svg"), self.student_tab)
         self.pb_remove_student.setText("")
         self.pb_remove_student.setObjectName("pb_remove_student")
         self.pb_remove_student.setEnabled(False)
@@ -216,9 +205,7 @@ class DbManagerView:
         self.cb_show_unassigned.setObjectName("cb_show_unassigned")
         hl2.addWidget(self.cb_show_unassigned)
 
-        spacerItem = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
+        spacerItem = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         hl2.addItem(spacerItem)
         vl2.addLayout(hl2)
 
@@ -245,22 +232,18 @@ class DbManagerView:
         hl4.setContentsMargins(-1, 0, -1, -1)
         hl4.setObjectName("hl4")
 
-        # self.pb_new_schedule = IconButton("resources/icons/ic_new.svg", self.schedules_tab)
+        # self.pb_new_schedule = IconButton("icons:ic_new.svg", self.schedules_tab)
         # self.pb_new_schedule.setText("")
         # self.pb_new_schedule.setObjectName("pb_new_schedule")
         # hl4.addWidget(self.pb_new_schedule)
 
-        self.pb_remove_schedule = IconButton(
-            SvgIcon("resources/icons/ic_trash.svg"), self.schedules_tab
-        )
+        self.pb_remove_schedule = IconButton(SvgIcon("icons:ic_trash.svg"), self.schedules_tab)
         self.pb_remove_schedule.setText("")
         self.pb_remove_schedule.setObjectName("pb_remove_schedule")
         self.pb_remove_schedule.setEnabled(False)
         hl4.addWidget(self.pb_remove_schedule)
 
-        spacerItem1 = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
+        spacerItem1 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         hl4.addItem(spacerItem1)
         vl3.addLayout(hl4)
 
@@ -282,9 +265,7 @@ class DbManagerView:
         dbmanager.setWindowTitle(_translate("dbmanager", "Manage Courses"))
         self.le_search.setPlaceholderText(_translate("dbmanager", "Search"))
         self.le2_search.setPlaceholderText(_translate("dbmanager", "Search"))
-        self.cb_show_unassigned.setText(
-            _translate("dbmanager", "Show unassigned students only")
-        )
+        self.cb_show_unassigned.setText(_translate("dbmanager", "Show unassigned students only"))
         self.data_tabs.setTabText(
             self.data_tabs.indexOf(self.student_tab),
             _translate("dbmanager", "Students"),
@@ -310,9 +291,7 @@ class AssignmentView:
         self.le_search.setObjectName("le_search")
         horizontalLayout.addWidget(self.le_search)
 
-        spacerItem = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
+        spacerItem = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         horizontalLayout.addItem(spacerItem)
         verticalLayout.addLayout(horizontalLayout)
 
@@ -327,14 +306,10 @@ class AssignmentView:
         self.lw_selected_students = QListWidget(assign_student_dialog)
         self.lw_selected_students.setMaximumHeight(50)
         self.lw_selected_students.setObjectName("lw_selected_students")
-        self.lw_selected_students.setSelectionMode(
-            QListWidget.SelectionMode.NoSelection
-        )
+        self.lw_selected_students.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.lw_selected_students.setFlow(QListWidget.Flow.LeftToRight)
         self.lw_selected_students.setAlternatingRowColors(True)
-        self.lw_selected_students.setEditTriggers(
-            QListWidget.EditTrigger.NoEditTriggers
-        )
+        self.lw_selected_students.setEditTriggers(QListWidget.EditTrigger.NoEditTriggers)
         self.lw_selected_students.setDragEnabled(False)
         verticalLayout.addWidget(self.lw_selected_students)
 
@@ -347,9 +322,7 @@ class AssignmentView:
         verticalLayout.addWidget(self.button_box)
 
         self.pb_new_student = QPushButton(assign_student_dialog)
-        self.button_box.addButton(
-            self.pb_new_student, QDialogButtonBox.ButtonRole.ResetRole
-        )
+        self.button_box.addButton(self.pb_new_student, QDialogButtonBox.ButtonRole.ResetRole)
 
         self.button_box.accepted.connect(assign_student_dialog.accept)
         self.button_box.rejected.connect(assign_student_dialog.reject)
@@ -360,8 +333,6 @@ class AssignmentView:
 
     def retranslateUi(self, assign_student_dialog):
         _translate = QCoreApplication.translate
-        assign_student_dialog.setWindowTitle(
-            _translate("assign_student_dialog", "Dialog")
-        )
+        assign_student_dialog.setWindowTitle(_translate("assign_student_dialog", "Dialog"))
         self.le_search.setPlaceholderText(_translate("assign_student_dialog", "Search"))
         self.pb_new_student.setText(_translate("assign_student_dialog", "New"))

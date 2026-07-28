@@ -8,8 +8,6 @@ from pathlib import Path
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtWidgets import QMessageBox
 
-from tcha.settings import Settings
-
 
 @dataclass(frozen=True)
 class Error:
@@ -158,6 +156,7 @@ class CopyError(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
+
 class BinReadError(Exception):
     def __init__(self, *args):
         super().__init__(*args)
@@ -185,6 +184,8 @@ class ErrorLogger:
     @cache
     @staticmethod
     def logdir() -> Path:
+        from tcha.settings import Settings
+
         return Settings.user_path() / "tchlogs"
 
     def _setup_logger(self, log_file: str) -> None:

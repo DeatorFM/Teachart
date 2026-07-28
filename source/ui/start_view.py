@@ -37,7 +37,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.styling import SvgIcon
 
@@ -93,9 +92,7 @@ class Ui_StartWindow(object):
         self.tb_file_actions = QToolBar(parent=start_window)
         self.tb_file_actions.setMovable(False)
         self.tb_file_actions.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea)
-        self.tb_file_actions.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-        )
+        self.tb_file_actions.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.tb_file_actions.setFloatable(False)
         self.tb_file_actions.setObjectName("tb_file_actions")
         start_window.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.tb_file_actions)
@@ -105,9 +102,7 @@ class Ui_StartWindow(object):
         font = QFont()
         font.setPointSize(8)
         self.dw_scheduledf.setFont(font)
-        self.dw_scheduledf.setFeatures(
-            QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
-        )
+        self.dw_scheduledf.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.dw_scheduledf.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea)
         self.dw_scheduledf.setObjectName("dw_scheduledf")
 
@@ -147,17 +142,17 @@ class Ui_StartWindow(object):
 
         self.ac_new = QAction(parent=start_window)
         self.ac_new.setObjectName("ac_new")
-        icon2 = SvgIcon("resources/icons/ic_newFile.svg")
+        icon2 = SvgIcon("icons:ic_newFile.svg")
         self.ac_new.setIcon(icon2)
 
         self.ac_course_mng = QAction(parent=start_window)
         self.ac_course_mng.setObjectName("ac_course_mng")
-        icon4 = SvgIcon("resources/icons/ic_edu.svg")
+        icon4 = SvgIcon("icons:ic_edu.svg")
         self.ac_course_mng.setIcon(icon4)
 
         self.ac_settings = QAction(parent=start_window)
         self.ac_settings.setObjectName("ac_settings")
-        icon3 = SvgIcon("resources/icons/ic_settings.svg")
+        icon3 = SvgIcon("icons:ic_settings.svg")
         self.ac_settings.setIcon(icon3)
 
         self.tb_file_actions.addAction(self.ac_new)
@@ -181,7 +176,7 @@ class Ui_StartWindow(object):
 
         self.tb_about = QToolButton(self.status_bar)
         self.tb_about.setObjectName("tb_about")
-        icon5 = SvgIcon("resources/icons/ic_about.svg")
+        icon5 = SvgIcon("icons:ic_about.svg")
         self.tb_about.setIcon(icon5)
         self.tb_about.setIconSize(QSize(22, 22))
         self.status_bar.addPermanentWidget(self.tb_about)
@@ -202,9 +197,7 @@ class Ui_StartWindow(object):
         )
         self.tb_file_actions.setWindowTitle(_translate("start_window", "File Actions"))
         self.dw_scheduledf.setWindowTitle(_translate("start_window", "Scheduled Files"))
-        self.cb_show_past_schedules.setText(
-            _translate("start_window", "Show past lessons")
-        )
+        self.cb_show_past_schedules.setText(_translate("start_window", "Show past lessons"))
         self.ac_open.setText(_translate("start_window", "Browse"))
         self.ac_new.setText(_translate("start_window", "New Sheet"))
         self.ac_course_mng.setText(_translate("start_window", "Course Explorer"))
@@ -229,9 +222,7 @@ class LessonCalendar(QCalendarWidget):
         self.repaint()
 
     def on_data_changed(self) -> None:
-        self.set_dates_for_month(
-            self.selectedDate().year(), self.selectedDate().month()
-        )
+        self.set_dates_for_month(self.selectedDate().year(), self.selectedDate().month())
 
     def paintCell(self, painter: QPainter, rect: QRect, date: QDate) -> None:
         super().paintCell(painter, rect, date)
@@ -251,9 +242,7 @@ class LessonCalendar(QCalendarWidget):
                     font.setBold(True)
                     font.setPixelSize(9)  # Smaller font size
                     painter.setFont(font)
-                    painter.drawText(
-                        circle_rect, Qt.AlignmentFlag.AlignCenter, str(count)
-                    )
+                    painter.drawText(circle_rect, Qt.AlignmentFlag.AlignCenter, str(count))
 
 
 class ScheduledFileDelegate(QStyledItemDelegate):
@@ -269,9 +258,7 @@ class ScheduledFileDelegate(QStyledItemDelegate):
         self.PATH_FONT.setPixelSize(11)
         self.PATH_FONT.setItalic(True)
 
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.save()
         super().paint(painter, option, QModelIndex())
         painter.restore()
@@ -328,13 +315,11 @@ class OpenFileDelegate(QStyledItemDelegate):
         self.ABSPATH_PATH = QFont()
         self.ABSPATH_PATH.setPixelSize(11)
 
-        self.ICON_ON = SvgIcon("resources/icons/ic_pinned.svg")
+        self.ICON_ON = SvgIcon("icons:ic_pinned.svg")
 
-        self.ICON_OFF = SvgIcon("resources/icons/ic_notPinned.svg")
+        self.ICON_OFF = SvgIcon("icons:ic_notPinned.svg")
 
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.save()
         super().paint(painter, option, QModelIndex())
         painter.restore()
@@ -365,9 +350,7 @@ class OpenFileDelegate(QStyledItemDelegate):
             else:
                 opts.icon = self.ICON_OFF
 
-            QApplication.style().drawControl(
-                QStyle.ControlElement.CE_CheckBoxLabel, opts, painter
-            )
+            QApplication.style().drawControl(QStyle.ControlElement.CE_CheckBoxLabel, opts, painter)
 
         painter.restore()
 
@@ -391,9 +374,7 @@ class OpenFileDelegate(QStyledItemDelegate):
                     return True
         return False
 
-    def setModelData(
-        self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
-    ):
+    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex):
         if index.column() == 1:
             checked = not bool(index.data())
             model.setData(index, checked)

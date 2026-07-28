@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QCoreApplication, QSize, Qt
 from PyQt6.QtGui import QActionGroup, QIcon, QPixmap
 from PyQt6.QtWidgets import QMenu, QSizePolicy, QToolBar, QToolButton
-
 from ui.commons import SwitchAction
 
 ToolBarStyleSheet = """
@@ -39,7 +38,7 @@ class TableToolsetView:
 
         icon1 = QIcon()
         icon1.addPixmap(
-            QPixmap("resources/icons/ic_insertRowBottom.svg"),
+            QPixmap("icons:ic_insertRowBottom.svg"),
             QIcon.Mode.Normal,
             QIcon.State.Off,
         )
@@ -48,7 +47,7 @@ class TableToolsetView:
 
         icon2 = QIcon()
         icon2.addPixmap(
-            QPixmap("resources/icons/ic_insertColumnRight.svg"),
+            QPixmap("icons:ic_insertColumnRight.svg"),
             QIcon.Mode.Normal,
             QIcon.State.Off,
         )
@@ -59,7 +58,7 @@ class TableToolsetView:
 
         icon3 = QIcon()
         icon3.addPixmap(
-            QPixmap("resources/icons/ic_deleterow.svg"),
+            QPixmap("icons:ic_deleterow.svg"),
             QIcon.Mode.Normal,
             QIcon.State.Off,
         )
@@ -68,7 +67,7 @@ class TableToolsetView:
 
         icon4 = QIcon()
         icon4.addPixmap(
-            QPixmap("resources/icons/ic_deletecolumn.svg"),
+            QPixmap("icons:ic_deletecolumn.svg"),
             QIcon.Mode.Normal,
             QIcon.State.Off,
         )
@@ -77,14 +76,12 @@ class TableToolsetView:
 
         icon5 = QIcon()
         icon5.addPixmap(
-            QPixmap("resources/icons/ic_notpinned.svg"),
+            QPixmap("icons:ic_notpinned.svg"),
             QIcon.Mode.Normal,
             QIcon.State.Off,
         )
         icon6 = QIcon()
-        icon6.addPixmap(
-            QPixmap("resources/icons/ic_pinned.svg"), QIcon.Mode.Normal, QIcon.State.Off
-        )
+        icon6.addPixmap(QPixmap("icons:ic_pinned.svg"), QIcon.Mode.Normal, QIcon.State.Off)
         self.ac_lock_size = SwitchAction(icon5, icon6, agent)
         agent.addAction(self.ac_lock_size)
         self.cell_editor_actions.addAction(self.ac_lock_size)

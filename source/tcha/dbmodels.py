@@ -70,7 +70,7 @@ def create_database(vernum: str) -> QSqlDatabase:
 
     from tcha.settings import Settings
 
-    path = Settings.user_path() / f"tcha{num}.tdb"
+    path = Settings.user_path() / "db" / f"tcha{num}.tdb"
     db.setDatabaseName(path.as_posix())
     ok = db.open()
     print("Success", ok)
@@ -266,9 +266,7 @@ class CourseModel(QSqlTableModel):
     def __contains__(self, value: CourseItem | str) -> bool:
         if isinstance(value, CourseItem):
             query = self.database().exec()
-            query.prepare(
-                "SELECT EXISTS (SELECT 1 FROM Courses WHERE id = ? AND name = ?)"
-            )
+            query.prepare("SELECT EXISTS (SELECT 1 FROM Courses WHERE id = ? AND name = ?)")
             query.addBindValue(value.id)
             query.addBindValue(value.name)
             if query.exec() and query.next():
@@ -297,9 +295,7 @@ class ScheduleModel(QSqlRelationalTableModel):
             relation_model.select()
         self.select()
 
-    def add_schedule(
-        self, course_id: int, datetime: QDateTime, file_id: int, path: str
-    ) -> bool:
+    def add_schedule(self, course_id: int, datetime: QDateTime, file_id: int, path: str) -> bool:
         record = self.record()
         record.setValue(1, course_id)
         record.setValue("date", datetime.date().toJulianDay())
@@ -342,9 +338,7 @@ class ScheduleModel(QSqlRelationalTableModel):
         """Returns the course id of the index as a numeric value."""
         query = QSqlQuery(self.database())
         query.prepare("SELECT course_id FROM Schedules WHERE id = ?")
-        query.addBindValue(
-            super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole)
-        )
+        query.addBindValue(super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole))
         if query.exec() and query.next():
             print("Return course id")
             return query.value(0)
@@ -365,9 +359,7 @@ class ScheduleModel(QSqlRelationalTableModel):
             ok = True
             ok &= self.setData(self.index(row, 1), course_id, Qt.ItemDataRole.EditRole)
             ok &= self.setData(self.index(row, 2), datetime.date().toJulianDay())
-            ok &= self.setData(
-                self.index(row, 3), datetime.time().msecsSinceStartOfDay()
-            )
+            ok &= self.setData(self.index(row, 3), datetime.time().msecsSinceStartOfDay())
             ok &= self.setData(self.index(row, 5), path)
             self.submitAll()
             self.select()
@@ -380,9 +372,7 @@ class ScheduleModel(QSqlRelationalTableModel):
 
         try:
             schedules = []
-            query = self.database().exec(
-                "SELECT date FROM Schedules WHERE date >= ? AND date <= ?"
-            )
+            query = self.database().exec("SELECT date FROM Schedules WHERE date >= ? AND date <= ?")
             query.addBindValue(month.toJulianDay())
             query.addBindValue(last_day.toJulianDay())
             query.exec()
@@ -415,10 +405,7 @@ class ScheduleModel(QSqlRelationalTableModel):
         orientation: Qt.Orientation,
         role: int = Qt.ItemDataRole.DisplayRole,
     ):
-        if (
-            orientation == Qt.Orientation.Horizontal
-            and role == Qt.ItemDataRole.DisplayRole
-        ):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if section == 1:
                 return tr("Course")
             elif section == 2:
@@ -524,31 +511,22 @@ class StudentModel(QSqlRelationalTableModel):
     def course_id(self, index: QModelIndex) -> int:
         query = QSqlQuery(self.database())
         query.prepare("SELECT course_id FROM Students WHERE id = ?")
-        query.addBindValue(
-            super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole)
-        )
+        query.addBindValue(super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole))
         if query.exec() and query.next():
             print("Return course id")
             return query.value(0)
         return 0
 
-    def on_value_change(
-        self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: list
-    ) -> None:
+    def on_value_change(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: list) -> None:
         print("Value has been changed")
         self.submit()
         if topLeft.isValid() and bottomRight.isValid():
             print("Is valid")
-            new_value = self.data(
-                self.createIndex(topLeft.row(), 2), Qt.ItemDataRole.EditRole
-            )
+            new_value = self.data(self.createIndex(topLeft.row(), 2), Qt.ItemDataRole.EditRole)
             print("New id: ", new_value)
 
     def headerData(self, section, orientation, role=...):
-        if (
-            orientation == Qt.Orientation.Horizontal
-            and role == Qt.ItemDataRole.DisplayRole
-        ):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if section == 1:
                 return "Name"
             elif section == 2:
@@ -599,9 +577,7 @@ class FilteredCourseModel(QSortFilterProxyModel):
             return True
 
         source_index = self.sourceModel().index(source_row, 0)
-        course: CourseItem = self.sourceModel().data(
-            source_index, Qt.ItemDataRole.UserRole
-        )
+        course: CourseItem = self.sourceModel().data(source_index, Qt.ItemDataRole.UserRole)
         print(course.source_id)
         search = self._search_str.lower()
 
@@ -691,9 +667,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         if self._exclusive_course_id:
             if (
-                not self.sourceModel().course_id(
-                    self.sourceModel().index(source_row, 2)
-                )
+                not self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
                 == self._exclusive_course_id
             ):
                 return False
@@ -718,9 +692,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
             source_index = self.sourceModel().index(source_row, 0)
             student: StudentItem = self.sourceModel().getRow(source_index)
             search = self._search_str.lower()
-            course_name = (
-                self.sourceModel().data(self.sourceModel().index(source_row, 2)).lower()
-            )
+            course_name = self.sourceModel().data(self.sourceModel().index(source_row, 2)).lower()
 
             if search in student.name.lower():
                 return True
@@ -779,12 +751,8 @@ class FilteredScheduleModel(QSortFilterProxyModel):
             return left_date < right_date
 
         if left.column() == 3 and right.column() == 3:
-            left_time = QTime.fromMSecsSinceStartOfDay(
-                left.data(Qt.ItemDataRole.EditRole)
-            )
-            right_time = QTime.fromMSecsSinceStartOfDay(
-                right.data(Qt.ItemDataRole.EditRole)
-            )
+            left_time = QTime.fromMSecsSinceStartOfDay(left.data(Qt.ItemDataRole.EditRole))
+            right_time = QTime.fromMSecsSinceStartOfDay(right.data(Qt.ItemDataRole.EditRole))
             return left_time < right_time
 
         return super().lessThan(left, right)
@@ -792,9 +760,7 @@ class FilteredScheduleModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         if self._exclusive_course_id:
             if (
-                not self.sourceModel().course_id(
-                    self.sourceModel().index(source_row, 2)
-                )
+                not self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
                 == self._exclusive_course_id
             ):
                 return False

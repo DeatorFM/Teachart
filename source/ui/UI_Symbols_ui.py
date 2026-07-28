@@ -13,7 +13,9 @@ class Ui_SymbolDialog(object):
     def setupUi(self, SymbolDialog):
         SymbolDialog.setObjectName("SymbolDialog")
         SymbolDialog.resize(555, 430)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(SymbolDialog.sizePolicy().hasHeightForWidth())
@@ -36,7 +38,9 @@ class Ui_SymbolDialog(object):
         self.cb_category.setMinimumSize(QtCore.QSize(150, 0))
         self.cb_category.setObjectName("cb_category")
         self.CategoryLayout.addWidget(self.cb_category)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         self.CategoryLayout.addItem(spacerItem)
         self.verticalLayout.addLayout(self.CategoryLayout)
         self.TW_Symbols = QtWidgets.QTableWidget(parent=SymbolDialog)
@@ -79,7 +83,9 @@ class Ui_SymbolDialog(object):
         self.LB_UnicodeName.setText("")
         self.LB_UnicodeName.setObjectName("LB_UnicodeName")
         self.SymbolInfoLayout.addWidget(self.LB_UnicodeName)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         self.SymbolInfoLayout.addItem(spacerItem1)
         self.LB_HexCode = QtWidgets.QLabel(parent=SymbolDialog)
         font = QtGui.QFont()
@@ -88,7 +94,9 @@ class Ui_SymbolDialog(object):
         self.LB_HexCode.setObjectName("LB_HexCode")
         self.SymbolInfoLayout.addWidget(self.LB_HexCode)
         self.LE_HexCode = QtWidgets.QLineEdit(parent=SymbolDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.LE_HexCode.sizePolicy().hasHeightForWidth())
@@ -102,7 +110,9 @@ class Ui_SymbolDialog(object):
         self.ButtonLayout = QtWidgets.QHBoxLayout()
         self.ButtonLayout.setContentsMargins(-1, -1, -1, 0)
         self.ButtonLayout.setObjectName("ButtonLayout")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         self.ButtonLayout.addItem(spacerItem2)
         self.PB_Paste = QtWidgets.QPushButton(parent=SymbolDialog)
         self.PB_Paste.setObjectName("PB_Paste")
@@ -117,8 +127,8 @@ class Ui_SymbolDialog(object):
         self.verticalLayout.addLayout(self.ButtonLayout)
 
         self.retranslateUi(SymbolDialog)
-        self.DBB_Buttons.accepted.connect(SymbolDialog.accept) # type: ignore
-        self.DBB_Buttons.rejected.connect(SymbolDialog.reject) # type: ignore
+        self.DBB_Buttons.accepted.connect(SymbolDialog.accept)  # type: ignore
+        self.DBB_Buttons.rejected.connect(SymbolDialog.reject)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(SymbolDialog)
 
     def retranslateUi(self, SymbolDialog):

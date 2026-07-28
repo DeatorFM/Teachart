@@ -31,7 +31,6 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-
 from tcha.dbmodels import FilteredCourseModel, FilteredStudentModel
 from ui.StyledWidget import *
 
@@ -196,9 +195,7 @@ class ColorAction(QWidgetAction):
                 # print(color.name(QColor.NameFormat.HexRgb))
                 button = QToolButton(widget)
                 button.setAutoRaise(True)
-                button.clicked.connect(
-                    lambda state, color=color: self.handleButton(color)
-                )
+                button.clicked.connect(lambda state, color=color: self.handleButton(color))
                 pixmap = QPixmap(16, 16)
                 pixmap.fill(color)
                 button.setIcon(QIcon(pixmap))
@@ -333,19 +330,13 @@ class PasteConfirmation(QMessageBox):
         self.setIcon(QMessageBox.Icon.Question)
         self.setText("This cell already has content. How would you like to paste?")
 
-        self.pb_replace = self.addButton(
-            tr("Replace"), QMessageBox.ButtonRole.ActionRole
-        )
-        self.pb_replace.setToolTip(
-            tr("Replaces the selected cell with the copied cell.")
-        )
+        self.pb_replace = self.addButton(tr("Replace"), QMessageBox.ButtonRole.ActionRole)
+        self.pb_replace.setToolTip(tr("Replaces the selected cell with the copied cell."))
         self.pb_replace.clicked.connect(self.accept)
 
         self.pb_append = self.addButton(tr("Append"), QMessageBox.ButtonRole.ActionRole)
         self.pb_append.setToolTip(
-            tr(
-                "Appends the copied cell's contents after the last element of the selected cell."
-            )
+            tr("Appends the copied cell's contents after the last element of the selected cell.")
         )
         self.pb_append.clicked.connect(self.accept)
         self.pb_cancel = self.addButton(QMessageBox.StandardButton.Cancel)
@@ -394,9 +385,7 @@ class NoteEdit(QPlainTextEdit):
             self.setFont(self._default_font)
             return
 
-        if source.hasText() and source.text().startswith(
-            ("https://", "http://", "www.")
-        ):
+        if source.hasText() and source.text().startswith(("https://", "http://", "www.")):
             old_fmt = self.currentCharFormat()
             link = source.text()
             if link.startswith("www."):

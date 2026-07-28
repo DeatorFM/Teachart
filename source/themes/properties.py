@@ -101,7 +101,7 @@ NTHEME_PROPERTIES = {
         },
     },
     "dark": {
-        "name": {Locale.EnglishUK: "Dark", Locale.German: "Dunkel"},
+        "name": {"EnglishUK": "Dark", "German": "Dunkel"},
         "resources": "dark",
         "applyFullPalette": False,
         "palette": {

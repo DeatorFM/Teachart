@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, KeysView
+from collections.abc import Callable, Iterator, KeysView
 from dataclasses import dataclass, field
 from enum import Enum, Flag, StrEnum
 from functools import cache
@@ -23,20 +23,40 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from themes.properties import NATIVE_THEMES
-
 from tcha.dbmodels import create_database, reset_database
-from tcha.styling import get_external_theme_names
 from tcha.utils import word_as_bool
+from themes.properties import NTHEME_PROPERTIES
+
+
+# In settings.py, add this function and remove the import
+def get_external_theme_names() -> Iterator[tuple[str, str]]:
+    import json
+    import zipfile
+
+    theme_path = Settings.user_path() / "themes"
+
+    if not theme_path.exists():
+        return
+
+    for file in theme_path.iterdir():
+        if file.suffix == ".taste" and "native:" not in file.stem:
+            try:
+                with zipfile.ZipFile(file, "r") as zf:
+                    properties_data = zf.read("properties.json")
+                    properties = json.loads(properties_data)
+
+                    if "name" in properties:
+                        yield file.stem, properties["name"]
+            except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
+                print(f"Warning: Could not read theme from {file.name}: {e}")
+                continue
 
 
 def get_themes() -> list[ThemeValue]:
     themes = []
-    for name, theme in NATIVE_THEMES.values():
+    for name, theme in NTHEME_PROPERTIES.items():
         themes.append(
-            ThemeValue(
-                theme["name"].get(Settings.value("User/language").name), f"native:{name}"
-            )
+            ThemeValue(theme["name"].get(Settings.value("User/language").name), f"native:{name}")
         )
 
     for fname, theme_name in get_external_theme_names():
@@ -68,9 +88,7 @@ class LocaleValue:
 
 
 class Locale(Enum):
-    EnglishUK = LocaleValue(
-        "English UK", QLocale.Language.English, QLocale.Country.UnitedKingdom
-    )
+    EnglishUK = LocaleValue("English UK", QLocale.Language.English, QLocale.Country.UnitedKingdom)
     German = LocaleValue("German", QLocale.Language.German, QLocale.Country.Germany)
     Japanese = LocaleValue("Japanese", QLocale.Language.Japanese, QLocale.Country.Japan)
 
@@ -124,9 +142,7 @@ class SettingsDialog(QDialog):
             "User/editor.single_selection": self._tick_single_selection,
             "User/dbpath": self._set_dblocation,
         }
-        self.ui.pb_edit_ini.setVisible(
-            qsettings.value("Application/debug", False, bool)
-        )
+        self.ui.pb_edit_ini.setVisible(qsettings.value("Application/debug", False, bool))
         self._import_options()
         self._set_ui_for_values()
         self.connect_signals()
@@ -162,9 +178,7 @@ class SettingsDialog(QDialog):
             self.restore_defaults()
 
     @staticmethod
-    def get_settings(
-        parent: QWidget | None, db: QSqlDatabase, qsettings: QSettings
-    ) -> ReturnFlags:
+    def get_settings(parent: QWidget | None, db: QSqlDatabase, qsettings: QSettings) -> ReturnFlags:
         dialog = SettingsDialog(db, qsettings, parent)
         code = dialog.exec()
         if code == QDialog.DialogCode.Accepted:
@@ -192,9 +206,7 @@ class SettingsDialog(QDialog):
 
     def _set_ui_for_values(self) -> None:
         """Makes UI reflect the settings' values"""
-        for key, value in filter(
-            lambda x: x[0].startswith("User/"), self.settings.items()
-        ):
+        for key, value in filter(lambda x: x[0].startswith("User/"), self.settings.items()):
             print(key, value)
             self._settings_map[key](value)
 
@@ -247,14 +259,10 @@ class SettingsDialog(QDialog):
         self.settings["User/always_schedule"] = self.ui.cb_always_schedule.isChecked()
 
     def _on_compress_images_set(self) -> None:
-        self.settings["User/editor.compress_image"] = (
-            self.ui.cb_compress_images.isChecked()
-        )
+        self.settings["User/editor.compress_image"] = self.ui.cb_compress_images.isChecked()
 
     def _on_single_selection_set(self) -> None:
-        self.settings["User/editor.single_selection"] = (
-            self.ui.cb_single_selection.isChecked()
-        )
+        self.settings["User/editor.single_selection"] = self.ui.cb_single_selection.isChecked()
 
     # Database settings
 
@@ -436,27 +444,15 @@ class Values:
         "AppInfo/app_ver": Value(AppInfo.app_ver, str, True),
         "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
         "User/appearance": Value("native:light", str, False),
-        "User/language": Value(
-            Locale.EnglishUK, Locale, False, lambda val: Locale[val]
-        ),
-        "User/time_format": Value(
-            TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]
-        ),
-        "User/always_schedule": Value(
-            False, bool, False, lambda val: word_as_bool(val)
-        ),
-        "User/editor.compress_image": Value(
-            False, bool, False, lambda val: word_as_bool(val)
-        ),
-        "User/editor.single_selection": Value(
-            False, bool, False, lambda val: word_as_bool(val)
-        ),
+        "User/language": Value(Locale.EnglishUK, Locale, False, lambda val: Locale[val]),
+        "User/time_format": Value(TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]),
+        "User/always_schedule": Value(False, bool, False, lambda val: word_as_bool(val)),
+        "User/editor.compress_image": Value(False, bool, False, lambda val: word_as_bool(val)),
+        "User/editor.single_selection": Value(False, bool, False, lambda val: word_as_bool(val)),
         "User/dbpath": Value("NoDB", str, True),
         "Application/pinned": Value([], list, True),
         "Application/recent": Value([], list, True),
-        "Application/first_startup": Value(
-            True, bool, False, lambda val: word_as_bool(val)
-        ),
+        "Application/first_startup": Value(True, bool, False, lambda val: word_as_bool(val)),
         "Application/debug": Value(False, bool, False, lambda val: word_as_bool(val)),
         "Application/editor.window_size": Value(QSize(850, 500), QSize, True),
     }
@@ -497,9 +493,7 @@ class Values:
         settings.setValue("appearance", Values.default_value("User/appearance"))
         settings.setValue("language", Values.default_value("User/language"))
         settings.setValue("time_format", Values.default_value("User/time_format"))
-        settings.setValue(
-            "always_schedule", Values.default_value("User/always_schedule")
-        )
+        settings.setValue("always_schedule", Values.default_value("User/always_schedule"))
         settings.setValue(
             "editor.compress_image", Values.default_value("User/editor.compress_image")
         )
@@ -515,9 +509,7 @@ class Values:
         settings.beginGroup("Application")
         settings.setValue("pinned", [])
         settings.setValue("recent", [])
-        settings.setValue(
-            "first_startup", Values.default_value("Application/first_startup")
-        )
+        settings.setValue("first_startup", Values.default_value("Application/first_startup"))
         settings.setValue("debug", Values.default_value("Application/debug"))
         settings.setValue(
             "editor.window_size", Values.default_value("Application/editor.window_size")
