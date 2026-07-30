@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication, QDir, QProcess
 from tcha.core import AppCore
@@ -15,7 +16,7 @@ def main() -> None:
     app = AppCore(sys.argv)
     app.restartRequested.connect(restart)
     root = os.path.dirname(os.path.abspath(__file__))
-    QDir.addSearchPath("icons", os.path.join(root, "../resources/svg"))
+    QDir.addSearchPath("icons", str(Path(root).parent / "resources" / "svg"))
     mw = app.startup_window()
     mw.show()
     sys.exit(app.exec())

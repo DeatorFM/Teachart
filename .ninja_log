@@ -2,3 +2,12 @@
 1	2158	8069733699196568	source/themes/light.py	4e1a15c2444344da
 14	673	8069733992058466	resources/themes/light/resources.bin	9d1b5fac8bf8e749
 674	938	8069733998643430	resources/themes/packed/light.taste	52f321840c37e6e6
+76	2210	8070402810444813	resources/themes/compiled/dark.rcc	5208d3bf9ec9d079
+1	2210	8070402809681488	resources/themes/compiled/light.rcc	342ea0f5bce39190
+1	1177	8070665351547364	resources/themes/compiled/light.rcc	342ea0f5bce39190
+17	331	8070666178410488	resources/themes/compiled/light.rcc	342ea0f5bce39190
+17	324	8070668384926830	resources/themes/compiled/light.rcc	342ea0f5bce39190
+69	2052	8071362497730116	source/themes/dark.py	185d4b488aabfbf5
+1	2091	8071362497033727	source/themes/light.py	c7c816e94e767016
+1	366	8071381233820178	source/themes/light.py	85de482c2497fb7a
+19	382	8071381234016793	source/themes/dark.py	3b048fd460b0e4

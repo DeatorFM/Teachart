@@ -3,6 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Type
 
+from nativeelements.audioelement import AudioElementDefinitions
+from nativeelements.baseelement import (
+    BaseElementDefinitions,
+    BaseElementDelegate,
+    BaseElementEditor,
+    BaseElementModel,
+    BaseElementToolset,
+    QAction,
+)
+from nativeelements.views import PictureEditorView
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QByteArray,
@@ -35,17 +45,6 @@ from PyQt6.QtWidgets import (
     QStyle,
     QStyleOptionViewItem,
 )
-
-from nativeelements.audioelement import AudioElementDefinitions
-from nativeelements.baseelement import (
-    BaseElementDefinitions,
-    BaseElementDelegate,
-    BaseElementEditor,
-    BaseElementModel,
-    BaseElementToolset,
-    QAction,
-)
-from nativeelements.views import PictureEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import (
@@ -225,9 +224,7 @@ class PictureModel(BaseElementModel):
         return item
 
     def shcopy(self) -> PictureModel:
-        model = PictureModel(
-            self.resource, self.width, self.height, self.rotation, self.adjusted
-        )
+        model = PictureModel(self.resource, self.width, self.height, self.rotation, self.adjusted)
         return model
 
     def to_byte_array(self) -> QByteArray:
@@ -268,9 +265,7 @@ class PictureEditor(BaseElementEditor):
         super().__init__(parent)
         self.ui = PictureEditorView()
         self.ui.setUi(self)
-        self.ui.piclabel.resized.connect(
-            lambda qsize: self.set_size(qsize.width(), qsize.height())
-        )
+        self.ui.piclabel.resized.connect(lambda qsize: self.set_size(qsize.width(), qsize.height()))
 
         # Attributes
         self._model = model
@@ -405,9 +400,7 @@ class PictureDelegate(BaseElementDelegate):
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
 
         style = option.widget.style()
-        style.drawControl(
-            QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget
-        )
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
         model: PictureModel = index.data()
         pixmap = model.pixmap
@@ -466,9 +459,7 @@ class PictureDelegate(BaseElementDelegate):
         editor.setGeometry(adjusted_rect)
         editor.adjust_label_size()
 
-    def setModelData(
-        self, editor: PictureEditor, model: PictureModel, index: QModelIndex
-    ):
+    def setModelData(self, editor: PictureEditor, model: PictureModel, index: QModelIndex):
         model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
     def destroyEditor(self, editor, index):
@@ -548,9 +539,7 @@ class PictureToolset(BaseElementToolset):
         self.ui.sb_ImageHeight.setValue(model.height)
         self.ui.sb_ImageWidth.valueChanged.connect(self.on_width_set)
         self.ui.sb_ImageHeight.valueChanged.connect(self.on_height_set)
-        self._max_height = round(
-            model.height * (self.ui.sb_ImageWidth.maximum() / model.width)
-        )
+        self._max_height = round(model.height * (self.ui.sb_ImageWidth.maximum() / model.width))
         self.ui.sb_ImageHeight.setMaximum(self._max_height)
 
     @pyqtSlot(int, int)
@@ -568,9 +557,7 @@ class PictureToolset(BaseElementToolset):
             self.ui.sb_ImageHeight.setMaximum(999)
 
     def on_width_set(self) -> None:
-        self.widthSet.emit(
-            self.ui.sb_ImageWidth.value(), self.ui.ac_keep_aspect_ratio.isChecked()
-        )
+        self.widthSet.emit(self.ui.sb_ImageWidth.value(), self.ui.ac_keep_aspect_ratio.isChecked())
 
     def on_height_set(self) -> None:
         self.heightSet.emit(
@@ -642,9 +629,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(
-            SvgIcon("resources/icons/ic_fileImage.svg"), tr("Picture"), parent
-        )
+        action = QAction(SvgIcon("icons:ic_fileImage.svg"), tr("Picture"), parent)
         action.setData(PictureElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
@@ -680,9 +665,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
         return False
 
     @staticmethod
-    def model_from_xml(
-        xml: QXmlStreamAttributes, resobj: FileResourceObject
-    ) -> PictureModel:
+    def model_from_xml(xml: QXmlStreamAttributes, resobj: FileResourceObject) -> PictureModel:
         try:
             width, height, adjusted = (
                 int(xml.value("width")),
@@ -690,9 +673,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
                 bool(int(xml.value("adjusted"))),
             )
             if width + height > 1:  # Width and height values must be at least 1
-                model = PictureModel(
-                    resobj, width, height, int(xml.value("rotation")), adjusted
-                )
+                model = PictureModel(resobj, width, height, int(xml.value("rotation")), adjusted)
                 print("Read PictureModel", model)
                 return model
             raise LFExceptions.ModelReadError(False)

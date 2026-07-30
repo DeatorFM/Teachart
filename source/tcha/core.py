@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util as iu
 import os
 import sys
 import typing
@@ -8,7 +7,6 @@ from optparse import Values
 from os.path import abspath, exists
 from pathlib import Path
 from shutil import rmtree
-from zipimport import zipimporter
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QDateTime, QPersistentModelIndex, QTimer, pyqtSignal
@@ -38,9 +36,10 @@ from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
-from tcha.styling import TchaProxyStyle, make_palette, load_theme, apply_style
+from tcha.styling import apply_style
 from tcha.table import PresenterView
 from tcha.utils import WinApi
+from themes.utils import load_theme
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -171,9 +170,7 @@ class AppCore(QApplication):
                 QMessageBox.information(
                     None,
                     tr("Database error"),
-                    tr(
-                        "The database found is invalid. A new database will be created."
-                    ),
+                    tr("The database found is invalid. A new database will be created."),
                 )
                 self._db = create_database(AppInfo.db_ver)
                 self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
@@ -194,7 +191,7 @@ class AppCore(QApplication):
         self.qsettings.setValue("User/dbpath", abspath(db.databaseName()))
         language = self.language_dialog()
         print("Selected language", language)
-        self.qsettings.setValue("User/language", language.name)            
+        self.qsettings.setValue("User/language", language.name)
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
@@ -259,9 +256,7 @@ class AppCore(QApplication):
         return self._presenter_view
 
     def caller(self) -> Editor | StartWindow | None:
-        for top_level in filter(
-            lambda x: isinstance(x, QMainWindow), self.topLevelWidgets()
-        ):
+        for top_level in filter(lambda x: isinstance(x, QMainWindow), self.topLevelWidgets()):
             if top_level.is_caller:
                 return top_level
         return None
@@ -272,9 +267,7 @@ class AppCore(QApplication):
         """Creates an editor with a new LessonFile object."""
         lf = LessonFile()
         lf.open("w")
-        editor_window = Editor(
-            self._course_model, self._schedule_model, self._edefinitions, lf
-        )
+        editor_window = Editor(self._course_model, self._schedule_model, self._edefinitions, lf)
         editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
         editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
         editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
@@ -310,17 +303,11 @@ class AppCore(QApplication):
                     self._course_model, self._schedule_model, self._edefinitions, lf
                 )
                 editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
-                editor_window.appActionTriggered[AppAction, Path].connect(
-                    self.on_app_action
-                )
-                editor_window.appActionTriggered[AppAction, QWidget].connect(
-                    self.on_app_action
-                )
+                editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
+                editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
                 editor_window.presenterActivated.connect(self.open_presenter)
                 editor_window.presenterClosed.connect(self.close_presenter)
-                editor_window.ui.ac_recent.setMenu(
-                    self._file_model.export_recent_as_menu(6)
-                )
+                editor_window.ui.ac_recent.setMenu(self._file_model.export_recent_as_menu(6))
 
                 self._clean_up_list.append(Path(lf.temppath))
                 self._clean_up_list.append(editor_window.resource_path)
@@ -354,9 +341,7 @@ class AppCore(QApplication):
                     self._start_dialog = None
                 self._file_model.append_file(str(path))
                 if editor_window:
-                    editor_window.set_recent_files(
-                        self._file_model.export_recent_as_menu(6)
-                    )
+                    editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
                 return editor_window
 
         else:
@@ -387,9 +372,7 @@ class AppCore(QApplication):
             return
         if return_flags & ReturnFlags.UpdateStyle:
             print("Updating application style")
-            self._load_theme(
-                Settings.qsettings().value("User/appearance", "light", str)
-            )
+            self._load_theme(Settings.qsettings().value("User/appearance", "light", str))
         if return_flags & ReturnFlags.UpdateLocale:
             print("Updating language")
             pass

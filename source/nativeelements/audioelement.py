@@ -5,6 +5,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Self, Type
 
+from nativeelements.baseelement import (
+    BaseElementDefinitions,
+    BaseElementDelegate,
+    BaseElementEditor,
+    BaseElementModel,
+    BaseElementToolset,
+    QAction,
+)
+from nativeelements.views import AudioEditorView
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QByteArray,
@@ -32,16 +41,6 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
     QWidget,
 )
-
-from nativeelements.baseelement import (
-    BaseElementDefinitions,
-    BaseElementDelegate,
-    BaseElementEditor,
-    BaseElementModel,
-    BaseElementToolset,
-    QAction,
-)
-from nativeelements.views import AudioEditorView
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import (
@@ -66,11 +65,7 @@ FILE_EXTENSIONS = {
 def supported_audio_extensions() -> tuple[str]:
     supported = QMediaFormat().supportedFileFormats(QMediaFormat.ConversionMode.Decode)
     return tuple(
-        [
-            FILE_EXTENSIONS[fformat]
-            for fformat in supported
-            if fformat in FILE_EXTENSIONS.keys()
-        ]
+        [FILE_EXTENSIONS[fformat] for fformat in supported if fformat in FILE_EXTENSIONS.keys()]
     )
 
 
@@ -143,9 +138,7 @@ class AudioModel(BaseElementModel):
     def recalculate_size(self, width):
         self._item_size.setWidth(width)
 
-    def delegate(
-        self, toolset: BaseElementToolset, parent: QObject
-    ) -> BaseElementDelegate:
+    def delegate(self, toolset: BaseElementToolset, parent: QObject) -> BaseElementDelegate:
         return AudioDelegate(toolset, parent)
 
     @property
@@ -394,9 +387,7 @@ class AudioEditor(BaseElementEditor):
                 self._repeats -= 1
                 QTimer.singleShot(
                     self._model.pause_length * 1000,
-                    lambda: self.set_playback_state(
-                        QMediaPlayer.PlaybackState.PlayingState
-                    ),
+                    lambda: self.set_playback_state(QMediaPlayer.PlaybackState.PlayingState),
                 )
             else:
                 self._repeats = self._model.repeats
@@ -436,9 +427,7 @@ class AudioEditor(BaseElementEditor):
 class AudioDelegate(BaseElementDelegate):
     def __init__(self, toolset: "AudioToolset", parent=None):
         super().__init__(toolset, parent)
-        self._play_icon = QApplication.style().standardIcon(
-            QStyle.StandardPixmap.SP_MediaPlay
-        )
+        self._play_icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         self._cached_editor: AudioEditor
 
     def paint(
@@ -468,9 +457,7 @@ class AudioDelegate(BaseElementDelegate):
         painter.save()
 
         style = QApplication.style()
-        style.drawControl(
-            QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget
-        )
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
         mouse_pos = option.widget.viewport().mapFromGlobal(QCursor.pos())
 
@@ -525,9 +512,7 @@ class AudioDelegate(BaseElementDelegate):
             print("Media status: ", status)
             self._toolset.connect_editor(self._cached_editor)
             self._toolset.enable_presenter_mode(self.pres_mode)
-            self._cached_editor.player.mediaStatusChanged.disconnect(
-                self.on_media_status_changed
-            )
+            self._cached_editor.player.mediaStatusChanged.disconnect(self.on_media_status_changed)
 
     def updateEditorGeometry(self, editor, option, index):
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
@@ -648,9 +633,7 @@ class AudioToolset(BaseElementToolset):
         self.ui.hs_PlayTime.setTickInterval(duration // 100)
 
         self.ui.te_StartTime.setMinimumTime(QTime.fromMSecsSinceStartOfDay(0))
-        self.ui.te_StartTime.setMaximumTime(
-            QTime.fromMSecsSinceStartOfDay(duration - 1000)
-        )
+        self.ui.te_StartTime.setMaximumTime(QTime.fromMSecsSinceStartOfDay(duration - 1000))
         self.ui.te_EndTime.setMinimumTime(QTime.fromMSecsSinceStartOfDay(1000))
         self.ui.te_EndTime.setMaximumTime(QTime.fromMSecsSinceStartOfDay(duration))
         self._duration = duration
@@ -662,12 +645,8 @@ class AudioToolset(BaseElementToolset):
             self.ui.te_StartTime.setMaximumTime(
                 QTime.fromMSecsSinceStartOfDay(self._duration - end - 1000)
             )
-            self.ui.te_EndTime.setMinimumTime(
-                QTime.fromMSecsSinceStartOfDay(start + 1000)
-            )
-            self.ui.te_EndTime.setTime(
-                QTime.fromMSecsSinceStartOfDay(self._duration - end)
-            )
+            self.ui.te_EndTime.setMinimumTime(QTime.fromMSecsSinceStartOfDay(start + 1000))
+            self.ui.te_EndTime.setTime(QTime.fromMSecsSinceStartOfDay(self._duration - end))
 
     def on_start_end_time_changed(self) -> int:
         """When the start or end time has been changed by user."""
@@ -677,9 +656,7 @@ class AudioToolset(BaseElementToolset):
             self.ui.te_StartTime.setMaximumTime(
                 QTime.fromMSecsSinceStartOfDay(self._duration - end - 1000)
             )
-            self.ui.te_EndTime.setMinimumTime(
-                QTime.fromMSecsSinceStartOfDay(start + 1000)
-            )
+            self.ui.te_EndTime.setMinimumTime(QTime.fromMSecsSinceStartOfDay(start + 1000))
             self.startEndTimeChanged.emit(start, end)
 
     def set_current_position(self) -> None:
@@ -757,7 +734,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
         return path if path else None
 
     @staticmethod
-    def model() -> Type[AudioModel]:
+    def model() -> type[AudioModel]:
         return AudioModel
 
     @staticmethod
@@ -774,9 +751,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(
-            SvgIcon("resources/icons/ic_fileAudio.svg"), tr("Audio File"), parent
-        )
+        action = QAction(SvgIcon("icons:ic_fileAudio.svg"), tr("Audio File"), parent)
         action.setData(AudioElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
@@ -811,9 +786,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
         return False
 
     @staticmethod
-    def model_from_xml(
-        xml: QXmlStreamAttributes, resobj: FileResourceObject
-    ) -> AudioModel:
+    def model_from_xml(xml: QXmlStreamAttributes, resobj: FileResourceObject) -> AudioModel:
         try:
             model = AudioModel(
                 resobj,
@@ -827,14 +800,12 @@ class AudioElementDefinitions(BaseElementDefinitions):
             return model
 
         except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(
-                False, "Attribute for AudioModel could not be read."
-            )
+            raise LFExceptions.ModelReadError(False, "Attribute for AudioModel could not be read.")
 
     @staticmethod
     def model_from_mime_data(rescont, mime_data):
         urls = mime_data.urls()
-        url = tuple(
+        url = tuple(  # noqa: RUF015
             filter(
                 lambda x: x.fileName().endswith(supported_audio_extensions()),
                 urls,

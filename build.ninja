@@ -13,16 +13,12 @@ rule run_python
   description = Running Python: $desc
 
 rule pyside_rcc
-  command = $pyside6_rcc $in -o $out
+  command = cmd /c "$pyside6_rcc $in -g python | $python -c "import sys; print(sys.stdin.read().replace('PySide6','PyQt6'),end='')" > $out"
   description = Compiling Qt resources: $in -> $out
 
 rule pack_theme
   command = $python theming/tpack.py $args
   description = $desc
-
-rule pytest
-  command = pytest $args
-  description = Running tests: $args
 
 rule qt_tool
   command = $cmd
@@ -84,13 +80,6 @@ build pack-dark: phony resources/themes/packed/dark.taste
 build pack-all: phony pack-light pack-dark
 
 build build-res: phony compile-all pack-all
-
-# Testing
-build test: pytest
-  args = tests/
-
-build testv: pytest
-  args = tests/ -v
 
 # Qt Toolchain
 build linguist-de: qt_tool

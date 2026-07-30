@@ -3,13 +3,11 @@ from enum import Enum, IntEnum
 from PyQt6.QtCore import QCoreApplication, QPoint, QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QActionGroup,
-    QBrush,
     QColor,
     QMouseEvent,
     QPainter,
     QPaintEvent,
     QPen,
-    QRegion,
     QResizeEvent,
 )
 from PyQt6.QtWidgets import (
@@ -28,7 +26,6 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-
 from tcha.styling import SvgIcon
 from ui.commons import SwitchButton
 from ui.element_toolsets import ColorMenu, FontSizeBox
@@ -69,15 +66,13 @@ class TextEditorMenuView:
         self.row2.setSpacing(2)
         self.row2.setObjectName("Row2")
 
-        spa1 = QSpacerItem(
-            15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
+        spa1 = QSpacerItem(15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.row2.addItem(spa1)
 
         self.tb_Bold = QToolButton(self.tools_widget)
         self.tb_Bold.setMaximumSize(QSize(22, 22))
         self.tb_Bold.setText("")
-        icon2 = SvgIcon("resources/icons/ic_bold.svg")
+        icon2 = SvgIcon("icons:ic_bold.svg")
         self.tb_Bold.setIcon(icon2)
         self.tb_Bold.setIconSize(QSize(20, 20))
         self.tb_Bold.setCheckable(True)
@@ -87,7 +82,7 @@ class TextEditorMenuView:
         self.tb_Italic = QToolButton(self.tools_widget)
         self.tb_Italic.setFixedSize(QSize(22, 22))
         self.tb_Italic.setText("")
-        icon3 = SvgIcon("resources/icons/ic_italic.svg")
+        icon3 = SvgIcon("icons:ic_italic.svg")
         self.tb_Italic.setIcon(icon3)
         self.tb_Italic.setIconSize(QSize(20, 20))
         self.tb_Italic.setCheckable(True)
@@ -97,7 +92,7 @@ class TextEditorMenuView:
         self.tb_Underline = QToolButton(self.tools_widget)
         self.tb_Underline.setFixedSize(QSize(22, 22))
         self.tb_Underline.setText("")
-        icon4 = SvgIcon("resources/icons/ic_underline.svg")
+        icon4 = SvgIcon("icons:ic_underline.svg")
         self.tb_Underline.setIcon(icon4)
         self.tb_Underline.setIconSize(QSize(20, 20))
         self.tb_Underline.setCheckable(True)
@@ -106,7 +101,7 @@ class TextEditorMenuView:
 
         self.tb_TextColor = QToolButton(agent)
         self.tb_TextColor.setFixedSize(QSize(22, 22))
-        icon5 = SvgIcon("resources/icons/ic_textColor.svg")
+        icon5 = SvgIcon("icons:ic_textColor.svg")
         self.tb_TextColor.setIcon(icon5)
         self.tb_TextColor.setIconSize(QSize(20, 20))
         self.tb_TextColor.setObjectName("tb_text_color")
@@ -211,7 +206,7 @@ class TextEditorMenuView:
         self.tb_AlignLeft = QToolButton(self.tools_widget)
         self.tb_AlignLeft.setFixedSize(QSize(22, 22))
         self.tb_AlignLeft.setText("")
-        icon6 = SvgIcon("resources/icons/ic_alignleft.svg")
+        icon6 = SvgIcon("icons:ic_alignleft.svg")
         self.tb_AlignLeft.setIcon(icon6)
         self.tb_AlignLeft.setIconSize(QSize(20, 20))
         self.tb_AlignLeft.setCheckable(True)
@@ -223,7 +218,7 @@ class TextEditorMenuView:
         self.tb_AlignCenter = QToolButton(self.tools_widget)
         self.tb_AlignCenter.setFixedSize(QSize(22, 22))
         self.tb_AlignCenter.setText("")
-        icon7 = SvgIcon("resources/icons/ic_aligncenter.svg")
+        icon7 = SvgIcon("icons:ic_aligncenter.svg")
         self.tb_AlignCenter.setIcon(icon7)
         self.tb_AlignCenter.setIconSize(QSize(20, 20))
         self.tb_AlignCenter.setCheckable(True)
@@ -249,33 +244,21 @@ class TextEditorMenuView:
         sep2 = agent.addSeparator()
         self.table_group.addAction(sep2)
 
-        self.ac_RowBottom = agent.addAction(
-            SvgIcon("resources/icons/ic_insertRowBottom.svg"), ""
-        )
+        self.ac_RowBottom = agent.addAction(SvgIcon("icons:ic_insertRowBottom.svg"), "")
         self.table_group.addAction(self.ac_RowBottom)
-        self.ac_RowTop = agent.addAction(
-            SvgIcon("resources/icons/ic_insertRowTop.svg"), ""
-        )
+        self.ac_RowTop = agent.addAction(SvgIcon("icons:ic_insertRowTop.svg"), "")
         self.table_group.addAction(self.ac_RowTop)
-        self.ac_ColumnRight = agent.addAction(
-            SvgIcon("resources/icons/ic_insertColumnRight.svg"), ""
-        )
+        self.ac_ColumnRight = agent.addAction(SvgIcon("icons:ic_insertColumnRight.svg"), "")
         self.table_group.addAction(self.ac_ColumnRight)
-        self.ac_ColumnLeft = agent.addAction(
-            SvgIcon("resources/icons/ic_insertColumnLeft.svg"), ""
-        )
+        self.ac_ColumnLeft = agent.addAction(SvgIcon("icons:ic_insertColumnLeft.svg"), "")
         self.table_group.addAction(self.ac_ColumnLeft)
 
         sep3 = agent.addSeparator()
         self.table_group.addAction(sep3)
 
-        self.ac_DeleteRow = agent.addAction(
-            SvgIcon("resources/icons/ic_deleterow.svg"), ""
-        )
+        self.ac_DeleteRow = agent.addAction(SvgIcon("icons:ic_deleterow.svg"), "")
         self.table_group.addAction(self.ac_DeleteRow)
-        self.ac_DeleteColumn = agent.addAction(
-            SvgIcon("resources/icons/ic_deletecolumn.svg"), ""
-        )
+        self.ac_DeleteColumn = agent.addAction(SvgIcon("icons:ic_deletecolumn.svg"), "")
         self.table_group.addAction(self.ac_DeleteColumn)
 
         self.hyperlink_group = QActionGroup(agent)
@@ -298,12 +281,8 @@ class TextEditorMenuView:
         self.ac_ColumnLeft.setText(_translate("TextEditorMenu", "Insert column left"))
         self.ac_ColumnRight.setText(_translate("TextEditorMenu", "Insert colum right"))
         self.ac_DeleteRow.setText(_translate("TextEditorMenu", "Delete selected row"))
-        self.ac_DeleteColumn.setText(
-            _translate("TextEditorMenu", "Delete selected column")
-        )
-        self.ac_DeleteHyperlink.setText(
-            _translate("TextEditorMenu", "Delete hyperlink")
-        )
+        self.ac_DeleteColumn.setText(_translate("TextEditorMenu", "Delete selected column"))
+        self.ac_DeleteHyperlink.setText(_translate("TextEditorMenu", "Delete hyperlink"))
 
 
 class AudioEditorView:
@@ -339,9 +318,7 @@ class AudioEditorView:
         self.le_name = QLineEdit(self.main_frame)
         self.le_name.setObjectName("self.le_name")
         # self.le_name.setMinimumWidth(90)
-        self.le_name.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self.le_name.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         # self.le_name.setMaximumWidth(300)
         self.frame_layout.addWidget(self.le_name)
 
@@ -421,15 +398,14 @@ class PictureLabel(QLabel):
         super().mousePressEvent(ev)
 
     def mouseReleaseEvent(self, ev: QMouseEvent):
-        if ev.button() == Qt.MouseButton.LeftButton and self._state.value > 0:
-            if self._overlay:
-                new_size = self._overlay.size()
-                self._overlay.deleteLater()
-                self._overlay = None
-                # self.resize(new_size)
-                self._state = PictureLabel.State.Inactive
-                self._section = PictureLabel.Section.NoSection
-                self.resized.emit(new_size)
+        if ev.button() == Qt.MouseButton.LeftButton and self._state.value > 0 and self._overlay:
+            new_size = self._overlay.size()
+            self._overlay.deleteLater()
+            self._overlay = None
+            # self.resize(new_size)
+            self._state = PictureLabel.State.Inactive
+            self._section = PictureLabel.Section.NoSection
+            self.resized.emit(new_size)
         super().mouseReleaseEvent(ev)
 
     def mouseMoveEvent(self, ev: QMouseEvent):
@@ -471,9 +447,7 @@ class PictureLabel(QLabel):
             painter.setPen(QPen(Qt.GlobalColor.black, 1))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRect(
-                self.rect().adjusted(
-                    self.margin(), self.margin(), -self.margin(), -self.margin()
-                )
+                self.rect().adjusted(self.margin(), self.margin(), -self.margin(), -self.margin())
             )
             painter.setBrush(Qt.GlobalColor.white)
             painter.drawRects(tuple(self._control_rects.values()))
@@ -492,9 +466,7 @@ class ResizeOverlay(QFrame):
     resized = pyqtSignal(QSize)
 
     def __init__(self, max_width: int, parent=None):
-        super().__init__(
-            None, Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint
-        )
+        super().__init__(None, Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self._cursor_map = {

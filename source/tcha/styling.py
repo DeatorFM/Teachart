@@ -8,26 +8,19 @@ import platform
 import re
 import sys
 import tempfile
-import zipfile
 from dataclasses import dataclass
-from importlib import import_module
 from pathlib import Path
 from typing import NewType
 from xml.etree import ElementTree as ET
 
 from PyQt6.QtCore import (
-    QByteArray,
-    QDataStream,
     QFile,
-    QIODevice,
     QPoint,
     QRect,
     QRectF,
     QSize,
     Qt,
     QXmlStreamWriter,
-    qChecksum,
-    qRegisterResourceData,
 )
 from PyQt6.QtGui import (
     QColor,
@@ -41,8 +34,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyleOption, QWidget
-from tcha.error import BinReadError
-from themes.properties import NTHEME_PROPERTIES
 
 from resources.svg import STANDARD_ICON_MAP, SVG_RESOURCES
 
@@ -152,79 +143,6 @@ def apply_style(app: QApplication) -> None:
         app.setStyle(style)
 
 
-def load_theme(identifier: str, app: QApplication) -> None:
-    if identifier.startswith("native:"):
-        name = identifier.removeprefix("native:")
-        return _load_native_theme(name, app)
-
-    if not _load_extern_theme(identifier, app):
-        return _load_native_theme()
-
-
-def _load_native_theme(name: str, app: QApplication) -> bool:
-    if name in NTHEME_PROPERTIES:
-        app.setPalette(
-            make_palette(
-                NTHEME_PROPERTIES[name]["palette"],
-                NTHEME_PROPERTIES[name]["applyFullPalette"],
-            ),
-        )
-
-        import_module(f"themes.{NTHEME_PROPERTIES[name]['resources']}")
-        stylesheets = import_module("themes.stylesheets")
-        app.setStyleSheet(stylesheets.STYLESHEETS[name])
-
-        return True
-
-    from tcha.settings import Values
-
-    load_theme(Values.default_value("User/appearance"), app)
-
-
-def _load_extern_theme(fname: str, app: QApplication) -> bool:
-    from tcha.settings import Settings
-
-    taste_file = Settings.user_path() / "themes" / f"{fname}.taste"
-    try:
-        with zipfile.ZipFile(taste_file, "r") as f_taste:
-            properties = json.loads(f_taste.read("properties.json"))
-            palette = make_palette(properties["palette"], properties["applyFullPalette"])
-            app.setPalette(palette)
-            res_data = f_taste.read(properties["resources"], "")
-            if qChecksum(res_data) == properties["chksum"]:
-                qt_resource_data, qt_resource_name, qt_resource_struct = restructure_resource_data(
-                    res_data
-                )
-                qRegisterResourceData(0x03, qt_resource_data, qt_resource_name, qt_resource_struct)
-                stylesheet = f_taste.read(properties["stylesheet"])
-                app.setStyleSheet(stylesheet.decode())
-                return True
-            return False
-
-    except zipfile.BadZipFile:
-        print("taste-file is corrupted and cannot be opened.")
-    except FileNotFoundError:
-        print("taste-file not found in User folder or taste-file is missing subfile")
-    except BinReadError:
-        print("Resource file corrupted.")
-    except (KeyError, ValueError, TypeError):
-        print("taste-file has invalid data or structure")
-    return False
-
-
-def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]:
-    bytearr = QByteArray(data)
-    stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
-    magic_header = stream.readBytes()
-    if magic_header == b"tcha-qrc":
-        qt_resource_data = stream.readBytes()
-        qt_resource_name = stream.readBytes()
-        qt_resource_struct = stream.readBytes()
-        if stream.atEnd():
-            return qt_resource_data, qt_resource_name, qt_resource_struct
-    raise BinReadError("Wrong magic header")
-
-
 def transform_color(color: QColor, alteration: tuple[float, float, float]) -> QColor:
     """Applies the transformation values to a QColor class."""
     for i, val in enumerate(alteration):
@@ -268,12 +186,12 @@ class Color(QColor):
 
     def to_hex(self) -> str:
         """Converts to string with Format #RRGGBBAA"""
-        return "#{r:0<2}{g:0<2}{b:0<2}".format(
+        return "#{r:0<2}{g:0<2}{b:0<2}".format(  # noqa: UP032
             r=hex(self.red())[2:], g=hex(self.green())[2:], b=hex(self.blue())[2:]
         )
 
     def to_hex_rgba(self) -> str:
-        return "#{r:0<2}{g:0<2}{b:0<2}{alpha:0<2}".format(
+        return "#{r:0<2}{g:0<2}{b:0<2}{alpha:0<2}".format(  # noqa: UP032
             r=hex(self.red())[2:],
             g=hex(self.green())[2:],
             b=hex(self.blue())[2:],
@@ -392,11 +310,11 @@ class QssTemplate:
         writer = QXmlStreamWriter(f)
         writer.writeStartElement("RCC")
         writer.writeStartElement("qresource")
-        for filename in os.listdir(self._icon_cache):
-            print(f"Write {filename}")
+        for fname in os.listdir(self._icon_cache):
+            print(f"Write {fname}")
             writer.writeStartElement("file")
-            writer.writeAttribute("alias", osp.basename(filename))
-            writer.writeCharacters(f"{self._icon_cache}/{filename}")
+            writer.writeAttribute("alias", osp.basename(fname))
+            writer.writeCharacters(f"{self._icon_cache}/{fname}")
             writer.writeEndElement()
         writer.writeEndElement()
         writer.writeEndElement()
@@ -499,7 +417,8 @@ class Svg:
     @classmethod
     def from_file(cls: Svg, path: str) -> Svg:
         path_obj = QFile(path)
-        return cls(path_obj.readData())
+        opened = path_obj.open(QFile.OpenModeFlag.ReadOnly)
+        return cls(path_obj.readAll().data().decode())
 
     def colored(self, color: QColor) -> Svg:
         hex_color = color.name(QColor.NameFormat.HexRgb)

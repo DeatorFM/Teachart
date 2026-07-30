@@ -1,4 +1,8 @@
 from enum import Enum, Flag, auto
+from pathlib import Path
+
+PROJECT_PATH = Path().parent
+RESOURCE_PATH = PROJECT_PATH / "resources"
 
 
 class AppAction(Enum):

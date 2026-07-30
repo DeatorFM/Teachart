@@ -1,5 +1,5 @@
 <RCC>
-    <qresource>
+    <qresource prefix="/">
         <file alias="arrow_drop_up_#00000040_0.svg">svg/arrow_drop_up_#00000040_0.svg</file>
         <file alias="arrow_drop_up_#00000040_180.svg">svg/arrow_drop_up_#00000040_180.svg</file>
         <file alias="arrow_drop_up_#00000040_270.svg">svg/arrow_drop_up_#00000040_270.svg</file>

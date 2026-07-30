@@ -5,6 +5,17 @@ import unicodedata
 import webbrowser
 from typing import Type
 
+from nativeelements.baseelement import (
+    BaseElementDefinitions,
+    BaseElementDelegate,
+    BaseElementModel,
+    BaseElementToolset,
+    BaseTextElementEditor,
+    QMimeData,
+    ResourceObject,
+    ResourceType,
+)
+from nativeelements.views import TextEditorMenuView
 from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
@@ -57,18 +68,6 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QWidget,
 )
-
-from nativeelements.baseelement import (
-    BaseElementDefinitions,
-    BaseElementDelegate,
-    BaseElementModel,
-    BaseElementToolset,
-    BaseTextElementEditor,
-    QMimeData,
-    ResourceObject,
-    ResourceType,
-)
-from nativeelements.views import TextEditorMenuView
 from tcha.consts import ResourceFlag
 from tcha.resmanager import FileResourceObject, ResourceContainer
 from tcha.settings import Locale, Settings
@@ -183,9 +182,7 @@ class TextEditor(BaseTextElementEditor):
         self.setDocument(model)
 
         # Attributes
-        self.type_lang = Locale[
-            Settings.qsettings().value("User/language", "EnglishUK", str)
-        ]
+        self.type_lang = Locale[Settings.qsettings().value("User/language", "EnglishUK", str)]
         self.last_char: str
         self.last_format: dict = {
             "family": ["Calibri"],
@@ -278,13 +275,9 @@ class TextEditor(BaseTextElementEditor):
         document.setTextWidth(self._target_width)
         new_height = document.size().height()
         if 0 <= new_height:
-            self.setFixedHeight(
-                int(new_height) + 10
-            )  # Add 10px buffer to prevent scrolling
+            self.setFixedHeight(int(new_height) + 10)  # Add 10px buffer to prevent scrolling
             document.set_item_size(
-                QSize(
-                    int(self._target_width) + 8, document.size().toSize().height() + 10
-                )
+                QSize(int(self._target_width) + 8, document.size().toSize().height() + 10)
             )
             self.sizeChanged.emit(old_height, new_height)
 
@@ -345,11 +338,11 @@ class TextEditor(BaseTextElementEditor):
             if e.key() == Qt.Key.Key_Tab:
                 self.change_indentation()
                 e.accept()
-                return None
+                return
             elif e.key() == Qt.Key.Key_Backtab:
                 self.change_indentation(-1)
                 e.accept()
-                return None
+                return
         super().keyPressEvent(e)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
@@ -417,9 +410,7 @@ class TextEditor(BaseTextElementEditor):
             cursor.mergeBlockFormat(bformat)
 
             if incr < 0:
-                block = self.document().findBlockByNumber(
-                    cursor.blockNumber() - tlist.count()
-                )
+                block = self.document().findBlockByNumber(cursor.blockNumber() - tlist.count())
                 lowerlist = block.textList()
                 if lowerlist:
                     lowerlist.add(cursor.block())
@@ -577,9 +568,7 @@ class TextEditor(BaseTextElementEditor):
                 props["bold"] = False
             props["italic"] = cformat.fontItalic()
             props["underlined"] = cformat.fontUnderline()
-            props["family"] = self.has_format(
-                cformat.fontFamilies(), self.last_format["family"]
-            )
+            props["family"] = self.has_format(cformat.fontFamilies(), self.last_format["family"])
 
             props["veralign"] = cformat.verticalAlignment()
             props["alignment"] = self.alignment()
@@ -657,9 +646,7 @@ class TextEditorMenu(QMenu):
         self.ui.tb_Italic.toggled.connect(self.on_italic_set)
         self.ui.tb_Underline.toggled.connect(self.on_underlined_set)
         self.ui.align_group.buttonToggled.connect(self.on_alignment_set)
-        self.ui.tb_TextColor.clicked.connect(
-            lambda: self.on_font_color_set(self.text_color())
-        )
+        self.ui.tb_TextColor.clicked.connect(lambda: self.on_font_color_set(self.text_color()))
         self.ui.color_menu.colorChanged.connect(self.on_font_color_set)
 
     @pyqtSlot(dict)
@@ -671,9 +658,7 @@ class TextEditorMenu(QMenu):
                     font.setFamilies(value)
                     self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.display_size(
-                        value
-                    )  # QComboBox with point sizes
+                    self.ui.cb_FontSize.display_size(value)  # QComboBox with point sizes
                 case "bold":
                     self.ui.pb_Bold.setChecked(value)  # Checkable QPushButton
                 case "italic":
@@ -688,7 +673,7 @@ class TextEditorMenu(QMenu):
 
     def set_button_color(self, old: QColor, color: QColor) -> None:
         self.ui.tb_TextColor.setProperty("color", color)
-        ic_engine = SvgIconEngine(Svg.from_file("resources/icons/ic_textColor.svg"))
+        ic_engine = SvgIconEngine(Svg.from_file("icons:ic_textColor.svg"))
         ic_engine.set_path_color("lineBottom", color)
         self.ui.tb_TextColor.setIcon(QIcon(ic_engine))
 
@@ -781,9 +766,7 @@ class TextDelegate(BaseElementDelegate):
         document.setHtml(data.toHtml())
         document.setDocumentMargin(8.0)  # Match TextModel's document margin
         if document.characterCount() > 0:
-            document.setTextWidth(
-                float(sub_rect.width() - 8)
-            )  # Consistent with sizeHint
+            document.setTextWidth(float(sub_rect.width() - 8))  # Consistent with sizeHint
 
         painter.save()
         painter.translate(sub_rect.topLeft())
@@ -840,8 +823,7 @@ class TextDelegate(BaseElementDelegate):
                     object.copy()
 
                 if (
-                    event.keyCombination().keyboardModifiers()
-                    & Qt.KeyboardModifier.ControlModifier
+                    event.keyCombination().keyboardModifiers() & Qt.KeyboardModifier.ControlModifier
                     and event.key() == Qt.Key.Key_Return
                 ):
                     self.commitData.emit(object)
@@ -851,9 +833,7 @@ class TextDelegate(BaseElementDelegate):
 
         return super().eventFilter(object, event)
 
-    def setModelData(
-        self, editor: TextEditor | None, model, index: QModelIndex
-    ) -> None:
+    def setModelData(self, editor: TextEditor | None, model, index: QModelIndex) -> None:
         print("Set new model data for TextElement")
         model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
@@ -952,9 +932,7 @@ class TextToolset(BaseElementToolset):
         self.ui.ac_underline.toggled.connect(self.on_underlined_set)
         self.ui.align_group.triggered.connect(self.on_alignment_set)
         self.ui.veralign_group.triggered.connect(self.on_vertical_alignment_set)
-        self.ui.ac_textcolor.triggered.connect(
-            lambda: self.on_color_set(self.current_color())
-        )
+        self.ui.ac_textcolor.triggered.connect(lambda: self.on_color_set(self.current_color()))
         self.ui.color_menu.colorChanged.connect(self.on_color_set)
 
     def enable_presenter_mode(self, enabled: bool):
@@ -973,9 +951,7 @@ class TextToolset(BaseElementToolset):
                     font.setFamilies(value)
                     self.ui.cb_Font.setCurrentFont(font)  # QFontComboBox
                 case "size":
-                    self.ui.cb_FontSize.display_size(
-                        value
-                    )  # QComboBox with point sizes
+                    self.ui.cb_FontSize.display_size(value)  # QComboBox with point sizes
                 case "bold":
                     self.ui.ac_bold.setChecked(value)  # Checkable QPushButton
                 case "italic":
@@ -1025,7 +1001,7 @@ class TextToolset(BaseElementToolset):
 
     def set_button_color(self, color: QColor) -> None:
         if color:
-            svg = Svg.from_file("resources/icons/ic_textColor.svg")
+            svg = Svg.from_file("icons:ic_textColor.svg")
             if color.isValid():
                 ic_engine = SvgIconEngine(svg)
                 ic_engine.set_path_color("lineBottom", color)
@@ -1070,9 +1046,7 @@ class TextToolset(BaseElementToolset):
         elif alignment == Qt.AlignmentFlag.AlignJustify:
             self.ui.ac_align_justify.setChecked(True)
 
-    def show_vertical_alignment(
-        self, alignment: QTextCharFormat.VerticalAlignment
-    ) -> None:
+    def show_vertical_alignment(self, alignment: QTextCharFormat.VerticalAlignment) -> None:
         if alignment == QTextCharFormat.VerticalAlignment.AlignSubScript:
             self.ui.ac_subscript.setChecked(True)
         elif alignment == QTextCharFormat.VerticalAlignment.AlignSuperScript:
@@ -1137,9 +1111,7 @@ class TextToolset(BaseElementToolset):
 class SymbolDialog(QDialog):
     characterClicked = pyqtSignal(str)
 
-    def __init__(
-        self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow
-    ) -> None:
+    def __init__(self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow) -> None:
         super().__init__(parent, flags)
         self.ui = uic.loadUi("ui/UI_Symbols.ui", self)
         self.chars = self.load_character_set()
@@ -1174,9 +1146,7 @@ class SymbolDialog(QDialog):
         for irow in range(self.ui.TW_Symbols.rowCount()):
             for icolumn in range(self.ui.TW_Symbols.columnCount()):
                 try:
-                    item = QTableWidgetItem(
-                        chr(self.chars[charset][irow * 16 + icolumn])
-                    )
+                    item = QTableWidgetItem(chr(self.chars[charset][irow * 16 + icolumn]))
                     font = QFont()
                     font.setPointSize(12)
                     font.setFamily(self.fontfamily)
@@ -1223,12 +1193,12 @@ class TextElementDefinitions(BaseElementDefinitions):
         return None
 
     @staticmethod
-    def model() -> Type[TextModel]:
+    def model() -> type[TextModel]:
         return TextModel
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(QIcon("resources/icons/ic_text.svg"), tr("Text"), parent)
+        action = QAction(QIcon("icons:ic_text.svg"), tr("Text"), parent)
         action.setData(TextElementDefinitions)
         action.setProperty("is_element_action", True)
         return action
@@ -1258,31 +1228,23 @@ class TextElementDefinitions(BaseElementDefinitions):
         )
 
     @staticmethod
-    def model_from_xml(
-        xml: QXmlStreamAttributes, resobj: FileResourceObject
-    ) -> TextModel:
+    def model_from_xml(xml: QXmlStreamAttributes, resobj: FileResourceObject) -> TextModel:
         model = TextModel(resobj)
         html = resobj.qfile().readAll().data().decode()
         model.setHtml(html)
         return model
 
     @staticmethod
-    def model_from_mime_data(
-        rescont: ResourceContainer, mime_data: QMimeData
-    ) -> TextModel | None:
+    def model_from_mime_data(rescont: ResourceContainer, mime_data: QMimeData) -> TextModel | None:
         resobj = rescont.create(TextElementDefinitions.type())
         model = TextModel(resobj)
-        common_types = set(TextElementDefinitions.mime_types()) & set(
-            mime_data.formats()
-        )
+        common_types = set(TextElementDefinitions.mime_types()) & set(mime_data.formats())
         if "text/html" in common_types:
             print(f"Raw html: {mime_data.html()}")
             html = mime_data.html()
 
             # Remove fragments markers
-            html = html.replace("<!--StartFragment-->", "").replace(
-                "<!--EndFragment-->", ""
-            )
+            html = html.replace("<!--StartFragment-->", "").replace("<!--EndFragment-->", "")
 
             # Remove problematic CSS properties that break text wrapping
             html = html.replace("white-space: pre;", "")
