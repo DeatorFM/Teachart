@@ -11,7 +11,6 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtWidgets import QDialog, QHeaderView
 from PyQt6.QtXml import QDomDocument
-
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
 from tcha.resmanager import ResourceContainer
@@ -23,9 +22,7 @@ class FileView(QDialog):
         super().__init__(parent, Qt.WindowType.Tool)
         self.ui = uic.loadUi("ui/debug_file_info.ui", self)
 
-    def setup_view(
-        self, lf: LessonFile, lesson: Lesson, schedule_id: int | None
-    ) -> None:
+    def setup_view(self, lf: LessonFile, lesson: Lesson, schedule_id: int | None) -> None:
         if lf.path:
             self.ui.lb_show_path.setText(lf.path)
         else:
@@ -130,9 +127,7 @@ class ResourceView(QDialog):
     def setup_view(self, rescont: ResourceContainer) -> None:
         model = ResourceViewModel(rescont)
         self.ui.tv_robjects.setModel(model)
-        self.tv_robjects.header().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
+        self.tv_robjects.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
 
 @dataclass(frozen=True)
@@ -219,9 +214,7 @@ class TreeTableModel(QAbstractItemModel):
 
         if isinstance(node, TreeNode):
             if node.level == 0:
-                return self.createIndex(
-                    row, column, TreeNode(1, node.row, row).to_int()
-                )
+                return self.createIndex(row, column, TreeNode(1, node.row, row).to_int())
 
             elif node.level == 1:
                 return self.createIndex(
@@ -250,9 +243,7 @@ class TreeTableModel(QAbstractItemModel):
                 return self.createIndex(node.row, 0, TreeNode(0, node.row).to_int())
 
             elif node.level == 2:
-                return self.createIndex(
-                    node.column, 0, TreeNode(1, node.row, node.column).to_int()
-                )
+                return self.createIndex(node.column, 0, TreeNode(1, node.row, node.column).to_int())
 
             elif node.level == 3:
                 return self.createIndex(
@@ -344,9 +335,7 @@ class TreeTableModel(QAbstractItemModel):
 
         return False
 
-    def headerData(
-        self, section: int, orientation, role=Qt.ItemDataRole.DisplayRole
-    ) -> str | None:
+    def headerData(self, section: int, orientation, role=Qt.ItemDataRole.DisplayRole) -> str | None:
         if role == Qt.ItemDataRole.DisplayRole:
             if section == 0:
                 return "Attribute"
@@ -388,6 +377,4 @@ class TableTreeView(QDialog):
     def setup_view(self, tablemodel: TableModel) -> None:
         tree_model = TreeTableModel(tablemodel, None)
         self.ui.tv_table.setModel(tree_model)
-        self.tv_table.header().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
+        self.tv_table.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)

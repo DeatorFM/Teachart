@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
-from tcha.consts import AppAction, DisplayMode
+from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
     CourseModel,
@@ -119,17 +119,18 @@ class AppCore(QApplication):
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
         self.setApplicationVersion(AppInfo.app_ver)
-        self.setWindowIcon((QIcon("resources/placeholder_logo.svg")))
+        self.setWindowIcon(QIcon(str(RESOURCE_PATH / "images" / "logo.svg")))
 
-        self.qsettings = Settings.qsettings()
         self._db: QSqlDatabase | None = None
         self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
+        self._debug_mode = "--debug" in argv
+        self._clean_mode = "--clean" in argv
         self._argv = argv
 
-        if not self.qsettings.allKeys():
+        if not Settings.qsettings().allKeys():
             print("Empty Settings: First initialisation")
             self._first_time()
         else:
@@ -195,6 +196,14 @@ class AppCore(QApplication):
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
+
+    def debug_enabled(self) -> bool:
+        return self._debug_mode
+
+    def clean_mode_enabled(self) -> bool:
+        return self._clean_mode
+
+    def setup_logger(self) -> None: ...
 
     def language_dialog(self) -> Locale:
         language, result = QInputDialog.getItem(

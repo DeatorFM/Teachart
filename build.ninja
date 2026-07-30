@@ -24,6 +24,11 @@ rule qt_tool
   command = $cmd
   description = $desc
 
+rule uv
+  command = uv $args
+  description = $desc
+
+
 # Development targets
 build dev: run_python source/main.py
   desc = Starting Teachart (dev mode)
@@ -43,6 +48,11 @@ build debug-clean: run_python source/main.py
 build test-tch: run_python source/main.py
   args = Test.tch
   desc = Running with Test.tch
+
+# Build executable script
+build setup: uv
+  args = pip install -e .
+  desc = Buildung teachart and tpack
 
 # Compile resources
 build source/themes/light.py: pyside_rcc resources/themes/light/light.qrc

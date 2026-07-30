@@ -35,6 +35,7 @@ source/themes/dark.py
 source/themes/light.py
 source/themes/properties.py
 source/themes/stylesheets.py
+source/themes/utils.py
 source/ui/StyledWidget.py
 source/ui/UI_Symbols_ui.py
 source/ui/__init__.py
@@ -51,5 +52,5 @@ teachart.egg-info/entry_points.txt
 teachart.egg-info/requires.txt
 teachart.egg-info/top_level.txt
 theming/__init__.py
-theming/stylesheets.py
+theming/qss_template.py
 theming/tpack.py

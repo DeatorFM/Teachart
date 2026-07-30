@@ -24,7 +24,7 @@ build = ["pyinstaller>=6.0.0"]
 [tool.setuptools]
 packages = ["tcha", "ui", "themes", "nativeelements", "resources", "theming"]
 py-modules = ["main"]
-package-dir = {"tcha" = "source/tcha","ui" = "source/ui","themes" = "source/themes","nativeelements" = "source/nativeelements","resources" = "source/resources", "main" = "source"}
+package-dir = {"" = "source", "theming" = "theming"}
 
 [tool.pytest.ini_options]
 pythonpath = ["source"]

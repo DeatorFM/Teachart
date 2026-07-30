@@ -75,10 +75,6 @@ class WinApi:
             print("Single mode cannot be forced.")
             return
         elif mode == DisplayMode.Extended:
-            user32.SetDisplayConfig(
-                0, None, 0, None, WinApi.SDC_APPLY | WinApi.SDC_TOPOLOGY_EXTEND
-            )
+            user32.SetDisplayConfig(0, None, 0, None, WinApi.SDC_APPLY | WinApi.SDC_TOPOLOGY_EXTEND)
         else:
-            user32.SetDisplayConfig(
-                0, None, 0, None, WinApi.SDC_APPLY | WinApi.SDC_TOPOLOGY_CLONE
-            )
+            user32.SetDisplayConfig(0, None, 0, None, WinApi.SDC_APPLY | WinApi.SDC_TOPOLOGY_CLONE)

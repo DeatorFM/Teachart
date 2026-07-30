@@ -6,7 +6,6 @@ from PyQt6.QtCore import (
     QByteArray,
     QDataStream,
     QIODevice,
-    QResource,
     qChecksum,
     qRegisterResourceData,
 )
