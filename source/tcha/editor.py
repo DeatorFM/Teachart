@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QDateTime,
@@ -23,8 +24,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
-
-from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
+from tcha.appcomp import debug_enabled
 from tcha.consts import (
     AppAction,
     ClipboardContent,
@@ -68,9 +68,7 @@ class SaveWorker(QRunnable):
 
 
 class Editor(QMainWindow):
-    appActionTriggered = pyqtSignal(
-        [AppAction], [AppAction, Path], [AppAction, QWidget]
-    )
+    appActionTriggered = pyqtSignal([AppAction], [AppAction, Path], [AppAction, QWidget])
     fileSaved = pyqtSignal(Path)
     indexCopied = pyqtSignal(QPersistentModelIndex)
     presenterActivated = pyqtSignal(QGraphicsScene, QScreen)  # Scene, Target Screen
@@ -99,9 +97,7 @@ class Editor(QMainWindow):
 
         # Attributes
         self._caller = False
-        self.save_state = (
-            SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
-        )
+        self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
@@ -119,15 +115,9 @@ class Editor(QMainWindow):
         self.table.check_clipboard()
 
     def initialise_editor(self) -> tuple[LessonFile, ResourceContainer]:
-        debug_tag = (
-            "(Debug-Mode)"
-            if Settings.qsettings().value("Application/debug", False, bool)
-            else ""
-        )
+        debug_tag = "(Debug-Mode)" if debug_enabled() else ""
         if self.lessonfile.mode == "w":
-            self.set_lesson(
-                Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime())
-            )
+            self.set_lesson(Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime()))
             tablemodel = TableModel.new(2, 2)
             self.table.setModel(tablemodel)
             self.ui.cb_course.setCurrentIndex(0)
@@ -142,17 +132,13 @@ class Editor(QMainWindow):
                 f"Finished reading file '{os.path.basename(self.lessonfile.path)}' successfully."
             )
             self.ui.ac_xml_insp.setEnabled(True)
-            self.setWindowTitle(
-                f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
-            )
+            self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
 
         else:
             raise ValueError("LessonFile's mode is invalid. Must be 'w' or 'r'.")
 
     def connect_signals(self) -> None:
-        self.courses.sourceModel().courseDataChanged.connect(
-            self.on_course_data_changed
-        )
+        self.courses.sourceModel().courseDataChanged.connect(self.on_course_data_changed)
         self.courses.rowsRemoved.connect(self.on_course_data_changed)
         self.courses.dataChanged.connect(self.on_course_data_changed)
         self.schedules.rowsAboutToBeRemoved.connect(self.check_for_schedule)
@@ -171,9 +157,7 @@ class Editor(QMainWindow):
 
         self.ui.ac_add_course.triggered.connect(self.add_course)
         self.ui.ac_course_exp.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(
-                AppAction.CourseExplorer, self
-            )
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
         )
         self.ui.ac_course_rec.triggered.connect(self.open_course_record)
         self.ui.ac_copy.triggered.connect(self.table.copy_current_index)
@@ -201,9 +185,7 @@ class Editor(QMainWindow):
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
         self.ui.ac_settings.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(
-                AppAction.Settings, self
-            )
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.Settings, self)
         )
 
         self.ui.ac_file_insp.triggered.connect(self.open_file_inspector)
@@ -214,9 +196,7 @@ class Editor(QMainWindow):
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
         self.ui.table.editingLevelChanged.connect(self.editing_level_changed)
-        self.ui.table.currentEditorIndexChanged.connect(
-            self.current_editor_index_changed
-        )
+        self.ui.table.currentEditorIndexChanged.connect(self.current_editor_index_changed)
         self.ui.table.clipboardChanged.connect(self.clipboard_changed)
 
         self.ui.ac_cell_finish_editing.triggered.connect(self.table.close_active_editor)
@@ -224,12 +204,8 @@ class Editor(QMainWindow):
         self.ui.ac_append_column.triggered.connect(self.table.add_column_at_end)
         self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
         self.ui.ac_add_column.triggered.connect(self.table.add_column_after_current)
-        self.ui.ac_rmv_row.triggered.connect(
-            lambda: self.table.remove_row()
-        )  # Move to model
-        self.ui.ac_rmv_column.triggered.connect(
-            lambda: self.table.remove_column()
-        )  # Move to model
+        self.ui.ac_rmv_row.triggered.connect(lambda: self.table.remove_row())  # Move to model
+        self.ui.ac_rmv_column.triggered.connect(lambda: self.table.remove_column())  # Move to model
 
         self.ui.cell_group.triggered.connect(self.table.handle_cell_action)
         self.ui.menu_elements.triggered.connect(self.table.handle_element_action)
@@ -263,14 +239,10 @@ class Editor(QMainWindow):
             self.appActionTriggered[AppAction, Path].emit(AppAction.OpenFile, path)
 
     def open_file_dialog(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, tr("Open Sheet"), None, "*.lesson *.tch"
-        )
+        path, _ = QFileDialog.getOpenFileName(self, tr("Open Sheet"), None, "*.lesson *.tch")
         if path:
             self._caller = True
-            self.appActionTriggered[AppAction, Path].emit(
-                AppAction.OpenFile, Path(path)
-            )
+            self.appActionTriggered[AppAction, Path].emit(AppAction.OpenFile, Path(path))
 
     def set_unsaved(self) -> None:
         self.save_state = SaveState.Unsaved
@@ -294,9 +266,7 @@ class Editor(QMainWindow):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if button == QMessageBox.StandardButton.Yes:
-                    id = self.courses.sourceModel().add_course(
-                        lesson.course_name, lesson.duration
-                    )
+                    id = self.courses.sourceModel().add_course(lesson.course_name, lesson.duration)
                     lesson = Lesson(
                         self.courses.source_id(),
                         lesson.datetime,
@@ -344,16 +314,10 @@ class Editor(QMainWindow):
             return False
 
     def _on_saving_finished(self) -> None:
-        debug_tag = (
-            "(Debug-Mode)"
-            if Settings.qsettings().value("Application/debug", False, bool)
-            else ""
-        )
+        debug_tag = "(Debug-Mode)" if debug_enabled() else ""
         self.ui.ac_save.setEnabled(True)
         self.ui.tb_save.setEnabled(True)
-        self.setWindowTitle(
-            f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}"
-        )
+        self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
         if self.save_state is SaveState.SaveAndQuit:
             self.save_state = SaveState.Saved
             self.statusBar().showMessage(tr("Saving finished!"), 3000)
@@ -372,9 +336,7 @@ class Editor(QMainWindow):
         if self.ui.ac_schedule.state() == 2 and not self.schedules.has_file(
             self.lessonfile.file_id
         ):
-            course_id = self.courses.data(
-                self.courses.index(self.ui.cb_course.currentIndex(), 0)
-            )
+            course_id = self.courses.data(self.courses.index(self.ui.cb_course.currentIndex(), 0))
             self.schedules.add_schedule(
                 course_id,
                 self.ui.dt_DateTime.dateTime(),
@@ -384,9 +346,7 @@ class Editor(QMainWindow):
             self.lesson.source_id = self.courses.source_id()
             print("New schedule created for file_id: ", self.lessonfile.file_id)
 
-        elif self.ui.ac_schedule.state() == 2 and self.schedules.has_file(
-            self.lessonfile.file_id
-        ):
+        elif self.ui.ac_schedule.state() == 2 and self.schedules.has_file(self.lessonfile.file_id):
             print("File exists. Updating schedule")
             idx = self.schedules.index_for_file_id(self.lessonfile.file_id)
             if idx.isValid():
@@ -398,9 +358,7 @@ class Editor(QMainWindow):
                     self.lessonfile.path,
                 )
 
-        elif self.ui.ac_schedule.state() == 1 and self.schedules.has_file(
-            self.lessonfile.file_id
-        ):
+        elif self.ui.ac_schedule.state() == 1 and self.schedules.has_file(self.lessonfile.file_id):
             idx = self.schedules.index_for_file_id(self.lessonfile.file_id)
             print("Index is valid ", idx.isValid())
             if idx.isValid():
@@ -419,17 +377,13 @@ class Editor(QMainWindow):
 
     def add_course(self) -> None:
         def isvalid() -> bool:
-            if name and duration > 0:
-                return True
-            return False
+            return bool(name and duration > 0)
 
         ok, name, duration = AddCourseDialog.get_course_info(self)
         if ok and isvalid():
             self.courses.sourceModel().add_course(name, duration)
         elif ok and not isvalid():
-            QMessageBox.warning(
-                self, None, tr("Please enter a valid course name and duration.")
-            )
+            QMessageBox.warning(self, None, tr("Please enter a valid course name and duration."))
             self.add_course()
         else:
             return
@@ -569,9 +523,7 @@ class Editor(QMainWindow):
                 if definition.supports_mime_data(mime):
                     self.def_for_mime_type = definition
                     self.ui.ac_from_clipboard.setEnabled(True)
-                    print(
-                        f"Supported definition for current mime types: {self.def_for_mime_type}"
-                    )
+                    print(f"Supported definition for current mime types: {self.def_for_mime_type}")
                     return
 
             if self.has_index_copied() and self.ui.table.editor:
@@ -631,9 +583,7 @@ class Editor(QMainWindow):
     def open_course_record(self) -> None:
         dialog = RecordView(self.lesson.course_id, self.courses.sourceModel(), self)
         dialog.managerCalled.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(
-                AppAction.CourseExplorer, self
-            )
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
         )
         dialog.open()
 

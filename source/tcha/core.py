@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import sys
 import typing
-from optparse import Values
+from functools import cache
 from os.path import abspath, exists
 from pathlib import Path
 from shutil import rmtree
+from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QDateTime, QPersistentModelIndex, QTimer, pyqtSignal
@@ -21,6 +22,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
+from tcha.appcomp import parse_args
 from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
@@ -34,7 +36,7 @@ from tcha.editor import Editor
 from tcha.elements import get_all_definitions
 from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
-from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog
+from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog, Values
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
 from tcha.styling import apply_style
 from tcha.table import PresenterView
@@ -113,7 +115,19 @@ PINNED = [
 ]
 
 
-class AppCore(QApplication):
+class MetaApp(type(QApplication)):
+    _instances: typing.ClassVar[dict] = {}
+    _lock: Lock = Lock()
+
+    def __call__(cls, *args, **kwds):
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwds)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
+
+
+class AppCore(QApplication, metaclass=MetaApp):
     restartRequested = pyqtSignal()
 
     def __init__(self, argv: list[str]) -> None:
@@ -126,9 +140,7 @@ class AppCore(QApplication):
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
-        self._debug_mode = "--debug" in argv
-        self._clean_mode = "--clean" in argv
-        self._argv = argv
+        self._launch_config = parse_args()
 
         if not Settings.qsettings().allKeys():
             print("Empty Settings: First initialisation")
@@ -136,14 +148,14 @@ class AppCore(QApplication):
         else:
             self._startup_checks()
 
-        load_theme(self.qsettings.value("User/appearance"), self)
+        load_theme(Settings.value("User/appearance"), self)
         apply_style(self)
 
         self._course_model = CourseModel(self._db)
         self._schedule_model = ScheduleModel(self._db)
         self._file_model = OpenFileModel(
-            self.qsettings.value("Application/recent", [], list),
-            self.qsettings.value("Application/pinned", [], list),
+            Settings.value("Application/recent"),
+            Settings.value("Application/pinned"),
         )
 
         self.init_display_mode = WinApi.get_display_mode()
@@ -154,12 +166,17 @@ class AppCore(QApplication):
         self.screenAdded.connect(self.on_screen_changed)
         self.screenRemoved.connect(self.on_screen_changed)
 
+    @cache
+    @staticmethod
+    def arguments() -> list[str]:
+        return super().arguments()
+
     def _startup_checks(self) -> None:
         if not ErrorLogger.logdir().exists():
             ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
 
         # Check database
-        dbpath = self.qsettings.value("User/dbpath", type=str)
+        dbpath = Settings.value("User/dbpath")
 
         if exists(dbpath):
             print(f"Data base file in '{dbpath}' found.")
@@ -174,7 +191,7 @@ class AppCore(QApplication):
                     tr("The database found is invalid. A new database will be created."),
                 )
                 self._db = create_database(AppInfo.db_ver)
-                self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
+                Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
         else:
             QMessageBox.information(
                 None,
@@ -182,26 +199,26 @@ class AppCore(QApplication):
                 tr("The database could not be found. A new database will be created."),
             )
             self._db = create_database(AppInfo.db_ver)
-            self.qsettings.setValue("User/dbpath", abspath(self._db.databaseName()))
+            Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
 
     def _first_time(self) -> None:
-        self.qsettings = Values.default_qsettings()
-        self.qsettings.setValue("Application/first_startup", False)
+        Values.default_qsettings()
+        Settings.set_value("Application/first_startup", False)
         db = create_database()
         print("Database at", abspath(db.databaseName()))
-        self.qsettings.setValue("User/dbpath", abspath(db.databaseName()))
+        Settings.set_value("User/dbpath", abspath(db.databaseName()))
         language = self.language_dialog()
         print("Selected language", language)
-        self.qsettings.setValue("User/language", language.name)
+        Settings.set_value("User/language", language.name)
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
 
     def debug_enabled(self) -> bool:
-        return self._debug_mode
+        return self._launch_config.debug
 
     def clean_mode_enabled(self) -> bool:
-        return self._clean_mode
+        return self._launch_config.clean
 
     def setup_logger(self) -> None: ...
 
@@ -241,14 +258,17 @@ class AppCore(QApplication):
 
     def startup_window(self) -> QWidget:
         """Returns startup window based on arguments on startup"""
-        if len(self._argv) == 1:
+        print(f"Parsed arguments: {self._launch_config}")
+        if not self._launch_config.opened_path:
             start = self.open_start_dialog()
             return start
 
-        elif len(self._argv) == 2:
-            path = Path(self._argv[1])
-            if path.is_file() and path.suffix == ".tch":
-                editor = self.open_file(path)
+        elif self._launch_config.opened_path.exists():
+            if (
+                self._launch_config.opened_path.is_file()
+                and self._launch_config.opened_path.suffix == ".tch"
+            ):
+                editor = self.open_file(self._launch_config.opened_path)
                 return editor if editor else self.create_editor()
             return self.create_editor()
 
@@ -384,24 +404,14 @@ class AppCore(QApplication):
             self._load_theme(Settings.qsettings().value("User/appearance", "light", str))
         if return_flags & ReturnFlags.UpdateLocale:
             print("Updating language")
-            pass
 
     def open_start_dialog(self, file_mode=False) -> None:
         if not self.opened_start_dialog():
-            window = StartWindow(self._file_model, self._schedule_model)
+            window = StartWindow(self._file_model, self._schedule_model, file_mode)
             window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
             window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
             window.appActionTriggered[AppAction].connect(self.on_app_action)
             self._start_dialog = window
-            if file_mode:
-                debug_tag = (
-                    "Debug-Mode"
-                    if Settings.qsettings().value("Application/debug", False, bool)
-                    else ""
-                )
-                window.ui.ac_new.setVisible(False)
-                window.ui.ac_settings.setVisible(False)
-                window.setWindowTitle(f"{tr('Open File')} {debug_tag}")
             return window
         else:
             return self.opened_start_dialog()
@@ -483,8 +493,8 @@ class AppCore(QApplication):
 
     def on_quitting(self) -> None:
         print("Saving recent and pinned files")
-        self.qsettings.setValue("Application/recent", self._file_model.export_recent())
-        self.qsettings.setValue("Application/pinned", self._file_model.export_pinned())
+        Settings.set_value("Application/recent", self._file_model.export_recent())
+        Settings.set_value("Application/pinned", self._file_model.export_pinned())
 
         for path in self._clean_up_list:
             rmtree(path.as_posix(), True)

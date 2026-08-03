@@ -1,9 +1,8 @@
 from enum import Enum
 
-import PyQt6.uic as uic
+from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, Qt
-from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QDialog,
     QListWidgetItem,
@@ -12,7 +11,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QWidget,
 )
-
+from tcha.appcomp import debug_enabled
 from tcha.dbmodels import *
 from tcha.settings import Settings
 from ui.ui_dbmanager import AssignmentView, DbManagerView
@@ -46,12 +45,10 @@ class DbManager(QDialog, DbManagerView):
         print("Student model initiated")
 
         self._schedule_model = schedule_model
-        self._filtered_schedule_model = FilteredScheduleModel(
-            self._schedule_model, self
-        )
+        self._filtered_schedule_model = FilteredScheduleModel(self._schedule_model, self)
 
         self.tv_courses.setModel(self._filtered_course_model)
-        if not qsettings.value("Application/debug", False, bool):
+        if not debug_enabled():
             self.tv_courses.hideColumn(0)
             self.tv_courses.hideColumn(3)
         self.tv_courses.selectionModel().setCurrentIndex(
@@ -59,54 +56,36 @@ class DbManager(QDialog, DbManagerView):
             QItemSelectionModel.SelectionFlag.SelectCurrent,
         )
         self.tv_courses.selectionModel().select(
-            QItemSelection(
-                self._course_model.index(0, 0), self._course_model.index(0, 3)
-            ),
+            QItemSelection(self._course_model.index(0, 0), self._course_model.index(0, 3)),
             QItemSelectionModel.SelectionFlag.SelectCurrent,
         )
 
         self.tv_students.setModel(self._filtered_student_model)
-        if not qsettings.value("Application/debug", False, bool):
+        if not debug_enabled():
             self.tv_students.hideColumn(0)
 
         self.tv_schedules.setModel(self._filtered_schedule_model)
-        if not qsettings.value("Application/debug", False, bool):
+        if not debug_enabled():
             self.tv_schedules.hideColumn(0)
             self.tv_schedules.hideColumn(4)
 
-        self.le_search.textChanged.connect(
-            self._filtered_course_model.set_search_filter
-        )
+        self.le_search.textChanged.connect(self._filtered_course_model.set_search_filter)
         self.pb_new_course.clicked.connect(self.add_course)
         self.pb_remove_course.clicked.connect(self.remove_course)
-        self.tv_courses.selectionModel().currentRowChanged.connect(
-            self.on_course_row_changed
-        )
-        self.tv_courses.selectionModel().selectionChanged.connect(
-            self.on_course_selection_changed
-        )
+        self.tv_courses.selectionModel().currentRowChanged.connect(self.on_course_row_changed)
+        self.tv_courses.selectionModel().selectionChanged.connect(self.on_course_selection_changed)
         self.pb_assign_students.clicked.connect(self._assign_button_clicked)
         self.pb_unassign_student.clicked.connect(self.unassign_student)
         self.pb_remove_student.clicked.connect(self.remove_student)
-        self.le2_search.textChanged.connect(
-            self._filtered_student_model.set_search_filter
-        )
+        self.le2_search.textChanged.connect(self._filtered_student_model.set_search_filter)
         self.pb_remove_schedule.clicked.connect(self.remove_schedule)
-        self.cb_show_unassigned.checkStateChanged.connect(
-            self.set_disable_assigned_students
-        )
-        self._course_model.courseDataChanged.connect(
-            self._student_model.on_course_data_changed
-        )
+        self.cb_show_unassigned.checkStateChanged.connect(self.set_disable_assigned_students)
+        self._course_model.courseDataChanged.connect(self._student_model.on_course_data_changed)
         self._course_model.courseDataChanged.connect(
             self._filtered_schedule_model.sourceModel().on_course_data_changed
         )
-        self.tv_students.selectionModel().selectionChanged.connect(
-            self.on_student_row_changed
-        )
-        self.tv_schedules.selectionModel().selectionChanged.connect(
-            self.on_schedule_row_changed
-        )
+        self.tv_students.selectionModel().selectionChanged.connect(self.on_student_row_changed)
+        self.tv_schedules.selectionModel().selectionChanged.connect(self.on_schedule_row_changed)
 
     def add_course(self) -> None:
         def isvalid() -> bool:
@@ -142,9 +121,7 @@ class DbManager(QDialog, DbManagerView):
         self._course_model.select()
         self._course_model.courseDataChanged.emit()
 
-    def on_course_row_changed(
-        self, current: QModelIndex, previous: QModelIndex
-    ) -> None:
+    def on_course_row_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
         if current.row() == 0:
             self.pb_remove_course.setEnabled(False)
             self.cb_show_unassigned.setEnabled(True)
@@ -158,9 +135,7 @@ class DbManager(QDialog, DbManagerView):
         if selected:
             selected_index = selected.indexes()[0]
             source_index = self._filtered_course_model.mapToSource(selected_index)
-            course_id = self._course_model.data(
-                self._course_model.index(source_index.row(), 0)
-            )
+            course_id = self._course_model.data(self._course_model.index(source_index.row(), 0))
             if course_id == 0:
                 self._filtered_student_model.set_exclusive_course_id(None)
                 self._filtered_schedule_model.set_exclusive_course_id(None)
@@ -168,9 +143,7 @@ class DbManager(QDialog, DbManagerView):
                 self._filtered_student_model.set_exclusive_course_id(course_id)
                 self._filtered_schedule_model.set_exclusive_course_id(course_id)
 
-    def on_student_row_changed(
-        self, selected: QItemSelection, deselected: QItemSelection
-    ) -> None:
+    def on_student_row_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if not selected.isEmpty():
             self.pb_unassign_student.setEnabled(True)
             self.pb_remove_student.setEnabled(True)
@@ -206,12 +179,8 @@ class DbManager(QDialog, DbManagerView):
     def assign_students(self) -> None:
         current_idx = self.tv_courses.selectionModel().currentIndex()
         source_idx = self._filtered_course_model.mapToSource(current_idx)
-        course_id = self._course_model.data(
-            self._course_model.index(source_idx.row(), 0)
-        )
-        course_name = self._course_model.data(
-            self._course_model.index(source_idx.row(), 1)
-        )
+        course_id = self._course_model.data(self._course_model.index(source_idx.row(), 0))
+        course_name = self._course_model.data(self._course_model.index(source_idx.row(), 1))
         code, students = AssignmentDialog.get_students(
             self, self._student_model, course_id, course_name
         )
@@ -241,9 +210,7 @@ class DbManager(QDialog, DbManagerView):
             self._student_model.removeRow(source_idx.row())
             self._student_model.select()
 
-    def on_schedule_row_changed(
-        self, selected: QItemSelection, deselected: QItemSelection
-    ) -> None:
+    def on_schedule_row_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if not selected.isEmpty():
             self.pb_remove_schedule.setEnabled(True)
         else:
@@ -351,9 +318,7 @@ class AssignmentDialog(QDialog, AssignmentView):
         self.tv_students.setModel(self._filtered_student_model)
         self.tv_students.hideColumn(0)
 
-        self.le_search.textChanged.connect(
-            self._filtered_student_model.set_search_filter
-        )
+        self.le_search.textChanged.connect(self._filtered_student_model.set_search_filter)
         self.tv_students.doubleClicked.connect(self.add_student)
         self.lw_selected_students.itemClicked.connect(self.remove_student)
         self.pb_new_student.clicked.connect(self.new_student_creation_requested)
@@ -419,9 +384,7 @@ class RecordView(QDialog):
         self.ui.tv_students.hideColumn(0)
         self.ui.tv_students.hideColumn(2)
 
-        name = course_model.data(
-            course_model.index(course_model.index_for_id(course_id).row(), 1)
-        )
+        name = course_model.data(course_model.index(course_model.index_for_id(course_id).row(), 1))
         wtprefix = tr("Course Record: ")
         self.setWindowTitle("{}{}".format(wtprefix, name))
 

@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from tcha.appcomp import debug_enabled
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.styling import SvgIcon
 
@@ -186,7 +187,10 @@ class Ui_StartWindow(object):
 
     def retranslateUi(self, start_window: QMainWindow):
         _translate = QCoreApplication.translate
-        start_window.setWindowTitle(start_window.tr("Start - Teachart"))
+        if debug_enabled():
+            start_window.setWindowTitle(start_window.tr("Start - Teachart (Debug-Mode)"))
+        else:
+            start_window.setWindowTitle(start_window.tr("Start - Teachart"))
         self.file_tabs.setTabText(
             self.file_tabs.indexOf(self.tab_recent),
             start_window.tr("Recent Files"),

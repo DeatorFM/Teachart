@@ -17,6 +17,15 @@ class AppAction(Enum):
     AboutTeachart = 8
 
 
+class DialogType(Enum):
+    Editor = 0
+    Start = 1
+    Settings = 2
+    DbManager = 3
+    About = 4
+    Other = 100
+
+
 class CellAction(Enum):
     Discard = auto()
     Accept = auto()

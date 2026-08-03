@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QWidget,
 )
-
 from tcha.consts import AppAction
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.lfio import ProgressLogger
@@ -64,9 +63,7 @@ class FilteredOpenFileModel(QSortFilterProxyModel):
 
 
 class OpenFileModel(QAbstractTableModel):
-    def __init__(
-        self, recent_files: list[str], pinned_file: list[str], parent=None
-    ) -> None:
+    def __init__(self, recent_files: list[str], pinned_file: list[str], parent=None) -> None:
         super().__init__(parent)
         self._data: list[FileItem] = self._build_data(recent_files, pinned_file)
 
@@ -151,9 +148,7 @@ class OpenFileModel(QAbstractTableModel):
         return False
 
     def export_recent(self, max_size=10) -> list[str]:
-        filtered = [
-            item.path.as_posix() for item in filter(lambda x: x.recent, self._data)
-        ]
+        filtered = [item.path.as_posix() for item in filter(lambda x: x.recent, self._data)]
         length = len(filtered)
         return filtered[:10] if length >= max_size else filtered[:length]
 
@@ -175,20 +170,25 @@ class OpenFileModel(QAbstractTableModel):
 
 
 class StartWindow(QMainWindow):
-    appActionTriggered = pyqtSignal(
-        [AppAction, Path], [AppAction, QWidget], [AppAction]
-    )
+    appActionTriggered = pyqtSignal([AppAction, Path], [AppAction, QWidget], [AppAction])
 
     def __init__(
         self,
         file_model: OpenFileModel,
         schedule_model: ScheduleModel,
+        file_mode=False,
         parent=None,
         flags=Qt.WindowType.Dialog,
     ):
         super().__init__(parent, flags)
         self.ui = Ui_StartWindow()
         self.ui.setupUi(self)
+
+        if file_mode:
+            debug_tag = self.tr("Debug-Mode") if self.debug_enabled() else ""
+            self.ui.ac_new.setVisible(False)
+            self.ui.ac_settings.setVisible(False)
+            self.setWindowTitle(f"{self.tr('Open File')} {debug_tag}")
 
         self.resize(700, 400)
 
@@ -208,18 +208,14 @@ class StartWindow(QMainWindow):
         self.ui.tv_recent.setModel(self._recentf_model)
         self.ui.tv_recent.header().setStretchLastSection(False)
         self.ui.tv_recent.setColumnWidth(1, 10)
-        self.ui.tv_recent.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
+        self.ui.tv_recent.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.ui.tv_recent.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.ui.tv_recent.setHeaderHidden(True)
 
         self.ui.tv_pinned.setModel(self._pinnedf_model)
         self.ui.tv_pinned.header().setStretchLastSection(False)
         self.ui.tv_pinned.setColumnWidth(1, 10)
-        self.ui.tv_pinned.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
+        self.ui.tv_pinned.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.ui.tv_pinned.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.ui.tv_pinned.setHeaderHidden(True)
 
@@ -234,22 +230,16 @@ class StartWindow(QMainWindow):
         )
         self.ui.ac_open.triggered.connect(self.open_file_dialog)
         self.ui.ac_course_mng.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(
-                AppAction.CourseExplorer, self
-            )
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
         )
         self.ui.ac_settings.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(
-                AppAction.Settings, self
-            )
+            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.Settings, self)
         )
         self.ui.tv_recent.clicked.connect(self.open_file)
         self.ui.tv_pinned.clicked.connect(self.open_file)
         self.ui.lv_scheduledf.clicked.connect(self.open_scheduled)
         self.ui.de_date_selector.dateChanged.connect(self.on_date_changed)
-        self.ui.cb_show_past_schedules.checkStateChanged.connect(
-            self.set_past_schedules_visible
-        )
+        self.ui.cb_show_past_schedules.checkStateChanged.connect(self.set_past_schedules_visible)
         self.ui.tb_about.clicked.connect(
             lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
         )

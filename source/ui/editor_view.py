@@ -7,7 +7,7 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
 )
-from PyQt6.QtGui import QAction, QActionGroup, QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QActionGroup, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QButtonGroup,
@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from tcha.appcomp import debug_enabled
 from tcha.consts import CanvasTool, CellAction
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.styling import SvgIcon
@@ -92,7 +93,7 @@ class Ui_Editor(object):
         self.menu_debug = QMenu(parent=self.menubar)
         self.menu_debug.setObjectName("menu_debug")
 
-        if qsettings.value("Application/debug", False, bool):
+        if debug_enabled():
             self.menu_debug.setVisible(False)
 
         self.menuHelp = QMenu(parent=self.menubar)

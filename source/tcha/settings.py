@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from tcha.appcomp import debug_enabled
 from tcha.dbmodels import create_database, reset_database
 from tcha.utils import word_as_bool
 from themes.properties import NTHEME_PROPERTIES
@@ -142,7 +143,7 @@ class SettingsDialog(QDialog):
             "User/editor.single_selection": self._tick_single_selection,
             "User/dbpath": self._set_dblocation,
         }
-        self.ui.pb_edit_ini.setVisible(qsettings.value("Application/debug", False, bool))
+        self.ui.pb_edit_ini.setVisible(debug_enabled())
         self._import_options()
         self._set_ui_for_values()
         self.connect_signals()
@@ -396,12 +397,12 @@ class Settings:
                     pass
             print(f"Key {key} not existing. Adding as default")
             Settings.set_default(key)
-            return Settings.value(key)
+            return Settings.value[T](key)
         return None
 
     @staticmethod
     def set_value(key: str, value: Any) -> None:
-        if key in Values.keys():
+        if key in Values.keys():  # noqa: SIM118
             if isinstance(value, Enum):
                 value = value.name
             qsettings = Settings.qsettings()
@@ -443,7 +444,7 @@ class Values:
     __VALUES: ClassVar[dict[str, Value]] = {
         "AppInfo/app_ver": Value(AppInfo.app_ver, str, True),
         "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
-        "User/appearance": Value("native:light", str, False),
+        "User/appearance": Value("native:light", str, True),
         "User/language": Value(Locale.EnglishUK, Locale, False, lambda val: Locale[val]),
         "User/time_format": Value(TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]),
         "User/always_schedule": Value(False, bool, False, lambda val: word_as_bool(val)),
@@ -453,7 +454,6 @@ class Values:
         "Application/pinned": Value([], list, True),
         "Application/recent": Value([], list, True),
         "Application/first_startup": Value(True, bool, False, lambda val: word_as_bool(val)),
-        "Application/debug": Value(False, bool, False, lambda val: word_as_bool(val)),
         "Application/editor.window_size": Value(QSize(850, 500), QSize, True),
     }
 
@@ -482,8 +482,13 @@ class Values:
     def default_qsettings(
         format: QSettings.Format = QSettings.Format.IniFormat,
         scope: QSettings.Scope = QSettings.Scope.UserScope,
+        clean=False,
     ) -> QSettings:
-        settings = QSettings(format, scope, "Teachart", "settings")
+        settings = (
+            QSettings(format, scope, "Teachart", "settings")
+            if not clean
+            else QSettings(format, scope, "Teachart", "settings_clean")
+        )
         settings.beginGroup("AppInfo")
         settings.setValue("app_ver", AppInfo.app_ver)
         settings.setValue("db_ver", AppInfo.db_ver)
@@ -510,7 +515,6 @@ class Values:
         settings.setValue("pinned", [])
         settings.setValue("recent", [])
         settings.setValue("first_startup", Values.default_value("Application/first_startup"))
-        settings.setValue("debug", Values.default_value("Application/debug"))
         settings.setValue(
             "editor.window_size", Values.default_value("Application/editor.window_size")
         )

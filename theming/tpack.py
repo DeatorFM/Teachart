@@ -61,9 +61,7 @@ def convert_to_bin(destination: Path, res_file: Path) -> int:
     return 0
 
 
-def pack_theme(
-    destination: Path, properties: Path, bin: Path, stylesheet: Path
-) -> bool:
+def pack_theme(destination: Path, properties: Path, bin: Path, stylesheet: Path) -> bool:
     """Packs the files under the given paths into a .taste-file at 'destination'. Returns True if the operation was successful"""
     try:
         if (
@@ -190,19 +188,13 @@ def handle_taste(namespace: argparse.Namespace) -> None:
                 return
 
             # Write new taste
-            wzip.writestr(
-                "properties.json", json.dumps(new_props, indent=4).encode("utf-8")
-            )
+            wzip.writestr("properties.json", json.dumps(new_props, indent=4).encode("utf-8"))
             try:
                 for file_ in rzip.filelist:
                     if file_.filename.endswith((".bin", ".dat")):
-                        wzip.writestr(
-                            new_props["resources"], rzip.read(props["resources"])
-                        )
+                        wzip.writestr(new_props["resources"], rzip.read(props["resources"]))
                     elif file_.filename.endswith(".qss"):
-                        wzip.writestr(
-                            new_props["stylesheet"], rzip.read(props["stylesheet"])
-                        )
+                        wzip.writestr(new_props["stylesheet"], rzip.read(props["stylesheet"]))
             except KeyError:
                 print(
                     "Faulty 'properties.json'. Please repack taste-file with json containing all keys"
@@ -262,7 +254,7 @@ def handle_properties(props: dict, namespace: argparse.Namespace) -> dict:
 
 
 def handle_bin(namespace: argparse.Namespace) -> None:
-    destination, resources = map(lambda path: Path(path), namespace.paths)
+    destination, resources = (Path(path) for path in namespace.paths)
     result = convert_to_bin(destination, resources)
     if result:
         print(f"Successfully converted to binary file. Checksum: {result}")
@@ -271,9 +263,7 @@ def handle_bin(namespace: argparse.Namespace) -> None:
 
 
 def handle_pack(namespace: argparse.Namespace):
-    destination, properties, resources, stylesheet = map(
-        lambda path: Path(path), namespace.paths
-    )
+    destination, properties, resources, stylesheet = (Path(path) for path in namespace.paths)
     print(f"Files: {destination}", properties, resources, stylesheet, sep=", ")
     result = pack_theme(destination, properties, resources, stylesheet)
     if result:
