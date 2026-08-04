@@ -103,7 +103,7 @@ NTHEME_PROPERTIES = {
     "dark": {
         "name": {"EnglishUK": "Dark", "German": "Dunkel"},
         "resources": "dark",
-        "applyFullPalette": False,
+        "applyFullPalette": True,
         "palette": {
             "AlternateBase": (0, 0, 0, 12),
             "Base": (32, 33, 36, 255),

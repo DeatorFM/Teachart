@@ -142,11 +142,7 @@ class AppCore(QApplication, metaclass=MetaApp):
         self._clean_up_list: list[Path] = []
         self._launch_config = parse_args()
 
-        if not Settings.qsettings().allKeys():
-            print("Empty Settings: First initialisation")
-            self._first_time()
-        else:
-            self._startup_checks()
+        self._startup_checks()
 
         load_theme(Settings.value("User/appearance"), self)
         apply_style(self)
@@ -172,6 +168,10 @@ class AppCore(QApplication, metaclass=MetaApp):
         return super().arguments()
 
     def _startup_checks(self) -> None:
+        if not Settings.qsettings().allKeys() or self._launch_config.clean:
+            self._first_time()
+            return
+
         if not ErrorLogger.logdir().exists():
             ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
 
@@ -202,11 +202,12 @@ class AppCore(QApplication, metaclass=MetaApp):
             Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
 
     def _first_time(self) -> None:
-        Values.default_qsettings()
+        qsettings = Values.default_qsettings(clean=self._launch_config.clean)
+        Settings.set_qsettings(qsettings)
         Settings.set_value("Application/first_startup", False)
-        db = create_database()
-        print("Database at", abspath(db.databaseName()))
-        Settings.set_value("User/dbpath", abspath(db.databaseName()))
+        self._db = create_database()
+        print("Database at", abspath(self._db.databaseName()))
+        Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
         language = self.language_dialog()
         print("Selected language", language)
         Settings.set_value("User/language", language.name)
@@ -390,18 +391,16 @@ class AppCore(QApplication, metaclass=MetaApp):
         dialog.exec()
 
     def open_settings(self, parent=None) -> None:
-        print("Open Settings")
         return_flags = SettingsDialog.get_settings(
             None, self._course_model.database(), Settings.qsettings()
         )
-        print("Return flags: ", return_flags)
         if return_flags & ReturnFlags.Restart:
             print("Restarting application")
             self.restartRequested.emit()
             return
         if return_flags & ReturnFlags.UpdateStyle:
             print("Updating application style")
-            self._load_theme(Settings.qsettings().value("User/appearance", "light", str))
+            load_theme(Settings.value("User/appearance"), self)
         if return_flags & ReturnFlags.UpdateLocale:
             print("Updating language")
 

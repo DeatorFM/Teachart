@@ -62,6 +62,7 @@ def get_themes() -> list[ThemeValue]:
 
     for fname, theme_name in get_external_theme_names():
         themes.append(ThemeValue(theme_name, fname))
+    return themes
 
 
 @dataclass(frozen=True)
@@ -135,7 +136,7 @@ class SettingsDialog(QDialog):
         self.settings = Settings.get_settings()
         self._return_flag: ReturnFlags = ReturnFlags.Invalid
         self._settings_map: dict[str, Callable] = {
-            "User/appearance": self._tick_appearance,
+            "User/appearance": self._select_appearance,
             "User/language": self._select_language,
             "User/time_format": self._select_time_format,
             "User/always_schedule": self._tick_always_schedule,
@@ -373,7 +374,7 @@ class Settings:
         and replaces invalid values with default values."""
         values = {}
 
-        for key in Values:
+        for key in Values.keys():  # noqa: SIM118
             print(f"Getting key {key}")
             values[key] = Settings.value(key)
 
@@ -386,8 +387,8 @@ class Settings:
         definition = Values.definition(key)
         if definition:
             if definition.qvariant:
-                value = qsettings.value(key, type=definition.type)
-                if value:
+                value = qsettings.value(key, type=definition.type, defaultValue=definition.default)
+                if value is not None:
                     return value
             else:
                 raw_value = qsettings.value(key)
@@ -397,7 +398,7 @@ class Settings:
                     pass
             print(f"Key {key} not existing. Adding as default")
             Settings.set_default(key)
-            return Settings.value[T](key)
+            return Settings.value(key)
         return None
 
     @staticmethod
@@ -421,6 +422,10 @@ class Settings:
         scope: QSettings.Scope = QSettings.Scope.UserScope,
     ) -> QSettings:
         return Settings.__qsettings
+
+    @staticmethod
+    def set_qsettings(qsettings: QSettings) -> None:
+        Settings.__qsettings = qsettings
 
     @cache
     @staticmethod
@@ -466,8 +471,10 @@ class Values:
 
     @cache
     @staticmethod
-    def default_value(key: str) -> Any:
+    def default_value(key: str, qsettings_value=False) -> Any:
         value = Values.__VALUES.get(key)
+        if qsettings_value and isinstance(value.default, Enum):
+            return value.default.name
         return value.default if value else None
 
     @staticmethod
@@ -497,7 +504,7 @@ class Values:
         settings.beginGroup("User")
         settings.setValue("appearance", Values.default_value("User/appearance"))
         settings.setValue("language", Values.default_value("User/language"))
-        settings.setValue("time_format", Values.default_value("User/time_format"))
+        settings.setValue("time_format", Values.default_value("User/time_format", True))
         settings.setValue("always_schedule", Values.default_value("User/always_schedule"))
         settings.setValue(
             "editor.compress_image", Values.default_value("User/editor.compress_image")

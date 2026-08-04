@@ -1,6 +1,6 @@
 
 QWidget {
-    background: rgba(228, 231, 235, 255);
+    background: rgba(32, 33, 36, 255);
     color: rgba(228, 231, 235, 255);
     selection-color:rgba(228, 231, 235, 255);
     selection-background-color:rgba(138, 180, 247, 102)
@@ -58,7 +58,7 @@ QSizeGrip {
     image:none
     }
 
-QStatusBar 
+QStatusBar {
     background: rgba(42, 43, 46, 255)
     }
     
@@ -201,8 +201,7 @@ QToolBar > QWidget {
     
 QMenu {
     background: rgba(32, 33, 36, 255);
-    padding:8px 0;
-    <env><if os="Darwin" value="border-radius:4px;"></env>
+    padding:8px 0
     }
     
 QMenu::separator {
@@ -488,7 +487,7 @@ QComboBox::item:selected {
     border-radius:4px
     }
     
-QComboBox QListView[frameShape=NoFrame"] {
+QComboBox QListView[frameShape="NoFrame"] {
     margin:0;
     padding:4px;
     background: rgba(32, 33, 36, 255);
@@ -568,7 +567,7 @@ QTabBar::close-button:!selected {
     }
     
 QTabBar::close-button:disabled {
-    url(:/close_#e4e7eb66_0.svg)
+    image:url(:/close_#e4e7eb66_0.svg)
     }
     
 QTabBar::tab {
@@ -636,7 +635,7 @@ QTabBar::tab:left:last,QTabBar::tab:left:only-one,QTabBar::tab:right:last,QTabBa
 
 QDockWidget {
     border:1px solid rgba(63, 64, 66, 255);
-    rder-radius:4px
+    border-radius:4px
     }
 
 QDockWidget::title {

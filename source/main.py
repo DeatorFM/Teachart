@@ -16,6 +16,7 @@ def main() -> None:
     app = AppCore(sys.argv)
     app.restartRequested.connect(restart)
     root = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(root)
     QDir.addSearchPath("icons", str(Path(root).parent / "resources" / "svg"))
     mw = app.startup_window()
     mw.show()

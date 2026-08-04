@@ -64,7 +64,9 @@ QUERIES = {
 }
 
 
-def create_database(vernum: str) -> QSqlDatabase:
+def create_database() -> QSqlDatabase:
+    from tcha.settings import AppInfo
+
     db = QSqlDatabase.addDatabase("QSQLITE")
     num = QDateTime.currentDateTime().toString("yyyyMMddHHmmss")
 
@@ -85,7 +87,7 @@ def create_database(vernum: str) -> QSqlDatabase:
 
     db.exec(f"""
         INSERT INTO metadata (key, value)
-        VALUES ('db_ver', {vernum})
+        VALUES ('db_ver', {AppInfo.db_ver})
     """)
 
     db.exec("""
