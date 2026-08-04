@@ -299,9 +299,7 @@ class SearchableComboBox(QComboBox):
 
     def filter_items(self, text: str):
         print("Text searched ", text)
-        if isinstance(self.model(), FilteredCourseModel) or isinstance(
-            self.model(), FilteredStudentModel
-        ):
+        if isinstance(self.model(), (FilteredCourseModel, FilteredStudentModel)):
             self.model().set_search_filter(text)
             if self.model().rowCount() > 0:
                 self.showPopup()

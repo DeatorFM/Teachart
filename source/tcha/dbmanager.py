@@ -33,7 +33,6 @@ class DbManager(QDialog, DbManagerView):
         super().__init__(parent, flags)
         self.setupUi(self)
         print("UI intitiated")
-        qsettings = Settings.qsettings()
 
         self._course_model = course_model
         self._filtered_course_model = FilteredCourseModel(self._course_model, self)

@@ -269,18 +269,19 @@ class SettingsDialog(QDialog):
     # Database settings
 
     def set_dbpath(self) -> None:
-        if self.settings.dbpath and exists(self.settings.dbpath):
+        dbpath = self.settings.get("User/dbpath")
+        if dbpath and exists(dbpath):
             path, _ = QFileDialog.getOpenFileName(
                 self,
                 tr("Open Lesson Database"),
-                dirname(self.settings.dbpath),
+                dirname(dbpath),
             )
         else:
             path, _ = QFileDialog.getOpenFileName(
-                self, tr("Open Lesson Database"), "/home", "Database files (*.db)"
+                self, tr("Open Lesson Database"), "/home", "Database files (*.tdb)"
             )
         if path:
-            self.settings.dbpath = path
+            self.settings["User/dbpath"] = path
             self.ui.le_path.setText(path)
             self._return_flag |= ReturnFlags.Restart
 
@@ -288,7 +289,7 @@ class SettingsDialog(QDialog):
         """Creates new database file without deleting the old one in the standard folder and sets it as the used database."""
         db = create_database(AppInfo.db_ver)
         self.settings.dbpath = abspath(db.databaseName())
-        self.ui.le_path.setText(self.settings.dbpath)
+        self.ui.le_path.setText(self.settings.get("User/dbpath"))
         self._return_flag |= ReturnFlags.Restart
 
     def reset_db(self) -> None:

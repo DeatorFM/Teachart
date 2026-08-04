@@ -174,7 +174,7 @@ class CourseModel(QSqlTableModel):
     def __init__(self, db: QSqlDatabase, parent=None):
         super().__init__(parent, db)
         self.setTable("Courses")
-        ok = self.select()
+        self.select()
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
 
     def add_course(self, name: str, duration: int, temporary=False) -> int:
@@ -199,11 +199,9 @@ class CourseModel(QSqlTableModel):
     def remove_by_id(self, id: int) -> bool:
         for row in range(self.rowCount()):
             record = self.record(row)
-            if record.value("id") == id:
-                if self.removeRow(row):
-                    if self.submitAll():
-                        self.select()
-                        return True
+            if record.value("id") == id and self.removeRow(row) and self.submitAll():
+                self.select()
+                return True
         return False
 
     def index_for_id(self, course_id: int) -> QModelIndex:
@@ -669,8 +667,8 @@ class FilteredStudentModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         if self._exclusive_course_id:
             if (
-                not self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
-                == self._exclusive_course_id
+                self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
+                != self._exclusive_course_id
             ):
                 return False
 
@@ -681,7 +679,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
             ):
                 return False
 
-        elif self._hide_assigned:
+        elif self._hide_assigned:  # noqa: SIM102
             if self.sourceModel().course_id(self.sourceModel().index(source_row, 2)):
                 return False
 

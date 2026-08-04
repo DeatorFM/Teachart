@@ -198,7 +198,7 @@ class AppCore(QApplication, metaclass=MetaApp):
                 tr("Database error"),
                 tr("The database could not be found. A new database will be created."),
             )
-            self._db = create_database(AppInfo.db_ver)
+            self._db = create_database()
             Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
 
     def _first_time(self) -> None:
