@@ -6,7 +6,7 @@ from functools import cache
 from pathlib import Path
 from typing import ClassVar
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication
 
 
 @cache

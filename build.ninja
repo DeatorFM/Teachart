@@ -16,6 +16,10 @@ rule pyside_rcc
   command = cmd /c "$pyside6_rcc $in -g python | $python -c "import sys; print(sys.stdin.read().replace('PySide6','PyQt6'),end='')" > $out"
   description = Compiling Qt resources: $in -> $out
 
+rule compress_qss
+  command = $python build/qss_to_py.py $name $in
+  description = Compressing QSS: $name
+
 rule pack_theme
   command = $python theming/tpack.py $args
   description = $desc
@@ -28,40 +32,25 @@ rule uv
   command = uv $args
   description = $desc
 
-
-# Development targets
-build dev: run_python source/main.py
-  desc = Starting Teachart (dev mode)
-
-build debug: run_python source/main.py
-  args = --debug
-  desc = Starting Teachart (debug mode)
-
-build clean: run_python source/main.py
-  args = --clean
-  desc = Cleaning Teachart
-
-build debug-clean: run_python source/main.py
-  args = --debug --clean
-  desc = Starting Teachart (debug + clean)
-
-build test-tch: run_python source/main.py
-  args = Test.tch
-  desc = Running with Test.tch
-
 # Build executable script
 build setup: uv
   args = pip install -e .
   desc = Buildung teachart and tpack
 
 # Compile resources
+build source/themes/stylesheets-light: compress_qss resources/themes/light/light.qss
+  name = light
+
+build source/themes/stylesheets-dark: compress_qss resources/themes/dark/dark.qss
+  name = dark
+
 build source/themes/light.py: pyside_rcc resources/themes/light/light.qrc
 
 build source/themes/dark.py: pyside_rcc resources/themes/dark/dark.qrc
 
-build compile-light: phony source/themes/light.py
+build compile-light: phony source/themes/light.py source/themes/stylesheets-light
 
-build compile-dark: phony source/themes/dark.py
+build compile-dark: phony source/themes/dark.py source/themes/stylesheets-dark
 
 build compile-all: phony compile-light compile-dark
 
@@ -70,7 +59,7 @@ build resources/themes/light/resources.bin: pack_theme source/themes/light.py
   args = bin resources/themes/light/resources.bin source/themes/light.py
   desc = Packing light theme resources
 
-build resources/themes/packed/light.taste: pack_theme resources/themes/light/resources.bin
+build resources/themes/packed/light.taste: pack_theme resources/themes/light/resources.bin resources/themes/light/properties.json resources/themes/light/light.qss
   args = pack resources/themes/packed/light.taste resources/themes/light/properties.json resources/themes/light/resources.bin resources/themes/light/light.qss
   desc = Creating light.taste package
 
@@ -81,7 +70,7 @@ build resources/themes/dark/resources.bin: pack_theme source/themes/dark.py
   args = bin resources/themes/dark/resources.bin source/themes/dark.py
   desc = Packing dark theme resources
 
-build resources/themes/packed/dark.taste: pack_theme resources/themes/dark/resources.bin
+build resources/themes/packed/dark.taste: pack_theme resources/themes/dark/resources.bin resources/themes/dark/properties.json resources/themes/dark/dark.qss
   args = pack resources/themes/packed/dark.taste resources/themes/dark/properties.json resources/themes/dark/resources.bin resources/themes/dark/dark.qss
   desc = Creating dark.taste package
 

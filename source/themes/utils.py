@@ -8,9 +8,9 @@ from PyQt6.QtCore import (
     QIODevice,
     qChecksum,
     qRegisterResourceData,
+    qUnregisterResourceData,
 )
 from PyQt6.QtWidgets import QApplication
-from tcha.consts import RESOURCE_PATH
 from tcha.error import BinReadError
 from tcha.settings import Values
 from tcha.styling import make_palette
@@ -39,9 +39,13 @@ def _load_native_theme(name: str, app: QApplication) -> bool:
         #     str(RESOURCE_PATH / "themes" / "compiled" / f"{name}.rcc")
         # )
         # print(f"Loaded RCC: {result}")
+        if ExternalTheme.has_data():
+            ExternalTheme.unregister()
         import_module(f"themes.{name}")
-        stylesheets_path = RESOURCE_PATH / "themes" / name / f"{name}.qss"
-        app.setStyleSheet(stylesheets_path.read_text())
+
+        from themes.stylesheets import STYLESHEETS
+
+        app.setStyleSheet(STYLESHEETS[name])
 
         return True
 
@@ -62,7 +66,11 @@ def _load_extern_theme(fname: str, app: QApplication) -> bool:
                 qt_resource_data, qt_resource_name, qt_resource_struct = restructure_resource_data(
                     res_data
                 )
-                qRegisterResourceData(0x03, qt_resource_data, qt_resource_name, qt_resource_struct)
+                if ExternalTheme.has_data():
+                    ExternalTheme.unregister()
+                ExternalTheme.set_resources(qt_resource_struct, qt_resource_name, qt_resource_data)
+                result = ExternalTheme.register()
+                print(f"Loaded resource data: {result}")
                 stylesheet = f_taste.read(properties["stylesheet"])
                 app.setStyleSheet(stylesheet.decode())
                 return True
@@ -90,3 +98,46 @@ def restructure_resource_data(data: bytes) -> tuple[bytes, bytes, bytes]:
         if stream.atEnd():
             return qt_resource_data, qt_resource_name, qt_resource_struct
     raise BinReadError("Wrong magic header")
+
+
+class ExternalTheme:
+    _qt_resource_struct: bytes = b""
+    _qt_resource_name: bytes = b""
+    _qt_resource_data: bytes = b""
+
+    @staticmethod
+    def set_resources(struct: bytes, name: bytes, data: bytes) -> None:
+        ExternalTheme._qt_resource_struct = struct
+        ExternalTheme._qt_resource_name = name
+        ExternalTheme._qt_resource_data = data
+
+    @staticmethod
+    def register() -> bool:
+        return qRegisterResourceData(
+            0x03,
+            ExternalTheme._qt_resource_struct,
+            ExternalTheme._qt_resource_name,
+            ExternalTheme._qt_resource_data,
+        )
+
+    @staticmethod
+    def unregister() -> bool:
+        result = qUnregisterResourceData(
+            0x03,
+            ExternalTheme._qt_resource_struct,
+            ExternalTheme._qt_resource_name,
+            ExternalTheme._qt_resource_data,
+        )
+        if result:
+            ExternalTheme._qt_resource_struct = b""
+            ExternalTheme._qt_resource_name = b""
+            ExternalTheme._qt_resource_data = b""
+            return True
+        return False
+
+    def has_data() -> bool:
+        return (
+            ExternalTheme._qt_resource_struct
+            and ExternalTheme._qt_resource_name
+            and ExternalTheme._qt_resource_data,
+        )

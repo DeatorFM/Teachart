@@ -22,6 +22,7 @@ def check_properties(props: dict) -> bool:
 
 
 def convert_to_bin(destination: Path, res_file: Path) -> int:
+    """Converts a pythoin resource (rcc) construct to a binary file."""
     if res_file.exists() and destination.suffix == ".bin":
         if res_file.suffix == ".py":
             spec = imputil.spec_from_file_location("resources", res_file.as_posix())
