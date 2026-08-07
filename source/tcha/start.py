@@ -37,6 +37,8 @@ class FileItem:
     recent: bool
     pinned: bool
 
+ABOUT_HTML = r'<html><head/><body><p><span style=" font-size:16pt; font-weight:600;">Teachart</span></p><p><br /><span style=" font-size:10pt;">Teachart is a tool for teachers to create lesson plans in a table structure.<br />Teachart is a free software and currently still in development.</span></p><p><span style=" font-size:10pt;">Version [Version]<br />Python [Python] <br />Qt [Qt]</span></p><p><a href="https://github.com/DeatorFM/Educhart"><span style=" font-size:10pt; text-decoration: underline; color:#0000ff;">Git Hub</span></a></p><p><span style=" font-size:10pt;">Written and translated in German by Florian Münstermann. </span></p><p><span style=" font-size:10pt;">UI Design adapted from PyQtDarkTheme by 5yutan5:<br /></span><a href="https://github.com/5yutan5/PyQtDarkTheme"><span style=" font-size:10pt; text-decoration: underline; color:#0000ff;">PyQtDarkTheme on Git Hub</span></a></p></body></html>'
+
 
 class FilteredOpenFileModel(QSortFilterProxyModel):
     def __init__(self, file_model: OpenFileModel, parent=None):
@@ -312,10 +314,8 @@ class AboutDialog(QDialog):
         self.set_text()
 
     def set_text(self) -> None:
-        path = Path("resources/about.html")
-        if path.exists():
-            html = path.read_text("utf-8")
-            html = html.replace("[Version]", QCoreApplication.applicationVersion())
-            html = html.replace("[Python]", platform.python_version())
-            html = html.replace("[Qt]", QLibraryInfo.version().toString())
-            self.ui.lb_description.setText(html)
+        html = ABOUT_HTML
+        html = html.replace("[Version]", QCoreApplication.applicationVersion())
+        html = html.replace("[Python]", platform.python_version())
+        html = html.replace("[Qt]", QLibraryInfo.version().toString())
+        self.ui.lb_description.setText(html)

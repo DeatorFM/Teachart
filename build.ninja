@@ -48,15 +48,15 @@ build source/themes/light.py: pyside_rcc resources/themes/light/light.qrc
 
 build source/themes/dark.py: pyside_rcc resources/themes/dark/dark.qrc
 
-build compile-light: phony source/themes/light.py source/themes/stylesheets-light
+build compile-light: phony source/themes/resources/light.py source/themes/stylesheets-light
 
-build compile-dark: phony source/themes/dark.py source/themes/stylesheets-dark
+build compile-dark: phony source/themes/resources/dark.py source/themes/stylesheets-dark
 
 build compile-all: phony compile-light compile-dark
 
 # Pack themes - light
-build resources/themes/light/resources.bin: pack_theme source/themes/light.py
-  args = bin resources/themes/light/resources.bin source/themes/light.py
+build resources/themes/light/resources.bin: pack_theme source/themes/resources/light.py
+  args = bin resources/themes/light/resources.bin source/themes/resources/light.py
   desc = Packing light theme resources
 
 build resources/themes/packed/light.taste: pack_theme resources/themes/light/resources.bin resources/themes/light/properties.json resources/themes/light/light.qss
@@ -66,8 +66,8 @@ build resources/themes/packed/light.taste: pack_theme resources/themes/light/res
 build pack-light: phony resources/themes/packed/light.taste
 
 # Pack themes - dark
-build resources/themes/dark/resources.bin: pack_theme source/themes/dark.py
-  args = bin resources/themes/dark/resources.bin source/themes/dark.py
+build resources/themes/dark/resources.bin: pack_theme source/themes/resources/dark.py
+  args = bin resources/themes/dark/resources.bin source/themes/resources/dark.py
   desc = Packing dark theme resources
 
 build resources/themes/packed/dark.taste: pack_theme resources/themes/dark/resources.bin resources/themes/dark/properties.json resources/themes/dark/dark.qss
