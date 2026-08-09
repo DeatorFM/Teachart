@@ -23,10 +23,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from styling.properties import NTHEME_PROPERTIES
 from tcha.appcomp import debug_enabled
 from tcha.dbmodels import create_database, reset_database
 from tcha.utils import word_as_bool
-from themes.properties import NTHEME_PROPERTIES
 
 
 # In settings.py, add this function and remove the import

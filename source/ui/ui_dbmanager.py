@@ -22,8 +22,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from styling.utils import SvgIcon
 from tcha.dbmodels import CourseModel
-from tcha.styling import SvgIcon
 from ui.commons import IconButton
 
 

@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
+from styling.theming import load_theme
+from styling.utils import apply_style
 from tcha.appcomp import parse_args
 from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
 from tcha.dbmanager import DbManager
@@ -38,10 +40,8 @@ from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog, Values
 from tcha.start import AboutDialog, OpenFileModel, StartWindow
-from tcha.styling import apply_style
 from tcha.table import PresenterView
 from tcha.utils import WinApi
-from themes.utils import load_theme
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -372,7 +372,7 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._file_model.append_file(str(path))
                 if editor_window:
                     editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
-                return editor_window
+                return editor_window  # noqa: B012
 
         else:
             QMessageBox.information(

@@ -68,10 +68,10 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QWidget,
 )
+from styling.utils import Svg, SvgIconEngine
 from tcha.consts import ResourceFlag
 from tcha.resmanager import FileResourceObject, ResourceContainer
 from tcha.settings import Locale, Settings
-from tcha.styling import Svg, SvgIconEngine
 from ui.element_toolsets import TextToolsetView
 
 

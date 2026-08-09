@@ -28,7 +28,7 @@ def compress_qss(qss_content: str) -> str:
 
 
 def qss_to_py(name: str, input_qss: Path) -> None:
-    from source.themes.stylesheets import STYLESHEETS
+    from source.styling.stylesheets import STYLESHEETS
 
     # Read and compress the QSS file
     qss_content = input_qss.read_text(encoding="utf-8")

@@ -37,9 +37,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from styling.utils import SvgIcon
 from tcha.appcomp import debug_enabled
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
-from tcha.styling import SvgIcon
 
 
 class Ui_StartWindow(object):

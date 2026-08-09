@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-from tcha.styling import SvgIcon
+from styling.utils import SvgIcon
 from ui.commons import SwitchButton
 from ui.element_toolsets import ColorMenu, FontSizeBox
 from ui.StyledWidget import convertColors

@@ -37,8 +37,8 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
+from styling.utils import SvgIcon
 from tcha.settings import Settings
-from tcha.styling import SvgIcon
 from tcha.utils import evened
 from ui.commons import ColorMenu, LabeledWidget, SplitButton, SwitchAction
 from ui.StyledWidget import convertColors

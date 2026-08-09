@@ -41,6 +41,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
     QWidget,
 )
+from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import (
@@ -49,7 +50,6 @@ from tcha.resmanager import (
     ResourceObject,
     ResourceType,
 )
-from tcha.styling import SvgIcon
 from ui.element_toolsets import AudioToolsetView
 
 FILE_EXTENSIONS = {

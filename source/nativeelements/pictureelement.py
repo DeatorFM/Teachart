@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
     QStyle,
     QStyleOptionViewItem,
 )
+from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
 from tcha.error import LFExceptions
 from tcha.resmanager import (
@@ -55,7 +56,6 @@ from tcha.resmanager import (
     ResourceType,
 )
 from tcha.settings import Settings
-from tcha.styling import SvgIcon
 from ui.element_toolsets import PictureToolsetView
 
 
