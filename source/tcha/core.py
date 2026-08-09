@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
 )
 from styling.theming import load_theme
 from styling.utils import apply_style
-from tcha.appcomp import parse_args
+from tcha.appcomp import DialogManager
+from tcha.components import parse_args
 from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
@@ -136,6 +137,7 @@ class AppCore(QApplication, metaclass=MetaApp):
         self.setWindowIcon(QIcon(str(RESOURCE_PATH / "images" / "logo.svg")))
 
         self._db: QSqlDatabase | None = None
+        self._dialog_manager = DialogManager()
         self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
@@ -403,6 +405,8 @@ class AppCore(QApplication, metaclass=MetaApp):
             load_theme(Settings.value("User/appearance"), self)
         if return_flags & ReturnFlags.UpdateLocale:
             print("Updating language")
+
+    def on_settings_closed(self, flags: ReturnFlags) -> None: ...
 
     def open_start_dialog(self, file_mode=False) -> None:
         if not self.opened_start_dialog():

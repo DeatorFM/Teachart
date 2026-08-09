@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from styling.properties import NTHEME_PROPERTIES
-from tcha.appcomp import debug_enabled
+from tcha.components import debug_enabled
 from tcha.dbmodels import create_database, reset_database
 from tcha.utils import word_as_bool
 
@@ -188,7 +188,6 @@ class SettingsDialog(QDialog):
         return ReturnFlags.Invalid
 
     def done(self, a0: int):
-        print("Last Settings", self.settings)
         if a0 == QDialog.DialogCode.Accepted:
             self.save_all()
         return super().done(a0)

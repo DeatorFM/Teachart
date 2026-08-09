@@ -1,4 +1,5 @@
 import os
+import random
 from pathlib import Path
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
@@ -24,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
-from tcha.appcomp import debug_enabled
+from tcha.components import debug_enabled
 from tcha.consts import (
     AppAction,
     ClipboardContent,
@@ -97,6 +98,7 @@ class Editor(QMainWindow):
 
         # Attributes
         self._caller = False
+        self._wid = random.getrandbits(32)
         self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
@@ -219,6 +221,10 @@ class Editor(QMainWindow):
 
     def path(self) -> str | None:
         return self.lessonfile.path
+
+    @property
+    def wid(self) -> int:
+        return self._wid
 
     @property
     def is_caller(self) -> bool:
@@ -592,7 +598,7 @@ class Editor(QMainWindow):
     def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
         self.ui.loading_bar.setVisible(True)
         translated_label = tr("Loading")
-        status_label = "{} {}".format(translated_label, file_name.name)
+        status_label = f"{translated_label} {file_name.name}"
         self.ui.statusbar.showMessage(status_label)
         self.ui.loading_bar.setVisible(True)
         logger.progressChanged.connect(self.ui.loading_bar.setValue)
