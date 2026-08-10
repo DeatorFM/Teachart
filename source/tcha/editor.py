@@ -70,9 +70,9 @@ class SaveWorker(QRunnable):
 
 class Editor(QMainWindow):
     appActionTriggered = pyqtSignal([AppAction], [AppAction, Path], [AppAction, QWidget])
+    fileOpened = pyqtSignal(Path)
     fileSaved = pyqtSignal(Path)
-    indexCopied = pyqtSignal(QPersistentModelIndex)
-    presenterActivated = pyqtSignal(QGraphicsScene, QScreen)  # Scene, Target Screen
+    presenterActivated = pyqtSignal(int, QGraphicsScene, QScreen)  # Scene, Target Screen
     presenterClosed = pyqtSignal()
 
     def __init__(
@@ -97,7 +97,6 @@ class Editor(QMainWindow):
         self.initialise_editor()
 
         # Attributes
-        self._caller = False
         self._wid = random.getrandbits(32)
         self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
         self.element_definitions = edefinitions
@@ -225,13 +224,6 @@ class Editor(QMainWindow):
     @property
     def wid(self) -> int:
         return self._wid
-
-    @property
-    def is_caller(self) -> bool:
-        return self._caller
-
-    def unset_caller(self) -> None:
-        self._caller = False
 
     # File Methods
 
@@ -577,7 +569,7 @@ class Editor(QMainWindow):
                 [size],
                 orientation,
             )
-            self.presenterActivated.emit(self.ui.canvas.scene(), self)
+            self.presenterActivated.emit(self.wid, self.ui.canvas.scene(), self)
         else:
             self.ui.canvas.clear()
             self.presenterClosed.emit()

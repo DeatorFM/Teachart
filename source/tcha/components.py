@@ -52,7 +52,9 @@ class LaunchConfig:
     clean: bool
 
 
-class MultiInstWindowContainer(dict):
+class DialogContainer(dict):
+    """Can save multiple window of same type by assigning it to unique key."""
+
     def __init__(self, wclass: type):
         super().__init__()
         self._wclass = wclass
@@ -68,16 +70,16 @@ class MultiInstWindowContainer(dict):
 class DialogManager:
     """Manages top level windows of application that are called from AppCore. Thanks to the Anki dev team for inspiration."""
 
-    _dialogs: ClassVar[dict[str, list[type, QWidget | MultiInstWindowContainer | None]]] = {
-        "Editor": [dialogs.Editor, MultiInstWindowContainer(dialogs.Editor)],
+    _dialogs: ClassVar[dict[str, list[type, QWidget | DialogContainer[str, QWidget] | None]]] = {
+        "Editor": [dialogs.Editor, DialogContainer(dialogs.Editor)],
         "StartWindow": [dialogs.StartWindow, None],
         "SettingsDialog": [dialogs.SettingsDialog, None],
-        "DbManager": [dialogs.SettingsDialog, None],
-        "AboutDialog": [dialogs.SettingsDialog],
-        "PresenterView": [dialogs.PresenterView],
+        "DbManager": [dialogs.DbManager, None],
+        "AboutDialog": [dialogs.AboutDialog, None],
+        "PresenterView": [dialogs.PresenterView, None],
     }
 
-    _multi_inst: ClassVar[list[str]] = [
+    _containers: ClassVar[list[str]] = [
         "Editor"
     ]  # Dialog types that can have more than one instance open
 
@@ -85,8 +87,8 @@ class DialogManager:
         """Define custom mapping for Dialog with class name 'wtype'. If 'multi_ins't' is True a container"""
         if wtype not in self._dialogs:
             if multi_inst and hasattr(wclass, "wid"):
-                self._dialogs[wtype] = MultiInstWindowContainer(wclass)
-                self._multi_inst.append(wtype)
+                self._dialogs[wtype] = DialogContainer(wclass)
+                self._containers.append(wtype)
                 return True
             else:
                 self._dialogs[wtype] = [wclass, None]
@@ -95,9 +97,14 @@ class DialogManager:
 
     def get_dialog(self, wtype: str, wid: int = 0) -> QWidget | None:
         """Get single instance only dialog if existing else None."""
-        if wtype in self._multi_inst:
+        if wtype in self._containers:
             return self._dialogs[wtype].get(wid)
         return self._dialogs.get(wtype, [None, None])[1]
+
+    def get_container(self, wtype: str) -> DialogContainer:
+        if wtype in self._containers:
+            return self._dialogs.get(wtype)[1]
+        return DialogContainer(None)
 
     def open(self, wtype: str, *args: Any, **kwargs: Any) -> QWidget | None:
         """Creates a new dialog of class 'wclass' for dialog of 'wtype'.
@@ -105,7 +112,7 @@ class DialogManager:
         For multi instance windows a new window is always created."""
         if wtype in self._dialogs:
             wclass, winst = self._dialogs.get(wtype, [None, None])
-            if wtype not in self._multi_inst:
+            if wtype not in self._containers:
                 if winst:
                     if winst.windowState() & Qt.WindowState.WindowMinimized:
                         winst.setWindowState(winst.windowState() & ~Qt.WindowState.WindowMinimized)
@@ -124,21 +131,21 @@ class DialogManager:
         return None
 
     def mark_closed(self, wtype: str, wid: int = 0) -> None:
-        if wtype in self._multi_inst:
+        if wtype in self._containers:
             del self._dialogs[wtype][wid]
         else:
             self._dialogs[wtype] = [self._dialogs[wtype][0], None]
 
     def all_closed(self) -> bool:
         return not any(
-            val[1] for key, val in self._dialogs.items() if key not in self._multi_inst
-        ) and not any(self._dialogs[wtype][1] for wtype in self._multi_inst)
+            val[1] for key, val in self._dialogs.items() if key not in self._containers
+        ) and not any(self._dialogs[wtype][1] for wtype in self._containers)
 
     def close_all(self) -> bool:
         result = True
         for wtype in self._dialogs:
-            if wtype in self._multi_inst:
-                cont: MultiInstWindowContainer = self._dialogs[wtype]
+            if wtype in self._containers:
+                cont: DialogContainer = self._dialogs[wtype]
                 for key, value in cont.items():
                     if value.close():
                         del cont[key]
@@ -154,16 +161,3 @@ class DialogManager:
 
     def is_opened(self, wtype: str) -> bool:
         return bool(self._dialogs.get(wtype, [None, None])[1])
-
-
-class MetaApp:
-    __debug = False
-    __clean = False
-
-    @staticmethod
-    def debug_enabled() -> bool:
-        return MetaApp.__debug
-
-    @staticmethod
-    def is_clean_mode() -> bool:
-        return MetaApp.__clean

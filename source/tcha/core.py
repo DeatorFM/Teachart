@@ -18,14 +18,12 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QInputDialog,
-    QMainWindow,
     QMessageBox,
     QWidget,
 )
 from styling.theming import load_theme
 from styling.utils import apply_style
-from tcha.appcomp import DialogManager
-from tcha.components import parse_args
+from tcha.components import DialogManager, parse_args
 from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
 from tcha.dbmanager import DbManager
 from tcha.dbmodels import (
@@ -278,8 +276,7 @@ class AppCore(QApplication, metaclass=MetaApp):
         return self.open_start_dialog()
 
     def opened_editors(self) -> list[Editor]:
-        windows = QApplication.topLevelWidgets()
-        return list(filter(lambda x: isinstance(x, Editor), windows))
+        return self._dialog_manager.get_container("Editor").values()
 
     def opened_start_dialog(self) -> StartWindow | None:
         return self._start_dialog
@@ -287,11 +284,7 @@ class AppCore(QApplication, metaclass=MetaApp):
     def opened_presenter(self) -> QGraphicsView | None:
         return self._presenter_view
 
-    def caller(self) -> Editor | StartWindow | None:
-        for top_level in filter(lambda x: isinstance(x, QMainWindow), self.topLevelWidgets()):
-            if top_level.is_caller:
-                return top_level
-        return None
+    def open_dialog(self, wtype: str) -> None: ...
 
     def create_editor(
         self,
@@ -299,18 +292,20 @@ class AppCore(QApplication, metaclass=MetaApp):
         """Creates an editor with a new LessonFile object."""
         lf = LessonFile()
         lf.open("w")
-        editor_window = Editor(self._course_model, self._schedule_model, self._edefinitions, lf)
-        editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
-        editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
-        editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
+        editor_window = self._dialog_manager.open(
+            "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
+        )
+        editor_window.dialogCalled.connect(self.open_dialog)
+        editor_window.fileOpened.connect(self.open_file)
         editor_window.presenterActivated.connect(self.open_presenter)
         editor_window.presenterClosed.connect(self.close_presenter)
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
         self._clean_up_list.append(editor_window.resource_path)
 
-        if self._start_dialog:
-            self._start_dialog.close()
-            self._start_dialog = None
+        start_dialog = self._dialog_manager.get_dialog("Start")
+        if start_dialog:
+            start_dialog.close()
+            self._dialog_manager.mark_closed("StartWindow")
 
         return editor_window
 
@@ -331,12 +326,11 @@ class AppCore(QApplication, metaclass=MetaApp):
                     caller.set_progress_logger(Path(lf.path), lf.progress)
                     caller.unset_caller()
 
-                editor_window = Editor(
-                    self._course_model, self._schedule_model, self._edefinitions, lf
+                editor_window = self._dialog_manager.open(
+                    "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
                 )
-                editor_window.appActionTriggered[AppAction].connect(self.on_app_action)
-                editor_window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
-                editor_window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
+                editor_window.dialogCalled.connect(self.open_dialog)
+                editor_window.fileOpened.connect(self.open_file)
                 editor_window.presenterActivated.connect(self.open_presenter)
                 editor_window.presenterClosed.connect(self.close_presenter)
                 editor_window.ui.ac_recent.setMenu(self._file_model.export_recent_as_menu(6))
