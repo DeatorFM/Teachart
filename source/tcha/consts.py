@@ -17,6 +17,12 @@ class AppAction(Enum):
     AboutTeachart = 8
 
 
+class CloseState(Enum):
+    CannotClose = 0
+    CanClose = 1
+    CanCloseLater = 2
+
+
 class DialogType(Enum):
     Editor = 0
     Start = 1
@@ -47,12 +53,6 @@ class ResourceFlag(Enum):
     NoResource = 0
     Optional = 1
     HasResource = 2
-
-
-class CloseState(Enum):
-    StayOpen = 0
-    Closed = 1
-    ScheduleClosure = 2
 
 
 class ResourceType(Enum):

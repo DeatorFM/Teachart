@@ -23,9 +23,9 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QMainWindow,
     QMenu,
-    QWidget,
 )
-from tcha.consts import AppAction
+from tcha.base import BaseMainWindow
+from tcha.consts import CloseState
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from tcha.lfio import ProgressLogger
 from ui.start_view import Ui_StartWindow
@@ -36,6 +36,7 @@ class FileItem:
     path: Path
     recent: bool
     pinned: bool
+
 
 ABOUT_HTML = r'<html><head/><body><p><span style=" font-size:16pt; font-weight:600;">Teachart</span></p><p><br /><span style=" font-size:10pt;">Teachart is a tool for teachers to create lesson plans in a table structure.<br />Teachart is a free software and currently still in development.</span></p><p><span style=" font-size:10pt;">Version [Version]<br />Python [Python] <br />Qt [Qt]</span></p><p><a href="https://github.com/DeatorFM/Educhart"><span style=" font-size:10pt; text-decoration: underline; color:#0000ff;">Git Hub</span></a></p><p><span style=" font-size:10pt;">Written and translated in German by Florian Münstermann. </span></p><p><span style=" font-size:10pt;">UI Design adapted from PyQtDarkTheme by 5yutan5:<br /></span><a href="https://github.com/5yutan5/PyQtDarkTheme"><span style=" font-size:10pt; text-decoration: underline; color:#0000ff;">PyQtDarkTheme on Git Hub</span></a></p></body></html>'
 
@@ -171,7 +172,7 @@ class OpenFileModel(QAbstractTableModel):
         return super().flags(index)
 
 
-class StartWindow(QMainWindow):
+class StartWindow(BaseMainWindow):
     dialogCalled = pyqtSignal(str)
     fileOpened = pyqtSignal(Path)
 
@@ -228,24 +229,24 @@ class StartWindow(QMainWindow):
         self.update_schedule_message()
 
     def connect_signals(self) -> None:
-        self.ui.ac_new.triggered.connect(
-            lambda: self.dialogCalled.emit("Editor")
-        )
+        self.ui.ac_new.triggered.connect(lambda: self.dialogCalled.emit("Editor"))
         self.ui.ac_open.triggered.connect(self.open_file_dialog)
-        self.ui.ac_course_mng.triggered.connect(
-            lambda: self.dialogCalled.emit("DbManager")
-        )
-        self.ui.ac_settings.triggered.connect(
-            lambda: self.dialogCalled.emit("SettingsDialog")
-        )
+        self.ui.ac_course_mng.triggered.connect(lambda: self.dialogCalled.emit("DbManager"))
+        self.ui.ac_settings.triggered.connect(lambda: self.dialogCalled.emit("SettingsDialog"))
         self.ui.tv_recent.clicked.connect(self.open_file)
         self.ui.tv_pinned.clicked.connect(self.open_file)
         self.ui.lv_scheduledf.clicked.connect(self.open_scheduled)
         self.ui.de_date_selector.dateChanged.connect(self.on_date_changed)
         self.ui.cb_show_past_schedules.checkStateChanged.connect(self.set_past_schedules_visible)
-        self.ui.tb_about.clicked.connect(
-            lambda: self.dialogCalled.emit("AboutDialog")
-        )
+        self.ui.tb_about.clicked.connect(lambda: self.dialogCalled.emit("AboutDialog"))
+
+    @property
+    def wid(self):
+        return 0
+
+    @property
+    def close_state(self):
+        return CloseState.CanClose
 
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:

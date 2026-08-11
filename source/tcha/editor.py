@@ -25,10 +25,11 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
-from tcha.components import debug_enabled
+from tcha.base import BaseMainWindow
 from tcha.consts import (
     AppAction,
     ClipboardContent,
+    CloseState,
     EditingLevel,
     SaveState,
     TableViewMode,
@@ -42,7 +43,7 @@ from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
 from tcha.table import Table
 from tcha.tablemodel import TableModel
-from tcha.utils import WinApi
+from tcha.utils import WinApi, debug_enabled
 from ui.editor_view import Ui_Editor
 
 
@@ -68,7 +69,7 @@ class SaveWorker(QRunnable):
         self.signals.finished.emit()
 
 
-class Editor(QMainWindow):
+class Editor(BaseMainWindow):
     appActionTriggered = pyqtSignal([AppAction], [AppAction, Path], [AppAction, QWidget])
     fileOpened = pyqtSignal(Path)
     fileSaved = pyqtSignal(Path)
@@ -99,6 +100,7 @@ class Editor(QMainWindow):
         # Attributes
         self._wid = random.getrandbits(32)
         self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
+        self._close_state = CloseState.CanClose
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
@@ -224,6 +226,10 @@ class Editor(QMainWindow):
     @property
     def wid(self) -> int:
         return self._wid
+
+    @property
+    def close_state(self):
+        return self._close_state
 
     # File Methods
 
@@ -649,8 +655,10 @@ class Editor(QMainWindow):
                 if not saved:
                     ev.ignore()
                     return
+                self._close_state = CloseState.CanCloseLater
             elif result == QMessageBox.StandardButton.Discard:
-                pass
+                ev.ignore()
+                return
             else:
                 ev.ignore()
                 return
@@ -663,6 +671,7 @@ class Editor(QMainWindow):
         if self.save_state != SaveState.Saving:
             self.tablemodel.rescont.close_file_streams()
             super().closeEvent(ev)
+            self.closed.emit("Editor", self.wid)
         else:
             self.save_state = SaveState.SaveAndQuit
             ev.ignore()

@@ -1,7 +1,50 @@
 import ctypes
+from argparse import ArgumentParser
 from ctypes import wintypes
+from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
 
+from PyQt6.QtWidgets import QApplication
 from tcha.consts import DisplayMode
+
+
+@cache
+def debug_enabled() -> bool:
+    return QApplication.instance().debug_enabled()
+
+
+@cache
+def clean_mode_enabled() -> bool:
+    return QApplication.instance().clean_mode_enabled()
+
+
+def core() -> QApplication:
+    return QApplication.instance()
+
+
+@dataclass(frozen=True)
+class LaunchConfig:
+    opened_path: Path | None
+    debug: bool
+    clean: bool
+
+
+@cache
+def _parser() -> ArgumentParser:
+    parser = ArgumentParser()
+    parser.add_argument(
+        "path", nargs="?", default="", type=str, help="Path to file to open on launch"
+    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--clean", action="store_true", help="Enable clean mode")
+    return parser
+
+
+def parse_args() -> LaunchConfig:
+    parser = _parser()
+    parsed = parser.parse_args()
+    return LaunchConfig(Path(parsed.path) if parsed.path else None, parsed.debug, parsed.clean)
 
 
 def evened(dec: float) -> int | float:

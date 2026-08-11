@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
 import typing
 from functools import cache
 from os.path import abspath, exists
@@ -15,17 +13,14 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QGraphicsScene,
-    QGraphicsView,
     QInputDialog,
     QMessageBox,
-    QWidget,
 )
 from styling.theming import load_theme
 from styling.utils import apply_style
-from tcha.components import DialogManager, parse_args
-from tcha.consts import RESOURCE_PATH, AppAction, DisplayMode
-from tcha.dbmanager import DbManager
+from tcha.consts import RESOURCE_PATH, CloseState, DisplayMode
 from tcha.dbmodels import (
     CourseModel,
     ScheduleModel,
@@ -33,14 +28,13 @@ from tcha.dbmodels import (
     check_database,
     create_database,
 )
-from tcha.editor import Editor
+from tcha.dialogs import DialogManager, Editor, PresenterView
 from tcha.elements import get_all_definitions
 from tcha.error import CriticalError, ErrorLogger, PyException
 from tcha.lfio import LessonFile
-from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, SettingsDialog, Values
-from tcha.start import AboutDialog, OpenFileModel, StartWindow
-from tcha.table import PresenterView
-from tcha.utils import WinApi
+from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, Values
+from tcha.start import OpenFileModel
+from tcha.utils import WinApi, parse_args
 
 
 def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
@@ -136,11 +130,11 @@ class AppCore(QApplication, metaclass=MetaApp):
 
         self._db: QSqlDatabase | None = None
         self._dialog_manager = DialogManager()
-        self._start_dialog: StartWindow | None = None
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
         self._launch_config = parse_args()
+        self._restart_planned = False
 
         self._startup_checks()
 
@@ -236,66 +230,63 @@ class AppCore(QApplication, metaclass=MetaApp):
                     return Locale.from_int(i)
         return Values.default_value("User/language")
 
-    def on_app_action(self, action: AppAction, value: typing.Any = None) -> None:
-        match action:
-            case AppAction.NoAction:
-                return
-            case AppAction.NewFile:
-                editor = self.create_editor()
-                editor.show()
-            case AppAction.OpenFile:
-                editor = self.open_file(value)
-                if editor:
-                    editor.show()
-            case AppAction.Settings:
-                self.open_settings(value)
-            case AppAction.StartDialog:
-                start = self.open_start_dialog(True)
-                start.show()
-            case AppAction.CourseExplorer:
-                self.open_course_exp(value)
-            case AppAction.AboutTeachart:
-                self.open_about_dialog()
-
-    def startup_window(self) -> QWidget:
+    def show_startup_window(self) -> bool:
         """Returns startup window based on arguments on startup"""
         print(f"Parsed arguments: {self._launch_config}")
         if not self._launch_config.opened_path:
             self.open_start_dialog()
-            return self._dialog_manager.get_dialog("StartWindow")
+            return True
 
         elif self._launch_config.opened_path.exists():
             if (
                 self._launch_config.opened_path.is_file()
                 and self._launch_config.opened_path.suffix == ".tch"
             ):
-                editor = self.open_file(self._launch_config.opened_path)
-                return editor if editor else self.create_editor()
-            return self.create_editor()
+                wid = self.open_file(self._launch_config.opened_path)
+                if not wid:
+                    self.create_editor()
+                    return True
 
-        return self.open_start_dialog()
+        self.open_start_dialog()
+        return True
 
     def opened_editors(self) -> list[Editor]:
         return self._dialog_manager.get_container("Editor").values()
 
-    def opened_start_dialog(self) -> StartWindow | None:
-        return self._start_dialog
+    def open_dialog(self, wtype: str) -> None:
+        match wtype:
+            case "Editor":
+                self.create_editor()
+            case "StartWindow":
+                self.open_start_dialog(True)
+            case "DbManager":
+                self.open_course_explorer()
+            case "SettingsDialog":
+                self.open_settings()
+            case "AboutDialog":
+                self.open_about_dialog()
 
-    def open_dialog(self, wtype: str) -> None: ...
+    def _on_window_closed(self, wtype: str, wid: int):
+        window = self._dialog_manager.get_dialog(wtype, wid)
+        if window.close_state == CloseState.CanCloseLater and self._restart_planned:
+            self._dialog_manager.mark_closed(wtype, wid)
+            self.restart()
+        else:
+            self._dialog_manager.mark_closed(wtype, wid)
+            self._restart_planned = False
 
-    def create_editor(
-        self,
-    ) -> Editor:
-        """Creates an editor with a new LessonFile object."""
+    def create_editor(self) -> int:
+        """Creates an editor with a new LessonFile object and returns its window is (wid)"""
         lf = LessonFile()
         lf.open("w")
-        editor_window = self._dialog_manager.open(
+        editor_window: Editor = self._dialog_manager.open(
             "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
         )
         editor_window.dialogCalled.connect(self.open_dialog)
         editor_window.fileOpened.connect(self.open_file)
         editor_window.presenterActivated.connect(self.open_presenter)
         editor_window.presenterClosed.connect(self.close_presenter)
+        editor_window.closed.connect(self._on_window_closed)
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
         self._clean_up_list.append(editor_window.resource_path)
 
@@ -304,16 +295,18 @@ class AppCore(QApplication, metaclass=MetaApp):
             start_dialog.close()
             self._dialog_manager.mark_closed("StartWindow")
 
-        return editor_window
+        editor_window.show()
+        return editor_window.wid
 
-    def open_file(self, path: Path) -> Editor | None:
+    def open_file(self, path: Path) -> int:
         if (
             path
             and path.exists()
             and str(path) not in [editor.path for editor in self.opened_editors()]
         ):
-            caller = self.caller()
+            caller = self.focusWidget() if isinstance(self.focusWidget(), Editor) else None
             editor_window = None
+            wid = 0
 
             try:
                 lf = LessonFile()
@@ -365,7 +358,8 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._file_model.append_file(str(path))
                 if editor_window:
                     editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
-                return editor_window  # noqa: B012
+                    editor_window.show()
+                    wid = editor_window.wid
 
         else:
             QMessageBox.information(
@@ -373,65 +367,71 @@ class AppCore(QApplication, metaclass=MetaApp):
                 tr("Open lesson-file"),
                 tr("File is already open or file does not exist."),
             )
-            return None
 
-    def open_course_exp(self, parent=None) -> None:
-        dialog = DbManager(self._course_model, self._schedule_model, parent)
-        if isinstance(parent, Editor):
-            cid = parent.lesson.course_id
-            if cid > 0:
-                dialog.set_course(cid)
+        return wid
+
+    def open_course_explorer(self) -> None:
+        dialog = self._dialog_manager.open(
+            "DbManager", self._course_model, self._schedule_model, None
+        )
+        for editor in self.opened_editors():
+            if editor == self.activeWindow():
+                cid = editor.lesson.course_id
+                if cid > 0:
+                    dialog.set_course(cid)
+                break
         dialog.exec()
+        self._dialog_manager.mark_closed("DbManager")
 
     def open_settings(self, parent=None) -> None:
         dialog = self._dialog_manager.open(
             "SettingsDialog", self._course_model.database(), Settings.qsettings()
         )
         code = dialog.exec()
-        self._dialog_manager.mark_closed("SettingsDialog")
         if code == QDialog.DialogCode.Accepted:
-            if return_flags & ReturnFlags.Restart:
+            if dialog.return_flags & ReturnFlags.Restart:
                 print("Restarting application")
-                self.restartRequested.emit()
+                button = QMessageBox.question(
+                    dialog,
+                    self.tr("Changes require restart"),
+                    self.tr("Changes will only take effect after a restart. Restart now?"),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if button == QMessageBox.StandardButton.Yes:
+                    self.restart()
+                self._dialog_manager.mark_closed("SettingsDialog")
                 return
-            if return_flags & ReturnFlags.UpdateStyle:
+            if dialog.return_flags & ReturnFlags.UpdateStyle:
                 print("Updating application style")
                 load_theme(Settings.value("User/appearance"), self)
-            if return_flags & ReturnFlags.UpdateLocale:
+            if dialog.return_flags & ReturnFlags.UpdateLocale:
                 print("Updating language")
-
-    def on_settings_closed(self, flags: ReturnFlags) -> None: ...
+        self._dialog_manager.mark_closed("SettingsDialog")
 
     def open_start_dialog(self, file_mode=False) -> None:
-        if not self._dialog_manager.is_opened("StartWindow"):
-            window = self._dialog_manager.open("StartWindow", self._file_model, self._schedule_model, file_mode)
-            window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
-            window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
-            window.appActionTriggered[AppAction].connect(self.on_app_action)
-            window.show()
-        else:
-            return self.opened_start_dialog()
+        window = self._dialog_manager.open(
+            "StartWindow", self._file_model, self._schedule_model, file_mode
+        )
+        window.dialogCalled.connect(self.open_dialog)
+        window.fileOpened.connect(self.open_file)
+        window.closed.connect(self._on_window_closed)
+        window.show()
 
     def open_about_dialog(self) -> None:
-        for widget in self.topLevelWidgets():
-            if isinstance(widget, AboutDialog):
-                return
-        dialog = AboutDialog()
+        dialog = self._dialog_manager.open("AboutDialog")
         dialog.exec()
-        dialog.deleteLater()
+        self._dialog_manager.mark_closed("AboutDialog")
 
     def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
-        if not self._presenter_view:
-            self._presenter_view = PresenterView(scene, editor)
-            self._presenter_view.finished.connect(self._disable_presenter_mode)
-            self.show_presenter()
-        else:
-            self._presenter_view.view.setScene(scene)
-            self._presenter_view.set_current_editor(editor)
-            self._presenter_view.rescale()
+        presenter_view = self._dialog_manager.open("PresenterView", scene, editor)
+        presenter_view.view.setScene(scene)
+        presenter_view.set_current_editor(editor)
+        presenter_view.rescale()
+        presenter_view.finished.connect(self._disable_presenter_mode)
+        self.show_presenter()
 
     def show_presenter(self) -> None:
-        if self._presenter_view:
+        if self._dialog_manager.is_opened("PresenterView"):
             if WinApi.get_display_mode() == DisplayMode.Extended:
                 self._presenter_view.showFullScreen()
 
@@ -441,10 +441,11 @@ class AppCore(QApplication, metaclass=MetaApp):
                 QTimer.singleShot(500, lambda: self._presenter_view.showFullScreen())
 
     def close_presenter(self) -> None:
-        if self._presenter_view:
-            self._presenter_view.view.setScene(None)
-            self._presenter_view.close()
-            self._presenter_view = None
+        presenter_view = self._dialog_manager.get_dialog("PresenterView")
+        if presenter_view:
+            presenter_view.view.setScene(None)
+            presenter_view.close()
+            self._dialog_manager.mark_closed("PresenterView")
             if self.init_display_mode != WinApi.get_display_mode():
                 WinApi.set_display_mode(self.init_display_mode)
 
@@ -453,7 +454,7 @@ class AppCore(QApplication, metaclass=MetaApp):
             editor.enable_presenter_mode(False)
 
     def on_screen_changed(self) -> None:
-        if self._presenter_view:
+        if self._dialog_manager.is_opened("PresenterView"):
             if WinApi.get_display_mode() == DisplayMode.Single:
                 self.init_display_mode = DisplayMode.Single
                 self._disable_presenter_mode()
@@ -465,27 +466,14 @@ class AppCore(QApplication, metaclass=MetaApp):
 
         self.init_display_mode = WinApi.get_display_mode()
 
-    @staticmethod
-    def set_shared_index(idx: QPersistentModelIndex) -> bool:
-        """Sets a persistent index that can be shared across different models"""
-        inst: AppCore = AppCore.instance()
-        if inst:
-            inst.setProperty("globalIndex", idx)
-            return True
-        return False
-
-    @staticmethod
-    def shared_index() -> QPersistentModelIndex:
-        inst: AppCore = AppCore.instance()
-        if inst:
-            return inst.property("globalIndex")
-
     def db(self) -> QSqlDatabase | None:
         return self._db
 
     def restart(self) -> None:
-        self.quit()
-        os.execv(sys.executable, ["python"] + sys.argv)
+        self._restart_planned = True
+        if self._dialog_manager.close_all():
+            self.quit()
+            self.restartRequested.emit()
 
     def on_quitting(self) -> None:
         print("Saving recent and pinned files")

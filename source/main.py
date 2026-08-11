@@ -18,8 +18,7 @@ def main() -> None:
     root = os.path.dirname(os.path.abspath(__file__))
     os.chdir(root)
     QDir.addSearchPath("icons", str(Path(root).parent / "resources" / "svg"))
-    mw = app.startup_window()
-    mw.show()
+    app.show_startup_window()
     sys.exit(app.exec())
 
 

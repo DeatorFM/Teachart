@@ -24,9 +24,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from styling.properties import NTHEME_PROPERTIES
-from tcha.components import debug_enabled
 from tcha.dbmodels import create_database, reset_database
-from tcha.utils import word_as_bool
+from tcha.utils import debug_enabled, word_as_bool
 
 
 # In settings.py, add this function and remove the import
@@ -182,6 +181,10 @@ class SettingsDialog(QDialog):
         if a0 == QDialog.DialogCode.Accepted:
             self.save_all()
         return super().done(a0)
+
+    @property
+    def return_flags(self) -> ReturnFlags:
+        return self._return_flag
 
     # UI setup to settings
 

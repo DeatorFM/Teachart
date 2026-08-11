@@ -32,10 +32,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from styling.utils import SvgIcon
-from tcha.components import debug_enabled
 from tcha.consts import CanvasTool, CellAction
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.table import PresenterCanvas, Table
+from tcha.utils import debug_enabled
 from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAction
 
 

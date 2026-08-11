@@ -38,8 +38,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from styling.utils import SvgIcon
-from tcha.components import debug_enabled
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
+from tcha.utils import debug_enabled
 
 
 class Ui_StartWindow(object):

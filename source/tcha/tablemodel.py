@@ -26,11 +26,11 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QHeaderView
-from tcha.components import debug_enabled
 from tcha.consts import ResourceFlag
 from tcha.elements import get_definitions
 from tcha.resmanager import ResourceContainer, ResourceObject
 from tcha.settings import Settings
+from tcha.utils import debug_enabled
 from ui.commons import PasteConfirmation
 
 TCHA_IDENTIFIER = 0x54434841

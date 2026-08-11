@@ -11,9 +11,9 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QWidget,
 )
-from tcha.components import debug_enabled
 from tcha.dbmodels import *
 from tcha.settings import Settings
+from tcha.utils import debug_enabled
 from ui.ui_dbmanager import AssignmentView, DbManagerView
 
 
