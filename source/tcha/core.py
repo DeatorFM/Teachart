@@ -261,8 +261,8 @@ class AppCore(QApplication, metaclass=MetaApp):
         """Returns startup window based on arguments on startup"""
         print(f"Parsed arguments: {self._launch_config}")
         if not self._launch_config.opened_path:
-            start = self.open_start_dialog()
-            return start
+            self.open_start_dialog()
+            return self._dialog_manager.get_dialog("StartWindow")
 
         elif self._launch_config.opened_path.exists():
             if (
@@ -280,9 +280,6 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def opened_start_dialog(self) -> StartWindow | None:
         return self._start_dialog
-
-    def opened_presenter(self) -> QGraphicsView | None:
-        return self._presenter_view
 
     def open_dialog(self, wtype: str) -> None: ...
 
@@ -387,29 +384,31 @@ class AppCore(QApplication, metaclass=MetaApp):
         dialog.exec()
 
     def open_settings(self, parent=None) -> None:
-        return_flags = SettingsDialog.get_settings(
-            None, self._course_model.database(), Settings.qsettings()
+        dialog = self._dialog_manager.open(
+            "SettingsDialog", self._course_model.database(), Settings.qsettings()
         )
-        if return_flags & ReturnFlags.Restart:
-            print("Restarting application")
-            self.restartRequested.emit()
-            return
-        if return_flags & ReturnFlags.UpdateStyle:
-            print("Updating application style")
-            load_theme(Settings.value("User/appearance"), self)
-        if return_flags & ReturnFlags.UpdateLocale:
-            print("Updating language")
+        code = dialog.exec()
+        self._dialog_manager.mark_closed("SettingsDialog")
+        if code == QDialog.DialogCode.Accepted:
+            if return_flags & ReturnFlags.Restart:
+                print("Restarting application")
+                self.restartRequested.emit()
+                return
+            if return_flags & ReturnFlags.UpdateStyle:
+                print("Updating application style")
+                load_theme(Settings.value("User/appearance"), self)
+            if return_flags & ReturnFlags.UpdateLocale:
+                print("Updating language")
 
     def on_settings_closed(self, flags: ReturnFlags) -> None: ...
 
     def open_start_dialog(self, file_mode=False) -> None:
-        if not self.opened_start_dialog():
-            window = StartWindow(self._file_model, self._schedule_model, file_mode)
+        if not self._dialog_manager.is_opened("StartWindow"):
+            window = self._dialog_manager.open("StartWindow", self._file_model, self._schedule_model, file_mode)
             window.appActionTriggered[AppAction, QWidget].connect(self.on_app_action)
             window.appActionTriggered[AppAction, Path].connect(self.on_app_action)
             window.appActionTriggered[AppAction].connect(self.on_app_action)
-            self._start_dialog = window
-            return window
+            window.show()
         else:
             return self.opened_start_dialog()
 

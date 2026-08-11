@@ -161,3 +161,6 @@ class DialogManager:
 
     def is_opened(self, wtype: str) -> bool:
         return bool(self._dialogs.get(wtype, [None, None])[1])
+
+    def is_defined(self, wtype: str) -> bool:
+        return wtype in self._dialogs

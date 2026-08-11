@@ -172,7 +172,8 @@ class OpenFileModel(QAbstractTableModel):
 
 
 class StartWindow(QMainWindow):
-    appActionTriggered = pyqtSignal([AppAction, Path], [AppAction, QWidget], [AppAction])
+    dialogCalled = pyqtSignal(str)
+    fileOpened = pyqtSignal(Path)
 
     def __init__(
         self,
@@ -228,14 +229,14 @@ class StartWindow(QMainWindow):
 
     def connect_signals(self) -> None:
         self.ui.ac_new.triggered.connect(
-            lambda: self.appActionTriggered[AppAction].emit(AppAction.NewFile)
+            lambda: self.dialogCalled.emit("Editor")
         )
         self.ui.ac_open.triggered.connect(self.open_file_dialog)
         self.ui.ac_course_mng.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
+            lambda: self.dialogCalled.emit("DbManager")
         )
         self.ui.ac_settings.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.Settings, self)
+            lambda: self.dialogCalled.emit("SettingsDialog")
         )
         self.ui.tv_recent.clicked.connect(self.open_file)
         self.ui.tv_pinned.clicked.connect(self.open_file)
@@ -243,31 +244,23 @@ class StartWindow(QMainWindow):
         self.ui.de_date_selector.dateChanged.connect(self.on_date_changed)
         self.ui.cb_show_past_schedules.checkStateChanged.connect(self.set_past_schedules_visible)
         self.ui.tb_about.clicked.connect(
-            lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
+            lambda: self.dialogCalled.emit("AboutDialog")
         )
-
-    @property
-    def is_caller(self) -> bool:
-        return self._caller
-
-    def unset_caller(self) -> None:
-        self._caller = False
 
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:
-            self._caller = True
-            self.appActionTriggered.emit(AppAction.OpenFile, index.data())
+            self.fileOpened.emit(index.data())
 
     def open_scheduled(self, index: QModelIndex) -> None:
         new_idx = self._schedule_model.index(index.row(), 5)
         path = self._schedule_model.data(new_idx)
-        self.appActionTriggered.emit(AppAction.OpenFile, Path(path))
+        self.fileOpened.emit(Path(path))
 
     def open_file_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self, tr("Open File Dialog"), filter=tr("Teachart document (*.tch)")
         )
-        self.appActionTriggered.emit(AppAction.OpenFile, Path(path))
+        self.fileOpened.emit(Path(path))
 
     def set_past_schedules_visible(self, state: Qt.CheckState) -> None:
         if state == Qt.CheckState.Checked:

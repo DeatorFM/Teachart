@@ -127,9 +127,8 @@ class SettingsDialog(QDialog):
         db: QSqlDatabase,
         qsettings: QSettings,
         parent=None,
-        flags=Qt.WindowType.Dialog,
     ):
-        super().__init__(parent, flags)
+        super().__init__(parent, Qt.WindowType.Dialog)
         self.ui = uic.loadUi("ui/settings.ui", self)
         self.qsettings = qsettings
         self.database: QSqlDatabase = db
@@ -178,14 +177,6 @@ class SettingsDialog(QDialog):
             == QDialogButtonBox.StandardButton.RestoreDefaults
         ):
             self.restore_defaults()
-
-    @staticmethod
-    def get_settings(parent: QWidget | None, db: QSqlDatabase, qsettings: QSettings) -> ReturnFlags:
-        dialog = SettingsDialog(db, qsettings, parent)
-        code = dialog.exec()
-        if code == QDialog.DialogCode.Accepted:
-            return dialog._return_flag
-        return ReturnFlags.Invalid
 
     def done(self, a0: int):
         if a0 == QDialog.DialogCode.Accepted:
