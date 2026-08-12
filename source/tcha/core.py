@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.theming import load_theme
 from styling.utils import apply_style
+from tcha.base import BaseMainWindow
 from tcha.consts import RESOURCE_PATH, CloseState, DisplayMode
 from tcha.dbmodels import (
     CourseModel,
@@ -267,7 +268,8 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self.open_about_dialog()
 
     def _on_window_closed(self, wtype: str, wid: int):
-        window = self._dialog_manager.get_dialog(wtype, wid)
+        window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
+        print(f"Window is {window}")
         if window.close_state == CloseState.CanCloseLater and self._restart_planned:
             self._dialog_manager.mark_closed(wtype, wid)
             self.restart()
@@ -290,10 +292,9 @@ class AppCore(QApplication, metaclass=MetaApp):
         editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
         self._clean_up_list.append(editor_window.resource_path)
 
-        start_dialog = self._dialog_manager.get_dialog("Start")
+        start_dialog = self._dialog_manager.get_dialog("StartWindow")
         if start_dialog:
             start_dialog.close()
-            self._dialog_manager.mark_closed("StartWindow")
 
         editor_window.show()
         return editor_window.wid
@@ -352,9 +353,9 @@ class AppCore(QApplication, metaclass=MetaApp):
 
                 if caller:
                     caller.reset_progress()
-                if self._start_dialog:
-                    self._start_dialog.close()
-                    self._start_dialog = None
+                start_dialog = self._dialog_manager.get_dialog("StartWindow")
+                if start_dialog:
+                    start_dialog.close()
                 self._file_model.append_file(str(path))
                 if editor_window:
                     editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))

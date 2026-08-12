@@ -8,7 +8,6 @@ from PyQt6.QtCore import (
     QDateTime,
     QModelIndex,
     QObject,
-    QPersistentModelIndex,
     QRunnable,
     Qt,
     QThreadPool,
@@ -20,10 +19,8 @@ from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
     QGraphicsScene,
-    QMainWindow,
     QMenu,
     QMessageBox,
-    QWidget,
 )
 from tcha.base import BaseMainWindow
 from tcha.consts import (
@@ -70,7 +67,7 @@ class SaveWorker(QRunnable):
 
 
 class Editor(BaseMainWindow):
-    appActionTriggered = pyqtSignal([AppAction], [AppAction, Path], [AppAction, QWidget])
+    dialogCalled = pyqtSignal(str)
     fileOpened = pyqtSignal(Path)
     fileSaved = pyqtSignal(Path)
     presenterActivated = pyqtSignal(int, QGraphicsScene, QScreen)  # Scene, Target Screen
@@ -110,7 +107,6 @@ class Editor(BaseMainWindow):
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self.connect_signals()
         self.ui.cb_course.setModel(self.courses)
         self.ui.cb_course.setModelColumn(1)
@@ -146,22 +142,16 @@ class Editor(BaseMainWindow):
         self.courses.dataChanged.connect(self.on_course_data_changed)
         self.schedules.rowsAboutToBeRemoved.connect(self.check_for_schedule)
 
-        self.ui.ac_new_doc.triggered.connect(
-            lambda: self.appActionTriggered[AppAction].emit(AppAction.NewFile)
-        )
+        self.ui.ac_new_doc.triggered.connect(lambda: self.dialogCalled.emit("Editor"))
         self.ui.ac_open_doc.triggered.connect(self.open_file_dialog)
-        self.ui.tb_open.clicked.connect(
-            lambda: self.appActionTriggered[AppAction].emit(AppAction.OpenDialog)
-        )
+        self.ui.tb_open.clicked.connect(lambda: self.dialogCalled.emit("StartWindow"))
         self.ui.ac_save.triggered.connect(self.save_document)
         self.ui.tb_save.clicked.connect(self.save_document)
         self.ui.ac_save_as.triggered.connect(lambda: self.save_document(True))
         self.ui.ac_close.triggered.connect(self.close)
 
         self.ui.ac_add_course.triggered.connect(self.add_course)
-        self.ui.ac_course_exp.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
-        )
+        self.ui.ac_course_exp.triggered.connect(lambda: self.dialogCalled.emit("DbManager"))
         self.ui.ac_course_rec.triggered.connect(self.open_course_record)
         self.ui.ac_copy.triggered.connect(self.table.copy_current_index)
         self.ui.ac_paste.triggered.connect(
@@ -182,14 +172,10 @@ class Editor(BaseMainWindow):
         )
         self.ui.ac_goto_active.triggered.connect(self.table.scroll_to_current)
         self.ui.ac_freeze_row.triggered.connect(self.table.freeze_current_row)
-        self.ui.ac_about.triggered.connect(
-            lambda: self.appActionTriggered[AppAction].emit(AppAction.AboutTeachart)
-        )
+        self.ui.ac_about.triggered.connect(lambda: self.dialogCalled.emit("AboutDialog"))
         self.ui.te_comment.textChanged.connect(self.set_comment)
 
-        self.ui.ac_settings.triggered.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.Settings, self)
-        )
+        self.ui.ac_settings.triggered.connect(lambda: self.dialogCalled.emit("SettingsDialog"))
 
         self.ui.ac_file_insp.triggered.connect(self.open_file_inspector)
         self.ui.ac_xml_insp.triggered.connect(self.open_xml_inspector)
@@ -246,7 +232,7 @@ class Editor(BaseMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, tr("Open Sheet"), None, "*.lesson *.tch")
         if path:
             self._caller = True
-            self.appActionTriggered[AppAction, Path].emit(AppAction.OpenFile, Path(path))
+            self.fileOpened.emit(Path(path))
 
     def set_unsaved(self) -> None:
         self.save_state = SaveState.Unsaved
@@ -465,7 +451,7 @@ class Editor(BaseMainWindow):
             else:
                 self.ui.ac_freeze_row.set_text("freeze")
 
-        if level & EditingLevel.ElementEditing:
+        if level & EditingLevel.ElementEditing:  # noqa: SIM102
             if self.presenter_mode:
                 model: BaseElementModel | None = self.table.current_model()
                 if model:
@@ -541,7 +527,7 @@ class Editor(BaseMainWindow):
 
     def has_index_copied(self) -> bool:
         clipboard = QApplication.clipboard()
-        if clipboard:
+        if clipboard:  # noqa: SIM102
             if "application/x-teachart" in clipboard.mimeData().formats():
                 return True
         return False
@@ -586,9 +572,7 @@ class Editor(BaseMainWindow):
 
     def open_course_record(self) -> None:
         dialog = RecordView(self.lesson.course_id, self.courses.sourceModel(), self)
-        dialog.managerCalled.connect(
-            lambda: self.appActionTriggered[AppAction, QWidget].emit(AppAction.CourseExplorer, self)
-        )
+        dialog.managerCalled.connect(lambda: self.dialogCalled.emit("DbManager"))
         dialog.open()
 
     # Other controls
@@ -657,8 +641,7 @@ class Editor(BaseMainWindow):
                     return
                 self._close_state = CloseState.CanCloseLater
             elif result == QMessageBox.StandardButton.Discard:
-                ev.ignore()
-                return
+                pass
             else:
                 ev.ignore()
                 return

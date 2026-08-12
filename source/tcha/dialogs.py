@@ -25,7 +25,7 @@ class DialogContainer(dict):
 
 
 class DialogManager:
-    """Manages top level windows of application that are called from AppCore. Thanks to the Anki dev team for inspiration."""
+    """Manages top level windows of application that are called from AppCore. Thanks to the Anki dev team for inspiration :-)"""
 
     _dialogs: ClassVar[dict[str, list[type, QWidget | DialogContainer[str, QWidget] | None]]] = {
         "Editor": [Editor, DialogContainer(Editor)],
@@ -40,10 +40,10 @@ class DialogManager:
         "Editor"
     ]  # Dialog types that can have more than one instance open
 
-    def define_custom_mapping(self, wtype: str, wclass: type, multi_inst=False) -> bool:
+    def define_custom_mapping(self, wtype: str, wclass: type, container=False) -> bool:
         """Define custom mapping for Dialog with class name 'wtype'. If 'multi_ins't' is True a container"""
         if wtype not in self._dialogs:
-            if multi_inst and hasattr(wclass, "wid"):
+            if container and hasattr(wclass, "wid"):
                 self._dialogs[wtype] = DialogContainer(wclass)
                 self._containers.append(wtype)
                 return True
@@ -55,7 +55,7 @@ class DialogManager:
     def get_dialog(self, wtype: str, wid: int = 0) -> QWidget | None:
         """Get single instance only dialog if existing else None."""
         if wtype in self._containers:
-            return self._dialogs[wtype].get(wid)
+            return self._dialogs[wtype][1].get(wid)
         return self._dialogs.get(wtype, [None, None])[1]
 
     def get_container(self, wtype: str) -> DialogContainer:
@@ -89,7 +89,7 @@ class DialogManager:
 
     def mark_closed(self, wtype: str, wid: int = 0) -> None:
         if wtype in self._containers:
-            del self._dialogs[wtype][wid]
+            del self._dialogs[wtype][1][wid]
         else:
             self._dialogs[wtype] = [self._dialogs[wtype][0], None]
 

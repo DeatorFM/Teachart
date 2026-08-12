@@ -17,11 +17,11 @@ from PyQt6.QtCore import (
     Qt,
     pyqtSignal,
 )
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHeaderView,
-    QMainWindow,
     QMenu,
 )
 from tcha.base import BaseMainWindow
@@ -296,6 +296,10 @@ class StartWindow(BaseMainWindow):
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
         self.update_schedule_message()
+
+    def closeEvent(self, ev: QCloseEvent):
+        super().closeEvent(ev)
+        self.closed.emit("StartWindow", 0)
 
 
 class AboutDialog(QDialog):
