@@ -99,11 +99,15 @@ class OpenFileModel(QAbstractTableModel):
     def paths(self) -> list[str]:
         return [item.path for item in self._data]
 
-    def append_file(self, path: str) -> bool:
-        """Appends file or puts it at the first index if existing."""
+    def append_file(self, path: str, strict=True) -> bool:
+        """
+        Appends file or puts it at the first index if existing.
+        If strict is True only files that exist will be added.
+        Returns True if the file was added.
+        """
         pathobj = Path(path)
         if not self.has_file(path):
-            if pathobj.exists() and pathobj.suffix in (".lesson", ".tch"):
+            if (pathobj.exists() or not strict) and pathobj.suffix in (".lesson", ".tch"):
                 self._data.insert(0, FileItem(pathobj, True, False))
                 self.rowsInserted.emit(QModelIndex(), 0, 0)
                 return True

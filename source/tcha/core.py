@@ -88,27 +88,6 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
     return cmodel, smodel, tmodel
 
 
-RECENT = [
-    "D:/Documents/Math/algebra_basics.lesson",
-    "D:/Documents/Science/physics_101.lesson",
-    "D:/Documents/History/world_war_2.lesson",
-    "D:/Documents/Math/calculus_intro.lesson",
-    "D:/Documents/English/shakespeare.lesson",
-    "D:/Documents/Science/chemistry_lab.lesson",
-    "D:/Documents/Geography/continents.lesson",
-    "D:/Documents/Math/geometry_shapes.lesson",
-]
-
-PINNED = [
-    "D:/Documents/Math/algebra_basics.lesson",
-    "D:/Documents/Science/physics_101.lesson",
-    "D:/Documents/Art/painting_techniques.lesson",
-    "D:/Documents/Music/music_theory.lesson",
-    "D:/Documents/Math/calculus_intro.lesson",
-    "D:/Documents/Programming/python_basics.lesson",
-]
-
-
 class MetaApp(type(QApplication)):
     _instances: typing.ClassVar[dict] = {}
     _lock: Lock = Lock()

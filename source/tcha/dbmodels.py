@@ -122,11 +122,13 @@ def check_database(db: QSqlDatabase) -> bool:
 
 def reset_database(db: QSqlDatabase) -> bool:
     """Deletes all informations from all user accessable tables"""
+    if not db.transaction():
+        return False
+
     db.exec("DELETE FROM Courses WHERE id > 0")  # To keep the 'No course" entry
     db.exec("DELETE FROM Schedules")
     db.exec("DELETE FROM Students")
-    ok = db.commit()
-    return ok
+    return db.commit()
 
 
 @dataclass(frozen=True)
@@ -184,12 +186,11 @@ class CourseModel(QSqlTableModel):
         record.setValue("duration", duration)
         record.setValue("temporary", int(temporary))
 
-        if self.insertRecord(0, record):
+        if self.insertRecord(-1, record):
             if self.submitAll():
                 self.select()
                 self.courseDataChanged.emit()
-                return self.data(self.index(0, 0))
-            print(self.data(self.index(0, 1)))
+                return self.data(self.index(self.rowCount() - 1, 0))
         else:
             print("Insert Failed")
             print(f"Database Error: {self.database().lastError().text()}")
@@ -242,7 +243,7 @@ class CourseModel(QSqlTableModel):
                 if idx.column() == 1:
                     return tr("All students")
                 else:
-                    return
+                    return super().data(idx, role)
             if idx.column() == 2:
                 value = super().data(idx, role)
                 return "{}{}".format(value, tr(" min"))
@@ -506,6 +507,7 @@ class StudentModel(QSqlRelationalTableModel):
 
     def getRow(self, item: QModelIndex) -> StudentItem:
         record = self.record(item.row())
+        print(f"Aliased field name: {record.fieldName(2)}")
         return StudentItem.from_record(record)
 
     def course_id(self, index: QModelIndex) -> int:

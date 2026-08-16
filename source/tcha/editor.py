@@ -45,8 +45,7 @@ from ui.editor_view import Ui_Editor
 
 
 class SaveWorkerSignals(QObject):
-    finished = pyqtSignal()
-    error = pyqtSignal(str)
+    finished = pyqtSignal(bool)
 
 
 class SaveWorker(QRunnable):
@@ -62,8 +61,8 @@ class SaveWorker(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        self._lf.save(self._path)
-        self.signals.finished.emit()
+        success = self._lf.save(self._path)
+        self.signals.finished.emit(success)
 
 
 class Editor(BaseMainWindow):
@@ -303,23 +302,26 @@ class Editor(BaseMainWindow):
             self.ui.ac_save.setEnabled(True)
             return False
 
-    def _on_saving_finished(self) -> None:
+    def _on_saving_finished(self, result: bool = True) -> None:
         debug_tag = "(Debug-Mode)" if debug_enabled() else ""
-        self.ui.ac_save.setEnabled(True)
-        self.ui.tb_save.setEnabled(True)
-        self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
-        if self.save_state is SaveState.SaveAndQuit:
-            self.save_state = SaveState.Saved
-            self.statusBar().showMessage(tr("Saving finished!"), 3000)
-            self.schedule()
-            self.fileSaved.emit(Path(self.lessonfile.path))
-            self.close()
+        if result:
+            self.ui.ac_save.setEnabled(True)
+            self.ui.tb_save.setEnabled(True)
+            self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
+            if self.save_state is SaveState.SaveAndQuit:
+                self.save_state = SaveState.Saved
+                self.statusBar().showMessage(tr("Saving finished!"), 3000)
+                self.schedule()
+                self.fileSaved.emit(Path(self.lessonfile.path))
+                self.close()
+            else:
+                self.save_state = SaveState.Saved
+                self.statusBar().showMessage(self.tr("Saving finished!"), 3000)
+                self.schedule()
+                self.ui.ac_xml_insp.setEnabled(True)
+                self.fileSaved.emit(Path(self.lessonfile.path))
         else:
-            self.save_state = SaveState.Saved
-            self.statusBar().showMessage(tr("Saving finished!"), 3000)
-            self.schedule()
-            self.ui.ac_xml_insp.setEnabled(True)
-            self.fileSaved.emit(Path(self.lessonfile.path))
+            self.statusBar().showMessage(self.tr("Saving failed. Check log for details."), 3000)
 
     def schedule(self) -> None:
         """Creates a new schedule if not existing."""

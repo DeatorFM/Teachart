@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QTextEdit,
     QToolBar,
 )
-
 from tcha.consts import ResourceFlag
 from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
 
@@ -145,7 +144,7 @@ class BaseElementModel(QObject):
 
     @abstractmethod
     def attrs(self) -> tuple[str]:
-        return tuple()
+        return tuple()  # noqa: C408
 
     @staticmethod
     @abstractmethod
@@ -156,6 +155,10 @@ class BaseElementModel(QObject):
     def to_byte_array() -> QByteArray:
         """Returns the model data as bytes that can be written to mime data"""
         return QByteArray
+
+    @abstractmethod
+    def close() -> None:
+        return
 
 
 class BaseElementEditor(QFrame):
@@ -209,9 +212,7 @@ class BaseElementDelegate(QStyledItemDelegate):
     def __init__(self, toolset: BaseElementToolset | None, parent=None):
         super().__init__(parent)
         self._toolset = toolset
-        self._cache: BaseElementModel | None = (
-            None  # Original model when editing has been started
-        )
+        self._cache: BaseElementModel | None = None  # Original model when editing has been started
         self.pres_mode = False
 
     def eventFilter(self, object: QObject, event: QEvent):
@@ -290,9 +291,7 @@ class BaseElementDefinitions:
 
     @staticmethod
     @abstractmethod
-    def model_from_xml(
-        xml: QXmlStreamAttributes, resobj: ResourceObject
-    ) -> BaseElementModel:
+    def model_from_xml(xml: QXmlStreamAttributes, resobj: ResourceObject) -> BaseElementModel:
         return
 
     @staticmethod

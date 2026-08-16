@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from random import getrandbits
-from typing import Any, Iterator, Self, Sequence
+from typing import Any, Self
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from PyQt6.QtCore import (
@@ -20,7 +21,7 @@ from PyQt6.QtCore import (
     QRect,
     QSize,
     Qt,
-    QVariant,
+    QXmlStreamAttributes,
     QXmlStreamWriter,
     pyqtSignal,
 )
@@ -29,7 +30,6 @@ from PyQt6.QtWidgets import QHeaderView
 from tcha.consts import ResourceFlag
 from tcha.elements import get_definitions
 from tcha.resmanager import ResourceContainer, ResourceObject
-from tcha.settings import Settings
 from tcha.utils import debug_enabled
 from ui.commons import PasteConfirmation
 
@@ -201,13 +201,13 @@ class CellModel(QAbstractListModel):
     def __init__(
         self,
         data: CellItem,
-        index: QModelIndex = QModelIndex(),
+        index: QModelIndex = QModelIndex(),  # noqa: B008
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._data: CellItem[BaseElementModel] = data
         self._work_data = data.copy()
-        self.cell_index: QPersistentModelIndex = index
+        self.cell_index: QModelIndex = index
 
     @property
     def tablemodel(self) -> TableModel:
@@ -276,7 +276,7 @@ class CellModel(QAbstractListModel):
         self._work_data.clear()
         self.endResetModel()
 
-    def removeRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
+    def removeRows(self, row: int, count: int, parent=QModelIndex()) -> bool:  # noqa: B008
         try:
             if row >= 0:
                 self.beginRemoveRows(parent, row, row + count - 1)
@@ -312,8 +312,10 @@ class CellModel(QAbstractListModel):
 
     # Data methods
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> BaseElementModel:
-        try:
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> BaseElementModel | None:
+        if index.isValid():
             model: BaseElementModel = self._data[index.row()]
             if role == Qt.ItemDataRole.DisplayRole:
                 return model
@@ -324,8 +326,7 @@ class CellModel(QAbstractListModel):
             elif role == Qt.ItemDataRole.SizeHintRole:
                 return self._work_data[index.row()].item_size
 
-        except IndexError:
-            return QVariant(None)
+        return
 
     def revert_work_data(self, index: QModelIndex) -> None:
         """Reverts the working CellItem at index to the same model as the original data"""
@@ -384,20 +385,6 @@ class CellModel(QAbstractListModel):
 
         return mimedata
 
-        # AppCore.set_shared_index(
-        #     QPersistentModelIndex(self.cell_index)
-        # )  # Setting so it can be accessed by other models
-        # stream.writeInt16(self.cell_index.model().model_id)  # Source model
-        # stream.writeInt8(1)  # Source Level
-        # stream.writeInt32(index.data().number)  # Model number
-        # stream.writeBool(False)  # Delete source?
-        # print(
-        #     f"Written mime data: Source level 1; Table row {self.cell_index.row()}; Table column {self.cell_index.column()}; Cell row {index.row()}"
-        # )
-
-        # mimedata.setData("application/x-teachart", encoded_data)
-        # return mimedata
-
     def canDropMimeData(
         self,
         data: QMimeData,
@@ -430,13 +417,10 @@ class CellModel(QAbstractListModel):
             if mime_data.model_id != self.cell_index.model().model_id:
                 return False
 
-            if not (
+            return (
                 mime_data.table_row == self.cell_index.row()
                 and mime_data.table_column == self.cell_index.column()
-            ):
-                return False
-
-            return True
+            )
 
         return False
 
@@ -605,6 +589,10 @@ class TableModel(QAbstractTableModel):
             return model
         raise ValueError("Row and column count must be at least 1.")
 
+    @classmethod
+    def new_from_xml(cls: TableModel, xml: QXmlStreamAttributes) -> TableModel:
+        return cls.new(int(xml.value("rows")), int(xml.value("columns")))
+
     # Indexing utilities
 
     def get_row(self, row: int) -> tuple[CellItem]:
@@ -653,11 +641,11 @@ class TableModel(QAbstractTableModel):
 
     def data(
         self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
-    ) -> CellItem | CellModel | QSize:
+    ) -> CellItem | CellModel | QSize | None:
         if index.isValid():
             item = (
                 self._data[index.row()][index.column()]
-                if not index == self._cached_model
+                if index != self._cached_model
                 else self._cached_model.model.work_item
             )
             if role == Qt.ItemDataRole.EditRole:
