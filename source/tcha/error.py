@@ -1,5 +1,7 @@
 import logging
 import os.path as osp
+import random
+import uuid
 from dataclasses import dataclass
 from enum import Enum
 from functools import cache
@@ -166,6 +168,62 @@ class ErrorCode(Enum):
     NoError = 0
     NonCritical = 1
     Critical = 2
+
+
+class IOLogger:
+    _session = 0
+
+    def __init__(self, file_id: uuid.UUID | None = None):
+        self._file_id = file_id
+        self._logfile = (
+            self.logdir() / f"{file_id}.log"
+            if file_id
+            else self.logdir() / f"unknown_{random.randbytes(32)}.log"
+        )
+        self._errors = set()
+
+        self._setup_logger()
+
+    @cache
+    @staticmethod
+    def logdir() -> Path:
+        from tcha.settings import Settings
+
+        return Settings.user_path() / "tchlogs"
+
+    def _setup_logger(self) -> None:
+        self._logger = logging.getLogger(str(self._session))
+        self._session += 1
+        self._logger.handlers.clear()
+
+        handler = logging.FileHandler(self._logfile)
+        formatter = logging.Formatter("%(asctime)s - %(message)s")
+        handler.setFormatter(formatter)
+        self._logger.addHandler(handler)
+
+    def set_file_id(self, file_id: uuid.UUID) -> None:
+        if self._logger and self._logger.handlers:
+            for handler in self._logger.handlers:
+                handler.close()
+            self._logger.handlers.clear()
+
+        old_logfile = self._logfile
+        new_logfile = self.logdir() / f"{file_id}.log"
+
+        if old_logfile.exists():
+            old_logfile.rename(new_logfile)
+
+        # Update reference and file_id
+        self._logfile = new_logfile
+        self._file_id = file_id
+
+        # Re-setup logger with new file
+        self._setup_logger()
+
+    def log(self, level: int, message: str, error=None) -> None:
+        self._logger.log(level, message)
+        if error:
+            self._errors.add(error)
 
 
 class ErrorLogger:

@@ -52,7 +52,7 @@ class Lesson:
         return cls(source_id, QDateTime.currentDateTime())
 
     @classmethod
-    def read(cls: Self, reader: QXmlStreamReader, strict=False) -> Lesson:
+    def read(cls: Self, reader: QXmlStreamReader, strict=False, logger) -> Lesson:
         """Reads data from an XML DOM element and returns an instance of Lesson.
         If a value is invalid a ModelReadError is invoked."""
         attrs = reader.attributes()
