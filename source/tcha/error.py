@@ -10,6 +10,8 @@ from pathlib import Path
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtWidgets import QMessageBox
 
+from tcha.utils import debug_enabled
+
 
 @dataclass(frozen=True)
 class Error:
@@ -29,6 +31,10 @@ class FileError(Enum):
     MissingFileId = 8
     BadZip = 9
 
+
+class LoggableError(Exception)
+    def __init__(self, critical=False, *args):
+        super().__init__(*args)
 
 class LFExceptions:
     class LFException(Exception):
@@ -180,7 +186,7 @@ class IOLogger:
             if file_id
             else self.logdir() / f"unknown_{random.randbytes(32)}.log"
         )
-        self._errors = set()
+        self._level  = logging.NOTSET
 
         self._setup_logger()
 
@@ -213,17 +219,24 @@ class IOLogger:
         if old_logfile.exists():
             old_logfile.rename(new_logfile)
 
-        # Update reference and file_id
         self._logfile = new_logfile
         self._file_id = file_id
 
-        # Re-setup logger with new file
         self._setup_logger()
 
-    def log(self, level: int, message: str, error=None) -> None:
+    def log(self, level: int, message: str) -> None:
+        # 
+        if level == logging.DEBUG and not debug_enabled():
+            return 
         self._logger.log(level, message)
-        if error:
-            self._errors.add(error)
+        self._level = level if level > self._level else self._level
+
+    def evaluate(self) -> ErrorCode:
+        if self._level == logging.CRITICAL:
+            return ErrorCode.Critical
+        elif self._level <= logging.ERROR and self._level >= logging.WARNING:
+            return ErrorCode.NonCritical
+        return ErrorCode.NoError
 
 
 class ErrorLogger:
