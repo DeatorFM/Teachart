@@ -195,6 +195,9 @@ class AppCore(QApplication, metaclass=MetaApp):
     def clean_mode_enabled(self) -> bool:
         return self._launch_config.clean
 
+    def source_id(self) -> int:
+        return self._course_model.source_id()
+
     def setup_logger(self) -> None: ...
 
     def language_dialog(self) -> Locale:

@@ -19,6 +19,10 @@ def clean_mode_enabled() -> bool:
     return QApplication.instance().clean_mode_enabled()
 
 
+def source_id() -> str:
+    return QApplication.instance().source_id()
+
+
 def core() -> QApplication:
     return QApplication.instance()
 

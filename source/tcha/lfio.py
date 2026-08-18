@@ -35,6 +35,7 @@ from tcha.tablemodel import (
     HeaderDataItem,
     TableModel,  # CellModel, HeaderDataItem,
 )
+from tcha.utils import source_id
 
 CURRENT_VERSION: int = 1
 
@@ -585,222 +586,150 @@ class XmlReader(QObject):
 
                 if token == QXmlStreamReader.TokenType.StartElement:  # noqa: SIM102
                     if reader.name() == "lesson":
-                        try:
-                            model = Lesson.read(reader)
-                            return model
+                        model = Lesson.read(reader)
+                        if reader.hasError():
+                            ...
+                            # LOGGER Error: log reader error from reader.errorString()
+                        self._cached_lesson = model
+                        return True
+            # LOGGER Error: Missing xml for lesson data
+            return Lesson.new(source_id())
 
-                        except LFExceptions.ModelReadError as e:
-                            error_handler.log(
-                                e,
-                                "Reading of general lesson data failed. One or more of the values is invalid.",
-                            )
-                            return None
-            return None
-
-    @staticmethod
-    def read_table(
-        temppath: Path,
-        error_handler: ErrorLogger,
-        progress_logger: ProgressLogger = ProgressLogger(),
-    ) -> TableModel | None:
+    def read_table(self) -> bool:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
-        struct_f = temppath / "struct.xml"
-        resources_dir = temppath / "resources"
-        reader = QXmlStreamReader(struct_f)
-        valid_file = XmlReader.validate_file(reader)
+        if self._reading == ReadState.Reading:
+            struct_f = Path(self._tchpath.name) / "struct.xml"
+            resources_dir = Path(self._tchpath.name) / "resources"
+            qfile = QFile(struct_f.as_posix())
+            if qfile.open():
+                # LOGGER Critical: Structure file not found
+                return False
+            reader = QXmlStreamReader(struct_f)
 
-        if not valid_file:
-            return None
+            if not self.validate_file(reader):
+                # LOGGER Critical: Xml data incompatible
+                qfile.close()
+                return False
 
-        row = 0
-        column = 0
-        header = 0
+            row, column, header = 0, 0, 0
+            in_table, writing_row, writing_cell = False, False, False
 
-        total_progress = 70
-        factor = 70 / total_progress  # Total: 70 %
+            tmodel = None
+            cell = None
 
-        in_table = False
-        writing_row = False
-        writing_cell = False
-        tmodel = None
-        cell = None
+            while not reader.atEnd():
+                token = reader.readNext()
 
-        while not reader.atEnd():
-            token = reader.readNext()
+                # Initialise table
 
-            # Initialise table
+                if token == QXmlStreamReader.TokenType.StartElement:
+                    if reader.name() == "table":
+                        attrs = reader.attributes()
+                        try:
+                            tmodel: TableModel = TableModel.new_from_xml(attrs)
+                            in_table = True
 
-            if token == QXmlStreamReader.TokenType.StartElement:
-                if reader.name() == "table":
-                    attrs = reader.attributes()
-                    try:
-                        tmodel: TableModel = TableModel.new_from_xml(attrs)
+                        except (ValueError, TypeError) as e:
+                            # LOGGER Critical: Row or column number is NaN or values not found.
+                            return False
+                        continue
 
-                        total_progress = tmodel.rowCount() + tmodel.columnCount() * 2
-                        factor = 70 / total_progress
+                    # Write Table
 
-                        progress_logger.raise_progress(factor * column)
-                        in_table = True
-
-                    except ValueError as e:
-                        e.critical = True
-                        error_handler.log(
-                            e,
-                            "Invalid value for row or column number. Value is not a number or values are 0.",
-                        )
-                        return None
-
-                    except TypeError as e:
-                        e.critcal = True
-                        error_handler.log(
-                            e,
-                            "Invalid value for row or column number. Value is not a number or values are 0.",
-                        )
-                        return None
-                    continue
-
-                # Write Table
-
-                if in_table:
-                    match reader.name():
-                        case "header":
-                            attrs = reader.attributes()
-
-                            try:
-                                if header < tmodel.columnCount():
-                                    tmodel.setHeaderData(
-                                        header,
-                                        Qt.Orientation.Horizontal,
-                                        str(attrs.value("text")),
-                                        Qt.ItemDataRole.DisplayRole,
-                                    )
-                                    tmodel.setHeaderData(
-                                        header,
-                                        Qt.Orientation.Horizontal,
-                                        QSize(int(attrs.value("size")), 0),
-                                        Qt.ItemDataRole.SizeHintRole,
-                                    )
-                                    header += 1
-                                    continue
-                                error_handler.log(
-                                    LFExceptions.BrokenTable(False),
-                                    "Skipped horizontal header definition because it would exceed defined column count.",
-                                )
-                            except (ValueError, TypeError) as e:
-                                e.critical = False
-                                error_handler.log(
-                                    e,
-                                    "Invalid value for header size and text. Check if values for header size or text are correct.",
-                                )
-
-                        case "row":
-                            if row < tmodel.rowCount():
-                                column = 0
-                                writing_row = True
-                                continue
-                            error_handler.log(
-                                LFExceptions.BrokenTable(False),
-                                f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {def_row_count}; Specified columns: {def_column_count}",
-                            )
-                            writing_row = False
-
-                        case "cell":
-                            if column < tmodel.columnCount():
-                                cell = tmodel.data(tmodel.index(row, column))
-                                writing_cell = True
-                                continue
-                            error_handler.log(
-                                LFExceptions.BrokenTable(False),
-                                f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {def_column_count}; Actual: {def_column_count + 1}",
-                            )
-                            writing_cell = False
-
-                        case "element":
-                            if writing_cell and writing_row:
+                    if in_table:
+                        match reader.name():
+                            case "header":
                                 attrs = reader.attributes()
 
                                 try:
-                                    definition = get_definitions(str(attrs.value("type")))
-                                    if definition:
-                                        resobj = tmodel.rescont.get(
-                                            osp.join(
-                                                temppath,
-                                                "resources",
-                                                str(attrs.value("file")),
-                                            )
+                                    if header < tmodel.columnCount():
+                                        tmodel.setHeaderData(
+                                            header,
+                                            Qt.Orientation.Horizontal,
+                                            str(attrs.value("text")),
+                                            Qt.ItemDataRole.DisplayRole,
                                         )
-                                        model = definition.model_from_xml(attrs, resobj)
-                                        cell.append(model)
-
-                                except KeyError as e:
-                                    e.critical = False
-                                    error_handler.log(
-                                        e,
-                                        f"The resource for the element {attrs.value('type')!s} does not exist. Model will be skipped.",
-                                    )
-                                    continue
-                                except (AttributeError, TypeError) as e:
-                                    e.critical = False
-                                    error_handler.log(
-                                        e,
-                                        f"Reading the model of type '{attrs.value('type')!s}' failed. Either the model type could not be identified or a required attribute is missing. Model will be skipped.",
-                                    )
-                                    continue
-                                except ValueError as e:
-                                    e.critical = False
-                                    error_handler.log(
-                                        e,
-                                        f"The resource value for model of type '{attrs.value('type')}' could not be parsed. Model will be skipped.",
-                                    )
-                                    continue
-                                except FileNotFoundError as e:
-                                    e.critical = False
-                                    error_handler.log(
-                                        e,
-                                        f"The resource file for model of type '{attrs.value('type')} could not be found. Model will be skipped.",
-                                    )
-                                    continue
-                                except LFExceptions.ModelReadError as e:
-                                    error_handler.log(
-                                        e,
-                                        f"Reading the model of type '{attrs.value('type')}' has failed. This could be due to invalid value. Model will be skipped.",
-                                    )
+                                        tmodel.setHeaderData(
+                                            header,
+                                            Qt.Orientation.Horizontal,
+                                            QSize(int(attrs.value("size")), 0),
+                                            Qt.ItemDataRole.SizeHintRole,
+                                        )
+                                        header += 1
+                                        continue
+                                    # LOGGER Error: Skipped horizontal header definition because it would exceed defined column count.
+                                except (ValueError, TypeError):
+                                    # LOGGER Error: Invalid value for header size and text. Check if values for header size or text are correct.
                                     continue
 
-                            else:
-                                continue
+                            case "row":
+                                if row < tmodel.rowCount():
+                                    column = 0
+                                    writing_row = True
+                                    continue
+                                # LOGGER Error: The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {tmodel.rowCount()}; Specified columns: {tmodel.columnCount()}
+                                writing_row = False
 
-            elif token == QXmlStreamReader.TokenType.EndElement and in_table:
-                match reader.name():
-                    case "headers":
-                        continue
+                            case "cell":
+                                if column < tmodel.columnCount():
+                                    cell = tmodel.data(tmodel.index(row, column))
+                                    writing_cell = True
+                                    continue
+                                # LOGGER Error: The table column was skipped because too many were parsed than specified in the definitions: Specified: {tmodel.columnCount()}; Actual: {tmodel.columnCount() + 1}
+                                writing_cell = False
 
-                    case "row" if writing_row:
-                        row += 1
-                        writing_row = False
-                        column = 0
-                        progress_logger.raise_progress(factor)
-                        continue
+                            case "element":
+                                if writing_cell and writing_row:
+                                    attrs = reader.attributes()
 
-                    case "cell" if writing_cell:
-                        column += 1
-                        writing_cell = False
-                        progress_logger.raise_progress(factor)
-                        continue
+                                    try:
+                                        definition = get_definitions(attrs.value("type"))
+                                        res_file = attrs.value("file")
+                                        if definition and res_file:
+                                            res_path = resources_dir / res_file
+                                            resobj = tmodel.rescont.save(
+                                                definition.type(), res_path
+                                            )
+                                            model = definition.model_from_xml(attrs, resobj)
+                                            if model:
+                                                cell.append(model)
+                                            else:
+                                                # LOGGER Error: Invalid values required to parse the element. Element is skipped.
+                                        # LOGGER Error: Cell element of type '{attrs.value("type")}' or resource file is not defined. Element is skipped.
 
-                    case "table":
-                        if row == tmodel.rowCount():
+                                    except FileNotFoundError:
+                                        # LOGGER Error: Resource file could not be found. Element is skipped.
+                                        continue
+
+                                else:
+                                    continue
+
+                elif token == QXmlStreamReader.TokenType.EndElement and in_table:
+                    match reader.name():
+                        case "headers":
+                            continue
+
+                        case "row" if writing_row:
+                            row += 1
+                            writing_row = False
+                            column = 0
+                            continue
+
+                        case "cell" if writing_cell:
+                            column += 1
+                            writing_cell = False
+                            continue
+
+                        case "table":
+                            if row == tmodel.rowCount():
+                                in_table = False
+                                break
+                            # LOGGER Error: The number of parsed rows does not match the actual number. Some rows' content might be missing.
                             in_table = False
+
                             break
-                        error_handler.log(
-                            LFExceptions.BrokenTable(False),
-                            "The number of parsed rows does not match the actual number. Some rows' content might be missing.",
-                        )
-                        in_table = False
 
-                        break
-
-        return tmodel
+            return True
 
     @staticmethod
     def validate_file(reader: QXmlStreamReader) -> bool:

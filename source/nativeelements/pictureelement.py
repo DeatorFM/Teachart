@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Type
 
@@ -47,7 +48,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
-from tcha.error import LFExceptions
+from tcha.error import LFExceptions, LoggableError
 from tcha.resmanager import (
     CompressedResourceObject,
     FileResourceObject,
@@ -665,7 +666,9 @@ class PictureElementDefinitions(BaseElementDefinitions):
         return False
 
     @staticmethod
-    def model_from_xml(xml: QXmlStreamAttributes, resobj: FileResourceObject) -> PictureModel:
+    def model_from_xml(
+        xml: QXmlStreamAttributes, resobj: FileResourceObject
+    ) -> PictureModel | None:
         try:
             width, height, adjusted = (
                 int(xml.value("width")),
@@ -676,10 +679,10 @@ class PictureElementDefinitions(BaseElementDefinitions):
                 model = PictureModel(resobj, width, height, int(xml.value("rotation")), adjusted)
                 print("Read PictureModel", model)
                 return model
-            raise LFExceptions.ModelReadError(False)
+            return None
 
         except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(False)
+            return None
 
     @staticmethod
     def model_from_mime_data(

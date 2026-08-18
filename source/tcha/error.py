@@ -9,7 +9,6 @@ from pathlib import Path
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtWidgets import QMessageBox
-
 from tcha.utils import debug_enabled
 
 
@@ -32,23 +31,19 @@ class FileError(Enum):
     BadZip = 9
 
 
-class LoggableError(Exception)
-    def __init__(self, critical=False, *args):
-        super().__init__(*args)
+@dataclass
+class LoggableError:
+    """Model of element could not be read."""
+
+    log_level: int
+    message: str
+
 
 class LFExceptions:
     class LFException(Exception):
         def __init__(self, critical: bool = False, *args):
             super().__init__(*args)
             self.message: str
-            self.critical = critical
-
-    class ModelReadError(Exception):
-        """Model of element could not be read."""
-
-        def __init__(self, critical: bool = False, *args):
-            super().__init__(*args)
-            self.message = tr("Model has invalid valuies and could not be read.")
             self.critical = critical
 
     class MissingXml(Exception):
@@ -186,7 +181,7 @@ class IOLogger:
             if file_id
             else self.logdir() / f"unknown_{random.randbytes(32)}.log"
         )
-        self._level  = logging.NOTSET
+        self._level = logging.NOTSET
 
         self._setup_logger()
 
@@ -225,9 +220,9 @@ class IOLogger:
         self._setup_logger()
 
     def log(self, level: int, message: str) -> None:
-        # 
+        #
         if level == logging.DEBUG and not debug_enabled():
-            return 
+            return
         self._logger.log(level, message)
         self._level = level if level > self._level else self._level
 

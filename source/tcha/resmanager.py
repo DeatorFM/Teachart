@@ -27,9 +27,7 @@ class ResourceType(enum.Enum):
 
 class ResourceObject(QObject):
     __metaclass__ = ABCMeta
-    resourceExpired = pyqtSignal(
-        str, ResourceType, int
-    )  #  self.name, self.type, self._type_num
+    resourceExpired = pyqtSignal(str, ResourceType, int)  #  self.name, self.type, self._type_num
 
     def __init__(
         self,
@@ -59,9 +57,7 @@ class ResourceObject(QObject):
 
     def adjust_type_num(self, num: int) -> bool:
         """Adjusts the type number and returns True if adjusted."""
-        print(
-            f"Comparing {num} with own {self._type_num} of original filename {self.filename()}"
-        )
+        print(f"Comparing {num} with own {self._type_num} of original filename {self.filename()}")
         if num < self._type_num:
             self._type_num -= 1
             print(f"Filename is now {self.filename()}")
@@ -221,15 +217,13 @@ class ResourceTransferObject:
     data: bytes | None = None
 
     def has_data(self) -> bool:
-        return True if self.data else False
+        return bool(self.data)
 
 
 class ResourceContainer(QObject):
     """A container with objects linking element model and resource."""
 
-    tempdir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory(
-        ".tmp", "RESC", delete=False
-    )
+    tempdir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory(".tmp", "RESC", delete=False)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -313,9 +307,7 @@ class ResourceContainer(QObject):
     def to_transfer_objects(self) -> list[ResourceTransferObject]:
         tobjects = []
         for obj in self.contents():
-            tobjects.append(
-                ResourceTransferObject(obj.type, obj.filename(), obj.path, obj.data)
-            )
+            tobjects.append(ResourceTransferObject(obj.type, obj.filename(), obj.path, obj.data))
         return tobjects
 
     def close_file_streams(self) -> None:

@@ -291,7 +291,9 @@ class BaseElementDefinitions:
 
     @staticmethod
     @abstractmethod
-    def model_from_xml(xml: QXmlStreamAttributes, resobj: ResourceObject) -> BaseElementModel:
+    def model_from_xml(
+        xml: QXmlStreamAttributes, resobj: ResourceObject
+    ) -> BaseElementModel | None:
         return
 
     @staticmethod

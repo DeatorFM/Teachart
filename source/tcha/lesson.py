@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Self
 
 from PyQt6.QtCore import QDate, QDateTime, QTime, QXmlStreamReader, QXmlStreamWriter
+from tcha import utils
 from tcha.error import LFExceptions
 
 
@@ -52,7 +53,7 @@ class Lesson:
         return cls(source_id, QDateTime.currentDateTime())
 
     @classmethod
-    def read(cls: Self, reader: QXmlStreamReader, strict=False, logger) -> Lesson:
+    def read(cls: Self, reader: QXmlStreamReader, strict=False) -> Lesson:
         """Reads data from an XML DOM element and returns an instance of Lesson.
         If a value is invalid a ModelReadError is invoked."""
         attrs = reader.attributes()
@@ -69,7 +70,8 @@ class Lesson:
             return cls(source_id, datetime, course_name, course_id, duration, comment)
 
         except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(False)
+            reader.raiseError("One or more values could not be read. Default data will be used.")
+            return None if strict else Lesson.new(utils.source_id())
 
     def copy(self) -> Lesson:
         """Creates a deepcopy of the object"""
