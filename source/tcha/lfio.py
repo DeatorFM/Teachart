@@ -24,7 +24,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from tcha.elements import get_definitions
-from tcha.error import CriticalError, ErrorLogger, LFExceptions, QtError
+from tcha.error import CriticalError, IOLogger, LFExceptions, QtError
 from tcha.lesson import Lesson
 from tcha.resmanager import (
     ResourceContainer,
@@ -101,7 +101,6 @@ class LessonFile:
             "creation_date": QDateTime(),
             "changed_date": QDateTime(),
         }
-        self._progress = ProgressLogger()
         self._state = WriteState.Unserialised
         self._reader = None
 
@@ -113,26 +112,26 @@ class LessonFile:
         if mode == "r" and path:
             try:
                 self._last_saved = QDateTime.currentDateTime()
-                self._error_handler = ErrorLogger(path, True)
-                self._error_handler.log_msg(
-                    f"Start reading file {osp.basename(path)} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}"
-                )
+                self._logger = IOLogger()
                 self._tempdir = tempfile.TemporaryDirectory(".tmp", "TCHA", delete=False)
                 print("Temporary", self._tempdir)
                 self._f = ZipFile(path, mode)
                 self._f.extractall(self.temppath)
 
-                reader = XmlReader()
-                self._metadata = reader.read_metadata()
-                self._state = WriteState.SerialisedFile
-                return True
+                self._reader = XmlReader(self._tempdir, self._logger)
+                success = self._reader.read_metadata()
+                if success:
+                    self._metadata = self._reader.metadata
+                    self._state = WriteState.SerialisedFile
+                    self._logger.set_file_id(self._metadata["file_id"])
+                    success &= self._reader.read_lesson()
+                    success &= self._reader.read_table()
+                    self._reader.finish_reading()             
+                    return success
+                return False
 
             except BadZipFile as e:
-                e.critical = True
-                self._error_handler.log(
-                    e,
-                    "The file is corrupted and cannot not be opened. This can happen when a file has not been closed properly during a writing process.",
-                )
+                # LOGGER Critical: File is corrupted and cannot be opened.
                 return False
 
         elif mode == "w":
@@ -156,18 +155,14 @@ class LessonFile:
             if not self._f or path:
                 try:
                     self._f = ZipFile(path, "w", ZIP_DEFLATED)
-                    self._error_handler = ErrorLogger(path, True)
+                    self._logger = IOLogger(self._metadata["file_id"])
                 except PermissionError:
-                    self._error_handler.log_msg(
-                        "File could not be opned because permission was denied."
-                    )
+                    # LOGGER Critical: File could not be opened. Permission denied.
                     return False
             else:
                 self.change_open_mode("w")
 
-            self._error_handler.log_msg(
-                f"Start writing operation to file {self._f.filename} at {self._last_saved.toString(Qt.DateFormat.ISODateWithMs)}"
-            )
+            # LOGGER Info: Starting writing operation
 
             # Write xml for document structure
             written_bytes = 0
@@ -187,9 +182,7 @@ class LessonFile:
 
             if written_bytes != self._save_buffer.size():
                 print(written_bytes, self._save_buffer.size())
-                self._error_handler.log_msg(
-                    "Error during writing of xml-data. Writing operation has been terminated."
-                )
+                # LOGGER Critical: Error during writing of xml-data. Writing operation has been terminated.
                 self.change_open_mode("r")
                 return False
 
@@ -198,20 +191,16 @@ class LessonFile:
             # Copy the resources into file or create new file if necessary
             for obj in self._save_buffer.resobjects:
                 if not obj.has_data():
-                    self._error_handler.log_msg(
-                        f"Writing '{obj.src_path}' to file as '{obj.filename}'"
-                    )
+                    # LOGGER Info: f"Writing '{obj.src_path}' to file as '{obj.filename}'"
                     self._copy(obj)
                 else:
-                    self._error_handler.log_msg(
-                        f"Writing new resource with name '{obj.filename}' to file"
-                    )
+                    # LOGGER Info: f"Writing new resource with name '{obj.filename}' to file"
                     self._write_new(obj)
 
-            self._error_handler.log_msg("Resource data successfully written.")
+            # LOGGER Info: "Resource data successfully written."
 
             self.change_open_mode("r")
-            self._error_handler.log_msg("Finished writing successfully.")
+            # LOGGER Info: "Finished writing successfully."
 
             self._f.extract("structure.xml", self.temppath)
             self._f.extract("lesson.xml", self.temppath)
@@ -262,70 +251,36 @@ class LessonFile:
     def extracted(self, name: str) -> bool:
         return osp.exists(osp.join(self.temppath, name))
 
-    def xml(self, name: str = "structure") -> QFile:
-        """Returns IO to extracted strcuture.xml as QFile. Raises an Exception of file not found or QFile throws an error."""
-        if self.extracted(f"{name}.xml"):
-            qfile = QFile(osp.join(self.temppath, f"{name}.xml"))
-            qfile.open(QFile.OpenModeFlag.ReadOnly)
-            print("Path", qfile.fileName())
-
-            if not qfile.error().value:
-                return qfile
-            raise QtError(qfile.error(), qfile.errorString(), True)
-        raise FileNotFoundError
+    def init_reader(self) -> bool:
+        if not self._reader and self._tempdir and self.file_id:
+            self._reader = IOLogger(self.file_id)
+            return True
+        return False
 
     def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
-        try:
-            struct_file = self.xml()
-            res_file = self.xml("resources")
-            table = XmlReader.read_table(
-                struct_file,
-                res_file,
-                osp.join(self.temppath),
-                self._error_handler,
-                self._progress,
-            )
-            remaining = 100 - self._progress.progress
-            self._progress.raise_progress(remaining)
-            struct_file.close()
-            res_file.close()
+        if self._reader and self._reader.read_state == ReadState.ReadingFinished:
+            return self._reader.table_model # FIX
+            self._reader.clear_cache()
+        else:
+            self._reader.start_reading()
+            if self._reader.read_table():
+                self._reader.finish_reading()
+                return self._reader.table_model
+                self._reader.clear_cache() # FIX
 
-            return table
-
-        except FileNotFoundError as e:
-            e.critical = True
-            self._error_handler.log(
-                e, "The file that contains table definitions could not be found."
-            )
-            return None
-        except QtError as e:
-            self._error_handler.log(
-                e,
-                f"There was an error while trying to read the xml file. Details: {e.error_string}",
-            )
-            return None
 
     def get_lesson(self, default: Lesson | None = None) -> Lesson | None:
         """Returns Lesson model if file is loaded and could be read otherwise returns the default value."""
-        try:
-            self._progress.raise_progress(5.0)  # Total: 30%
-            qfile = self.xml()
-            model = XmlReader.read_lesson(qfile, self._error_handler, self._progress)
-            qfile.close()
-            return model
-
-        except FileNotFoundError as e:
-            e.critical = True
-            self._error_handler.log(e, "The file containing table definitions could not be found.")
-            return default
-
-        except QtError as e:
-            self._error_handler.log(
-                e,
-                f"There was an error while trying to read the xml file. Details: {e.error_string}",
-            )
-            return default
+        if self._reader and self._reader.read_state == ReadState.ReadingFinished:
+            return self._reader.lesson_model
+            self._reader.clear_cache()
+        else:
+            self._reader.start_reading()
+            if self._reader.read_lesson():
+                self._reader.finish_reading()
+                return self._reader.lesson_model
+                self._reader.clear_cache()
 
     def set_metadata(self, metadata: FileMetaData) -> None:
         self._metadata = metadata
@@ -481,6 +436,10 @@ class XmlReader(QObject):
         self._reading = ReadState.ReadingFinished
 
     @property
+    def read_state(self) -> ReadState:
+        return self._reading_state
+
+    @property
     def metadata(self) -> FileMetaData | None:
         return self._cached_metadata
 
@@ -496,6 +455,7 @@ class XmlReader(QObject):
         self._cached_metadata = None
         self._cached_lesson = None
         self._cached_table_model = None
+        self._reading_state = ReadState.Idling
 
     def read_all(self) -> bool:
         if self._reading == ReadState.Reading:
