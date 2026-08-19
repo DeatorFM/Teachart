@@ -2,6 +2,7 @@ import json
 import logging
 import os.path as osp
 import tempfile
+from turtle import clear
 import uuid
 from base64 import b64decode, b64encode
 from dataclasses import dataclass
@@ -150,7 +151,6 @@ class LessonFile:
         """Saves a new file or overwrites the entire file's contents if existing"""
         if self._state == WriteState.SerialisedBuffer:
             self._last_saved = QDateTime.currentDateTime()
-            print("Starting saving operation")
 
             if not self._f or path:
                 try:
@@ -186,7 +186,7 @@ class LessonFile:
                 self.change_open_mode("r")
                 return False
 
-            self._error_handler.log_msg("All xml-data written successfully.")
+            # LOGGER Info: All xml data written successfully.
 
             # Copy the resources into file or create new file if necessary
             for obj in self._save_buffer.resobjects:
@@ -202,6 +202,7 @@ class LessonFile:
             self.change_open_mode("r")
             # LOGGER Info: "Finished writing successfully."
 
+            self.init_reader()
             self._f.extract("structure.xml", self.temppath)
             self._f.extract("lesson.xml", self.temppath)
             self._f.extract("metadata.xml", self.temppath)
@@ -260,39 +261,35 @@ class LessonFile:
     def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
         if self._reader and self._reader.read_state == ReadState.ReadingFinished:
-            return self._reader.table_model # FIX
+            model =  self._reader.table_model
             self._reader.clear_cache()
+            return model
         else:
             self._reader.start_reading()
             if self._reader.read_table():
                 self._reader.finish_reading()
-                return self._reader.table_model
-                self._reader.clear_cache() # FIX
+                model = self._reader.table_model
+                self._reader.clear_cache()
+                return model
+        return None
 
-
-    def get_lesson(self, default: Lesson | None = None) -> Lesson | None:
+    def get_lesson(self) -> Lesson | None:
         """Returns Lesson model if file is loaded and could be read otherwise returns the default value."""
         if self._reader and self._reader.read_state == ReadState.ReadingFinished:
-            return self._reader.lesson_model
-            self._reader.clear_cache()
+            model =  self._reader.lesson_model
+            self._reader.clear_caches()
+            return model
         else:
             self._reader.start_reading()
             if self._reader.read_lesson():
                 self._reader.finish_reading()
-                return self._reader.lesson_model
-                self._reader.clear_cache()
+                model = self._reader.lesson_model
+                self._reader.clear_caches()
+                return model
+        return None
 
     def set_metadata(self, metadata: FileMetaData) -> None:
         self._metadata = metadata
-
-    def checksums(self) -> dict[str, int]:
-        with self._f.open("chksum.dat", "r") as f:
-            data = f.read()
-            decoded = b64decode(data).decode()
-            decoded = decoded.rstrip("\n")
-            print(decoded)
-            pairs = decoded.split("\n")
-            return {pair.split(":")[0]: int(pair.split(":")[1]) for pair in pairs}
 
     def generate_file_id(self) -> uuid.UUID:
         return uuid.uuid1()
@@ -318,10 +315,6 @@ class LessonFile:
     @property
     def temppath(self) -> str | None:
         return self._tempdir.name if self._tempdir else None
-
-    @property
-    def error_handler(self) -> ErrorLogger:
-        return self._error_handler
 
     def close(self) -> None:
         if self._f:
@@ -459,8 +452,11 @@ class XmlReader(QObject):
 
     def read_all(self) -> bool:
         if self._reading == ReadState.Reading:
-            ...
+            success = self.read_metadata()
+            success &= self.read_lesson()
+            success &= self.read_table()
             self.finish_reading()
+            return success
         return False
 
     def read_metadata(self) -> bool:
