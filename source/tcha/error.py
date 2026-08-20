@@ -220,7 +220,6 @@ class IOLogger:
         self._setup_logger()
 
     def log(self, level: int, message: str) -> None:
-        #
         if level == logging.DEBUG and not debug_enabled():
             return
         self._logger.log(level, message)

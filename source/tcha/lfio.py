@@ -47,22 +47,6 @@ class WriteState(Enum):
     SerialisedFile = auto()
 
 
-class ProgressLogger(QObject):
-    progressChanged = pyqtSignal(int)
-
-    def __init__(self):
-        super().__init__(None)
-        self._progress = 0.0
-
-    def raise_progress(self, by: float) -> None:
-        self._progress += by
-        self.progressChanged.emit(int(self._progress))
-
-    @property
-    def progress(self) -> float:
-        return self._progress
-
-
 @dataclass(frozen=True)
 class SaveBuffer:
     struct_buffer: QByteArray
@@ -88,7 +72,7 @@ class FileMetaData(TypedDict):
 
 
 class LessonFile:
-    """Provides file stream for serialised Lesson-Documents"""
+    """Provides file stream for serialised TCH-Documents"""
 
     def __init__(self):
         self._save_buffer: SaveBuffer | None = None
@@ -105,10 +89,6 @@ class LessonFile:
         self._state = WriteState.Unserialised
         self._reader = None
 
-    @property
-    def progress(self) -> ProgressLogger:
-        return self._progress
-
     def open(self, mode: Literal["r", "w"], path: str | None = None) -> bool:
         if mode == "r" and path:
             try:
@@ -118,6 +98,7 @@ class LessonFile:
                 print("Temporary", self._tempdir)
                 self._f = ZipFile(path, mode)
                 self._f.extractall(self.temppath)
+                self._logger.log(logging.INFO, f"Started reading operation for file {osp.basename(path)}")
 
                 self._reader = XmlReader(self._tempdir, self._logger)
                 success = self._reader.read_metadata()
@@ -127,12 +108,13 @@ class LessonFile:
                     self._logger.set_file_id(self._metadata["file_id"])
                     success &= self._reader.read_lesson()
                     success &= self._reader.read_table()
-                    self._reader.finish_reading()             
+                    self._reader.finish_reading()
+                    self._logger.log(logging.INFO, "Finished reading operation.")            
                     return success
                 return False
 
             except BadZipFile as e:
-                # LOGGER Critical: File is corrupted and cannot be opened.
+                self._logger.log(logging.CRITICAL, "File could not be opened: Permission denied.")
                 return False
 
         elif mode == "w":
@@ -154,53 +136,53 @@ class LessonFile:
 
             if not self._f or path:
                 try:
-                    self._f = ZipFile(path, "w", ZIP_DEFLATED)
                     self._logger = IOLogger(self._metadata["file_id"])
+                    self._logger.log(logging.INFO, f"Started write operation to path: {path}")
+                    self._f = ZipFile(path, "w", ZIP_DEFLATED)
                 except PermissionError:
-                    # LOGGER Critical: File could not be opened. Permission denied.
+                    self._logger.log(logging.CRITICAL, "File could not be opened: Permission denied.")
                     return False
             else:
+                self._logger.log(logging.INFO, f"Started write operation to path: {self.path}")
                 self.change_open_mode("w")
-
-            # LOGGER Info: Starting writing operation
 
             # Write xml for document structure
             written_bytes = 0
             with self._f.open("structure.xml", "w") as struct_f:
                 written_bytes += struct_f.write(self._save_buffer.struct_buffer.data())
-            self._error_handler.log_msg("Table structure written.")
+            self._logger.log(logging.DEBUG, "Table structure written.")
 
             # Write lesson.xml
             with self._f.open("lesson.xml", "w") as lesson_f:
                 written_bytes += lesson_f.write(self._save_buffer.lesson_data_buffer.data())
-            self._error_handler.log_msg("Lesson data written.")
+            self._logger.log(logging.DEBUG, "Lesson data written.")
 
             # Write metadata.xml
             with self._f.open("metadata.xml", "w") as metadata_f:
                 written_bytes += metadata_f.write(self._save_buffer.meta_data_buffer.data())
-            self._error_handler.log_msg("Meta data written.")
+            self._logger.log(logging.DEBUG, "Meta data written.")
 
             if written_bytes != self._save_buffer.size():
                 print(written_bytes, self._save_buffer.size())
-                # LOGGER Critical: Error during writing of xml-data. Writing operation has been terminated.
+                self._logger.log(logging.CRITICAL, "Error during writing of xml-data. Writing operation has been terminated.")
                 self.change_open_mode("r")
                 return False
 
-            # LOGGER Info: All xml data written successfully.
+            self._logger.log(logging.DEBUG, "All xml data written successfully.")
 
             # Copy the resources into file or create new file if necessary
             for obj in self._save_buffer.resobjects:
                 if not obj.has_data():
-                    # LOGGER Info: f"Writing '{obj.src_path}' to file as '{obj.filename}'"
+                    self._logger.log(logging.INFO, f"Writing '{obj.src_path}' to file as '{obj.filename}'")
                     self._copy(obj)
                 else:
-                    # LOGGER Info: f"Writing new resource with name '{obj.filename}' to file"
+                    self._logger.log(logging.INFO, f"Writing new resource with name '{obj.filename}' to file")
                     self._write_new(obj)
 
-            # LOGGER Info: "Resource data successfully written."
+            self._logger.log(logging.DEBUG, "Resource data successfully written.")
 
             self.change_open_mode("r")
-            # LOGGER Info: "Finished writing successfully."
+            self._logger.log(logging.INFO, "Finished writing successfully.")
 
             self.init_reader()
             self._f.extract("structure.xml", self.temppath)
@@ -293,6 +275,9 @@ class LessonFile:
 
     def generate_file_id(self) -> uuid.UUID:
         return uuid.uuid1()
+
+    def logger(self) -> IOLogger | None:
+        return self._logger
 
     @property
     def file_id(self) -> uuid.UUID:
@@ -409,7 +394,7 @@ class XmlReader(QObject):
     def __init__(self, extracted_files: tempfile.TemporaryDirectory, io_logger: logging.Logger):
         self._logger = io_logger
         self._tchpath = extracted_files
-        self._reading_status = 0
+        self._reading_progess = 0
         self._reading_state = ReadState.Idling
 
         self._cached_metadata = None
@@ -422,6 +407,7 @@ class XmlReader(QObject):
 
         if all((dir_path / f).exists() for f in required_files):
             self._reading_state = ReadState.Reading
+            self._reading_progess = 0
             return True
         return False
 
@@ -450,6 +436,10 @@ class XmlReader(QObject):
         self._cached_table_model = None
         self._reading_state = ReadState.Idling
 
+    def raise_progress(self, by: int) -> None:
+        self._reading_progess += by
+        self.readingProgessChanged.emit(self._reading_progess)
+
     def read_all(self) -> bool:
         if self._reading == ReadState.Reading:
             success = self.read_metadata()
@@ -465,12 +455,12 @@ class XmlReader(QObject):
             path = Path(self._tchpath.name) / "metadata.xml"
             qfile = QFile(path.as_posix())
             if not qfile.open(QFile.OpenModeFlag.ReadOnly):
-                # LOGGER Critical: Metadata file could not be opened
+                self._logger.log(logging.CRITICAL, "Metadata file could not be opened")
                 return False
             reader = QXmlStreamReader(qfile)
 
             if not self.validate_file(reader):
-                # LOGGER Critical: Xml data incompatible
+                self._logger.log(logging.CRITICAL, "Xml data incompatible")
                 qfile.close()
                 return False
 
@@ -483,36 +473,37 @@ class XmlReader(QObject):
                             case "version":
                                 metadata["current_version"] = int(reader.text())
                                 if metadata["current_version"] > CURRENT_VERSION:
-                                    # LOGGER Critical: File version not compatible
+                                    self._logger.log(logging.CRITICAL, "File version not compatible")
                                     qfile.close()
                                     return False
+                                self.raise_progress(4)
                             case "file_id":
                                 metadata["file_id"] = uuid.UUID(reader.text())
+                                self.raise_progress(4)
                             case "creation_date":
                                 metadata["creation_date"] = QDateTime.fromString(
                                     reader.text(), Qt.DateFormat.ISODate
                                 )
                                 if not metadata["creation_date"].isValid():
-                                    # LOGGER Warning: Invalid Data that can be corrected
+                                    self._logger.log(logging.ERROR, "Invalid Data (creation date) that can be corrected")
                                     metadata["creation_date"] = QDateTime.currentDateTime()
+                                self.raise_progress(4)
                             case "changed_date":
                                 metadata["changed_date"] = QDateTime.fromString(
                                     reader.text(), Qt.DateFormat.ISODate
                                 )
                                 if not metadata["changed_date"].isValid():
-                                    # LOGGER: Warning: Invalid Data that can be corrected
+                                    self._logger.log(logging.ERROR, "Invalid Data (changed date) that can be corrected")
                                     metadata["changed_date"] = QDateTime.currentDateTime()
+                                self.raise_progress(4)
 
                 except ValueError:
-                    # LOGGER Critical: Missing file id or version not readable
-                    qfile.close()
-                    return False
-                except CriticalError:
+                    self._logger.log(logging.CRITICAL, "Missing or invalid file id.")
                     qfile.close()
                     return False
 
                 if reader.hasError():
-                    # LOGGER Critical:  General Parsing error
+                    self._logger.log(logging.CRITICAL, f"Xml parsing error {reader.error()}")
                     qfile.close()
                     return False
 
@@ -520,7 +511,7 @@ class XmlReader(QObject):
             self._cached_metadata = metadata
             return True
 
-        # LOGGER Critical: Metadata incomplete
+        self._logger.log(logging.CRITICAL, "Metadata could not be sufficiently parsed.")
         return False
 
     def read_lesson(self) -> bool:
@@ -528,12 +519,12 @@ class XmlReader(QObject):
             path = Path(self._tchpath.name) / "lesson.xml"
             qfile = QFile(path.as_posix())
             if not qfile.open(QFile.OpenModeFlag.ReadOnly):
-                # LOGGER Critical: Lesson information file could not be opened
+                self._logger.log(logging.CRITICAL, "Lesson data file could not be opened")
                 return False
             reader = QXmlStreamReader(qfile)
 
             if not self.validate_file(reader):
-                # LOGGER Critical: Xml data incompatible
+                self._logger.log(logging.CRITICAL, "Xml data incompatible")
                 qfile.close()
                 return False
 
@@ -542,14 +533,15 @@ class XmlReader(QObject):
 
                 if token == QXmlStreamReader.TokenType.StartElement:  # noqa: SIM102
                     if reader.name() == "lesson":
-                        model = Lesson.read(reader)
+                        self._cached_lesson = Lesson.read(reader)
                         if reader.hasError():
-                            ...
-                            # LOGGER Error: log reader error from reader.errorString()
-                        self._cached_lesson = model
+                            self._logger.log(logging.ERROR, f"Parsing error. Details: {reader.errorString()}")
+                        self.raise_progress(16)
                         return True
-            # LOGGER Error: Missing xml for lesson data
-            return Lesson.new(source_id())
+            self._logger.log(logging.ERROR, "Missing xml for lesson data")
+            self.raise_progress(16)
+            self._cached_lesson = Lesson.new(source_id())
+            return True
 
     def read_table(self) -> bool:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
@@ -558,16 +550,17 @@ class XmlReader(QObject):
             resources_dir = Path(self._tchpath.name) / "resources"
             qfile = QFile(struct_f.as_posix())
             if qfile.open():
-                # LOGGER Critical: Structure file not found
+                self._logger.log(logging.CRITICAL, "Table structure file could not be opened")
                 return False
             reader = QXmlStreamReader(struct_f)
 
             if not self.validate_file(reader):
-                # LOGGER Critical: Xml data incompatible
+                self._logger.log(logging.CRITICAL, "Xml data incompatible")
                 qfile.close()
                 return False
 
             row, column, header = 0, 0, 0
+            progress = 0
             in_table, writing_row, writing_cell = False, False, False
 
             tmodel = None
@@ -583,10 +576,11 @@ class XmlReader(QObject):
                         attrs = reader.attributes()
                         try:
                             tmodel: TableModel = TableModel.new_from_xml(attrs)
+                            progress_increment = 68 / (tmodel.rowCount() * tmodel.columnCount() + tmodel.columnCount())
                             in_table = True
 
                         except (ValueError, TypeError) as e:
-                            # LOGGER Critical: Row or column number is NaN or values not found.
+                            self._logger.log(logging.CRITICAL, "Row or column number is NaN or values not found.")
                             return False
                         continue
 
@@ -612,10 +606,11 @@ class XmlReader(QObject):
                                             Qt.ItemDataRole.SizeHintRole,
                                         )
                                         header += 1
+                                        self.raise_progress(progress_increment)
                                         continue
-                                    # LOGGER Error: Skipped horizontal header definition because it would exceed defined column count.
+                                    self._logger.log(logging.ERROR, "Skipped horizontal header definition because it would exceed defined column count.")
                                 except (ValueError, TypeError):
-                                    # LOGGER Error: Invalid value for header size and text. Check if values for header size or text are correct.
+                                    self._logger.log(logging.ERROR, "Invalid value for header size and text. Check if values for header size or text are correct.")
                                     continue
 
                             case "row":
@@ -623,7 +618,7 @@ class XmlReader(QObject):
                                     column = 0
                                     writing_row = True
                                     continue
-                                # LOGGER Error: The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {tmodel.rowCount()}; Specified columns: {tmodel.columnCount()}
+                                self._logger(logging.ERROR, f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {tmodel.rowCount()}; Specified columns: {tmodel.columnCount()}")
                                 writing_row = False
 
                             case "cell":
@@ -631,7 +626,7 @@ class XmlReader(QObject):
                                     cell = tmodel.data(tmodel.index(row, column))
                                     writing_cell = True
                                     continue
-                                # LOGGER Error: The table column was skipped because too many were parsed than specified in the definitions: Specified: {tmodel.columnCount()}; Actual: {tmodel.columnCount() + 1}
+                                self._logger.log(logging.ERROR, f"The table column was skipped because too many were parsed than specified in the definitions: Specified: {tmodel.columnCount()}; Actual: {tmodel.columnCount() + 1}")
                                 writing_cell = False
 
                             case "element":
@@ -650,11 +645,11 @@ class XmlReader(QObject):
                                             if model:
                                                 cell.append(model)
                                             else:
-                                                # LOGGER Error: Invalid values required to parse the element. Element is skipped.
-                                        # LOGGER Error: Cell element of type '{attrs.value("type")}' or resource file is not defined. Element is skipped.
+                                                self._logger.log(logging.ERROR, "Invalid values required to parse the element. Element is skipped.")
+                                        self._logger.log(logging.ERROR, f"Cell element of type '{attrs.value("type")}' or resource file is not defined. Element is skipped.")
 
                                     except FileNotFoundError:
-                                        # LOGGER Error: Resource file could not be found. Element is skipped.
+                                        self._logger.log(logging.ERROR, "Resource file could not be found. Element is skipped.")
                                         continue
 
                                 else:
@@ -669,20 +664,21 @@ class XmlReader(QObject):
                             row += 1
                             writing_row = False
                             column = 0
+                            self.raise_progress(progress_increment)
                             continue
 
                         case "cell" if writing_cell:
                             column += 1
                             writing_cell = False
+                            self.raise_progress(progress_increment)
                             continue
 
                         case "table":
                             if row == tmodel.rowCount():
                                 in_table = False
                                 break
-                            # LOGGER Error: The number of parsed rows does not match the actual number. Some rows' content might be missing.
+                            self._logger.log(logging.ERROR, "The number of parsed rows does not match the actual number. Some rows' content might be missing.")
                             in_table = False
-
                             break
 
             return True
@@ -691,6 +687,3 @@ class XmlReader(QObject):
     def validate_file(reader: QXmlStreamReader) -> bool:
         token = reader.readNext()
         return token == QXmlStreamReader.TokenType.StartElement and reader.name() == "tch"
-
-    @classmethod
-    def read_header(cls, attrs: QXmlStreamAttributes) -> HeaderDataItem: ...

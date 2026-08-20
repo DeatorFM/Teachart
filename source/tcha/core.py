@@ -291,14 +291,13 @@ class AppCore(QApplication, metaclass=MetaApp):
             editor_window = None
             wid = 0
 
-            try:
-                lf = LessonFile()
-                lf.open("r", str(path))
+          
 
-                if caller:
-                    caller.set_progress_logger(Path(lf.path), lf.progress)
-                    caller.unset_caller()
+            lf = LessonFile()
+            if caller:
+                lf.progressChanged.connect(caller.ui.set_progress)
 
+            if self.open("r", str(path)):
                 editor_window = self._dialog_manager.open(
                     "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
                 )
@@ -311,27 +310,7 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._clean_up_list.append(Path(lf.temppath))
                 self._clean_up_list.append(editor_window.resource_path)
 
-            except ValueError as e:
-                wrapped_error = PyException(e, True)
-                lf.error_handler.log(wrapped_error, "Lesson model could not be loaded")
-                lf.close()
-
-            except CriticalError:
-                lf.error_handler.log_msg(
-                    "The reading operation was terminated because of a previous critical error."
-                )
-                lf.close()
-
-            finally:
-                lf.error_handler.show_result(
-                    tr("File reading error"),
-                    tr(
-                        "There was a problem when reading the file. The file can be opened but the document cannot be displayed correctly."
-                    ),
-                    tr(
-                        "The file could not be read because it is either corrupted or has an invalid structure."
-                    ),
-                )
+                evaluation = lf.logger.evaluate()
 
                 if caller:
                     caller.reset_progress()
