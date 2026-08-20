@@ -31,7 +31,7 @@ from tcha.dbmodels import (
 )
 from tcha.dialogs import DialogManager, Editor, PresenterView
 from tcha.elements import get_all_definitions
-from tcha.error import CriticalError, ErrorLogger, PyException
+from tcha.error import ErrorCode, ErrorLogger
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, Values
 from tcha.start import OpenFileModel
@@ -281,21 +281,21 @@ class AppCore(QApplication, metaclass=MetaApp):
         editor_window.show()
         return editor_window.wid
 
-    def open_file(self, path: Path) -> int:
+    def open_file(self, path: Path, caller=None) -> int:
         if (
             path
             and path.exists()
-            and str(path) not in [editor.path for editor in self.opened_editors()]
+            and path not in [Path(editor.path) for editor in self.opened_editors()]
         ):
-            caller = self.focusWidget() if isinstance(self.focusWidget(), Editor) else None
             editor_window = None
             wid = 0
 
-          
-
             lf = LessonFile()
             if caller:
-                lf.progressChanged.connect(caller.ui.set_progress)
+                lf.progressChanged.connect(caller.set_progress)
+                translated_label = self.tr("Loading")
+                status_label = f"{translated_label} {path.name}"
+                caller.set_status_bar_mgs(status_label)
 
             if self.open("r", str(path)):
                 editor_window = self._dialog_manager.open(
@@ -310,7 +310,16 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._clean_up_list.append(Path(lf.temppath))
                 self._clean_up_list.append(editor_window.resource_path)
 
-                evaluation = lf.logger.evaluate()
+                if lf.logger.evaluate() == ErrorCode.NonCritical:
+                    QMessageBox.warning(
+                        editor_window,
+                        self.tr(
+                            "File reading error",
+                            self.tr(
+                                "There was an error while reading the file. The document may not be displayed correctly."
+                            ),
+                        ),
+                    )
 
                 if caller:
                     caller.reset_progress()
@@ -322,6 +331,15 @@ class AppCore(QApplication, metaclass=MetaApp):
                     editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
                     editor_window.show()
                     wid = editor_window.wid
+
+            else:
+                QMessageBox.critical(
+                    None,
+                    self.tr("File reading error"),
+                    self.tr(
+                        "The file could not be read because it's either corrupted or has an invalid structure."
+                    ),
+                )
 
         else:
             QMessageBox.information(

@@ -265,7 +265,7 @@ class StartWindow(BaseMainWindow):
         path, _ = QFileDialog.getOpenFileName(
             self, tr("Open File Dialog"), filter=tr("Teachart document (*.tch)")
         )
-        self.fileOpened.emit(Path(path))
+        self.fileOpened.emit(Path(path), self)
 
     def set_past_schedules_visible(self, state: Qt.CheckState) -> None:
         if state == Qt.CheckState.Checked:
@@ -287,19 +287,17 @@ class StartWindow(BaseMainWindow):
 
         self.ui.status_bar.showMessage(message)
 
-    def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
+    def set_status_bar_msg(self, msg: str) -> None:
+        self.ui.statusbar.showMessage(msg)
+
+    def set_progress(self, value: int) -> None:
         self.ui.loading_bar.setVisible(True)
-        translated_label = tr("Loading")
-        status_label = "{} {}".format(translated_label, file_name.name)
-        self.ui.status_bar.showMessage(status_label)
-        self.ui.loading_bar.setVisible(True)
-        logger.progressChanged.connect(self.ui.loading_bar.setValue)
+        self.ui.loading_bar.setValue(value)
 
     def reset_progress(self) -> None:
-        self.ui.status_bar.clearMessage()
+        self.ui.statusbar.clearMessage()
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
-        self.update_schedule_message()
 
     def closeEvent(self, ev: QCloseEvent):
         super().closeEvent(ev)

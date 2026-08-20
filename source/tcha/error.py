@@ -1,14 +1,14 @@
 import logging
-import os.path as osp
 import random
+import typing
 import uuid
 from dataclasses import dataclass
 from enum import Enum
 from functools import cache
 from pathlib import Path
+from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtWidgets import QMessageBox
 from tcha.utils import debug_enabled
 
 
@@ -171,6 +171,18 @@ class ErrorCode(Enum):
     Critical = 2
 
 
+class MetaLogger(type):
+    _instances: typing.ClassVar[dict] = {}
+    _lock: Lock = Lock()
+
+    def __call__(cls, *args, **kwds):
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwds)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
+
+
 class IOLogger:
     _session = 0
 
@@ -223,91 +235,18 @@ class IOLogger:
         if level == logging.DEBUG and not debug_enabled():
             return
         self._logger.log(level, message)
-        self._level = level if level > self._level else self._level
+        self._level = max(self._level, level)
 
     def evaluate(self) -> ErrorCode:
+        """Evaluates the last reading session and returns the appropriate error code."""
         if self._level == logging.CRITICAL:
+            self._level = logging.NOTSET
             return ErrorCode.Critical
         elif self._level <= logging.ERROR and self._level >= logging.WARNING:
+            self._level = logging.NOTSET
             return ErrorCode.NonCritical
+        self._level = logging.NOTSET
         return ErrorCode.NoError
 
 
-class ErrorLogger:
-    """Logs errors and evaluates them."""
-
-    def __init__(self, file_name: str | None, raise_critical: bool = False):
-        self._errors: set[LFExceptions.LFException] = set()
-        self._logger = None
-        self._raise_critical = raise_critical
-        if file_name:
-            self._file = ErrorLogger.logdir() / (osp.basename(file_name) + ".log")
-            self._setup_logger(self._file.as_posix())
-        else:
-            self._file = None
-
-    @cache
-    @staticmethod
-    def logdir() -> Path:
-        from tcha.settings import Settings
-
-        return Settings.user_path() / "tchlogs"
-
-    def _setup_logger(self, log_file: str) -> None:
-        """Create a unique logger for this ErrorLogger instance"""
-        self._logger = logging.getLogger(log_file)  # Create unique logger per file
-        self._logger.handlers.clear()  # Clear existing handlers
-        self._logger.setLevel(logging.INFO)
-
-        handler = logging.FileHandler(log_file)
-        formatter = logging.Formatter("%(asctime)s - %(message)s")
-        handler.setFormatter(formatter)
-        self._logger.addHandler(handler)
-
-    def set_file(self, file_name: str) -> None:
-        self._file = ErrorLogger.logdir() / (osp.basename(file_name) + ".log")
-        self._setup_logger(self._file.as_posix())
-
-    def log_msg(self, msg: str) -> None:
-        """Logs a message in file if defined."""
-        if self._file:
-            self._logger.info(msg)
-
-    def log(self, error: Exception, msg: str) -> None:
-        """Logs the error as an exception with the message."""
-        self._errors.add(error)
-        if self._file:
-            self._logger.info(msg)
-        if self._raise_critical and error.critical:
-            raise CriticalError
-
-    def show_result(self, title: str, non_critical_msg: str, critical_msg: str) -> None:
-        """Evaluates all errors and shows a MessageBox accordingly."""
-        if self.code() == ErrorCode.NoError:
-            return
-        elif self.code() == ErrorCode.NonCritical:
-            QMessageBox.warning(None, title, non_critical_msg)
-        elif self.code() == ErrorCode.Critical:
-            QMessageBox.warning(None, title, critical_msg)
-
-    def critical(self) -> bool:
-        for e in self._errors:
-            if e.critical:
-                return True
-
-    def clear(self) -> None:
-        self._errors.clear()
-
-    @property
-    def logfile(self) -> Path | None:
-        return self._file
-
-    def code(self) -> ErrorCode:
-        """Evalutes all errors and returns error code."""
-        if not self._errors:
-            return ErrorCode.NoError
-
-        for error in self._errors:
-            if error.critical:
-                return ErrorCode.Critical
-        return ErrorCode.NonCritical
+class StandardLogger(metaclass=MetaLogger): ...

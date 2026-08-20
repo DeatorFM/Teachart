@@ -5,18 +5,6 @@ PROJECT_PATH = Path().parent
 RESOURCE_PATH = PROJECT_PATH / "resources"
 
 
-class AppAction(Enum):
-    NoAction = 0
-    NewFile = 1
-    OpenFile = 2
-    CourseExplorer = 3
-    Settings = 4
-    StartDialog = 5
-    OpenDialog = 6
-    PresenterView = 7
-    AboutTeachart = 8
-
-
 class CloseState(Enum):
     CannotClose = 0
     CanClose = 1

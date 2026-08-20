@@ -96,8 +96,6 @@ class PictureModel(BaseElementModel):
 
         self._original_aspect_ratio: float = size.height() / size.width()
 
-        print("Image loaded from", self._resource.path)
-
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeEmptyElement("element")
         writer.writeAttribute("type", "PictureElement")
@@ -625,7 +623,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
         return original_file
 
     @staticmethod
-    def model() -> Type[PictureModel]:
+    def model() -> type[PictureModel]:
         return PictureModel
 
     @staticmethod
@@ -670,13 +668,16 @@ class PictureElementDefinitions(BaseElementDefinitions):
         xml: QXmlStreamAttributes, resobj: FileResourceObject
     ) -> PictureModel | None:
         try:
-            width, height, adjusted = (
+            width, height, adjusted, rotation = (
                 int(xml.value("width")),
                 int(xml.value("height")),
                 bool(int(xml.value("adjusted"))),
+                int(xml.value("rotation")),
             )
-            if width + height > 1:  # Width and height values must be at least 1
-                model = PictureModel(resobj, width, height, int(xml.value("rotation")), adjusted)
+            if (
+                width > 0 and height > 0 and rotation % 90 == 0
+            ):  # Width and height values must be at least 1
+                model = PictureModel(resobj, width, height, rotation, adjusted)
                 print("Read PictureModel", model)
                 return model
             return None

@@ -800,7 +800,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
             return model
 
         except (ValueError, TypeError):
-            raise LFExceptions.ModelReadError(False, "Attribute for AudioModel could not be read.")
+            return None
 
     @staticmethod
     def model_from_mime_data(rescont, mime_data):

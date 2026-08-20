@@ -5,7 +5,7 @@ and filtering functionality for all database models.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from PyQt6.QtCore import (
@@ -191,7 +191,7 @@ class TestDatabaseFunctions:
         """Test that check_database opens database if closed."""
         test_db.close()
         # Note: check_database should open it
-        result = check_database(test_db)
+        check_database(test_db)
         assert test_db.isOpen()
 
     def test_reset_database(self, populated_db):

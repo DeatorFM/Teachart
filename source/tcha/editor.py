@@ -24,7 +24,6 @@ from PyQt6.QtWidgets import (
 )
 from tcha.base import BaseMainWindow
 from tcha.consts import (
-    AppAction,
     ClipboardContent,
     CloseState,
     EditingLevel,
@@ -35,7 +34,7 @@ from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.lesson import Lesson
-from tcha.lfio import LessonFile, ProgressLogger
+from tcha.lfio import LessonFile
 from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
 from tcha.table import Table
@@ -67,7 +66,7 @@ class SaveWorker(QRunnable):
 
 class Editor(BaseMainWindow):
     dialogCalled = pyqtSignal(str)
-    fileOpened = pyqtSignal(Path)
+    fileOpened = pyqtSignal(Path, BaseMainWindow)
     fileSaved = pyqtSignal(Path)
     presenterActivated = pyqtSignal(int, QGraphicsScene, QScreen)  # Scene, Target Screen
     presenterClosed = pyqtSignal()
@@ -126,9 +125,6 @@ class Editor(BaseMainWindow):
             self.ui.table.setModel(tablemodel)
             self.check_for_schedule(self.lessonfile.file_id)
             self.set_lesson(self.lessonfile.get_lesson())
-            self.lessonfile.error_handler.log_msg(
-                f"Finished reading file '{os.path.basename(self.lessonfile.path)}' successfully."
-            )
             self.ui.ac_xml_insp.setEnabled(True)
             self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
 
@@ -225,13 +221,13 @@ class Editor(BaseMainWindow):
     def on_file_opened(self, action: QAction) -> None:
         path = action.data()
         if isinstance(path, Path):
-            self.appActionTriggered[AppAction, Path].emit(AppAction.OpenFile, path)
+            self.fileOpened.emit(path, self)
 
     def open_file_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, tr("Open Sheet"), None, "*.lesson *.tch")
         if path:
             self._caller = True
-            self.fileOpened.emit(Path(path))
+            self.fileOpened.emit(Path(path), self)
 
     def set_unsaved(self) -> None:
         self.save_state = SaveState.Unsaved
@@ -579,13 +575,12 @@ class Editor(BaseMainWindow):
 
     # Other controls
 
-    def set_progress_logger(self, file_name: Path, logger: ProgressLogger) -> None:
+    def set_status_bar_msg(self, msg: str) -> None:
+        self.ui.statusbar.showMessage(msg)
+
+    def set_progress(self, value: int) -> None:
         self.ui.loading_bar.setVisible(True)
-        translated_label = tr("Loading")
-        status_label = f"{translated_label} {file_name.name}"
-        self.ui.statusbar.showMessage(status_label)
-        self.ui.loading_bar.setVisible(True)
-        logger.progressChanged.connect(self.ui.loading_bar.setValue)
+        self.ui.loading_bar.setValue(value)
 
     def reset_progress(self) -> None:
         self.ui.statusbar.clearMessage()
