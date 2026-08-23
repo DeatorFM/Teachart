@@ -5,7 +5,6 @@ from typing import Self
 
 from PyQt6.QtCore import QDate, QDateTime, QTime, QXmlStreamReader, QXmlStreamWriter
 from tcha import utils
-from tcha.error import LFExceptions
 
 
 @dataclass
@@ -18,9 +17,7 @@ class Lesson:
     comment: str = field(default="")
 
     def isvalid(self) -> bool:
-        if len(self.source_id) > 1:
-            return True
-        return False
+        return len(self.source_id) > 1
 
     def set_datetime(self, datetime: QDateTime) -> None:
         self.datetime = datetime
@@ -55,23 +52,29 @@ class Lesson:
     @classmethod
     def read(cls: Self, reader: QXmlStreamReader, strict=False) -> Lesson:
         """Reads data from an XML DOM element and returns an instance of Lesson.
-        If a value is invalid a ModelReadError is invoked."""
+        If a value is invalid None is returned if strict is True else a default Lesson model."""
         attrs = reader.attributes()
         datetime = QDateTime()
 
         try:
-            datetime.setDate(QDate.fromJulianDay(int(attrs.value("date"))))
-            datetime.setTime(QTime.fromMSecsSinceStartOfDay(int(attrs.value("date"))))
-            course_name = str(attrs.value("course_name"))
-            course_id = int(attrs.value("course_id"))
-            duration = int(attrs.value("duration"))
-            comment = reader.readElementText()
-            source_id = str(attrs.value("source_id"))
-            return cls(source_id, datetime, course_name, course_id, duration, comment)
+            _course_name, _course_id, _source_id = (
+                attrs.value("course_name"),
+                abs(int(attrs.value("course_id"))),
+                attrs.value("source_id"),
+            )
+            if int(_source_id, base=16):
+                datetime.setDate(QDate.fromJulianDay(int(attrs.value("date"))))
+                datetime.setTime(QTime.fromMSecsSinceStartOfDay(int(attrs.value("time"))))
+                course_name = _course_name
+                course_id = _course_id if course_name else 0
+                duration = abs(int(attrs.value("duration")))
+                comment = reader.readElementText()
+                source_id = attrs.value("source_id")
+                return cls(source_id, datetime, course_name, course_id, duration, comment)
 
         except (ValueError, TypeError):
             reader.raiseError("One or more values could not be read. Default data will be used.")
-            return None if strict else Lesson.new(utils.source_id())
+        return None if strict else Lesson.new(utils.source_id())
 
     def copy(self) -> Lesson:
         """Creates a deepcopy of the object"""

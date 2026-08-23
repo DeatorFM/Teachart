@@ -1,14 +1,12 @@
-import json
 import logging
 import os.path as osp
 import tempfile
 import uuid
-from base64 import b64decode, b64encode
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import cache
 from pathlib import Path
-from turtle import clear
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from PyQt6.QtCore import (
@@ -19,26 +17,24 @@ from PyQt6.QtCore import (
     QObject,
     QSize,
     Qt,
+    QVersionNumber,
     QXmlStreamAttributes,
     QXmlStreamReader,
     QXmlStreamWriter,
     pyqtSignal,
 )
 from tcha.elements import get_definitions
-from tcha.error import CriticalError, IOLogger, LFExceptions, QtError
+from tcha.error import IOLogger
 from tcha.lesson import Lesson
 from tcha.resmanager import (
-    ResourceContainer,
     ResourceTransferObject,
-    ResourceType,
 )
 from tcha.tablemodel import (
-    HeaderDataItem,
     TableModel,  # CellModel, HeaderDataItem,
 )
 from tcha.utils import source_id
 
-CURRENT_VERSION: int = 1
+CURRENT_VERSION: str = "1"
 
 
 class WriteState(Enum):
@@ -65,10 +61,39 @@ class SaveBuffer:
 
 
 class FileMetaData(TypedDict):
-    current_version: int
     file_id: uuid.UUID | None
     creation_date: QDateTime
     changed_date: QDateTime
+
+
+class TchPath:
+    """Provides streams to all required files extracted from a .tch-file."""
+
+    def __init__(self, dir: str) -> None:
+        self._dir = Path(dir)
+        self._has_resources = (self._dir / "resources").exists()
+        if not self._dir.exists():
+            raise FileNotFoundError("Extracted files not found")
+
+    def has_required_files(self) -> bool:
+        return all(
+            file in self._dir.iterdir() for file in ["structure.xml", "lesson.xml", "metadata.xml"]
+        )
+
+    @property
+    def structure(self) -> QFile:
+        return QFile(str(self._dir / "structure.xml"))
+
+    @property
+    def lesson(self) -> QFile:
+        return QFile(str(self._dir / "lesson.xml"))
+
+    @property
+    def metadata(self) -> QFile:
+        return QFile(str(self._dir / "metadata.xml"))
+
+    def resource(self, basename: str) -> str:
+        return str(self._dir / "resources" / basename) if self._has_resources else ""
 
 
 class LessonFile:
@@ -81,13 +106,18 @@ class LessonFile:
         self._tempdir: tempfile.TemporaryDirectory | None = None
         self._last_saved = None
         self._metadata: FileMetaData = {
-            "version": 1,
             "file_id": None,
             "creation_date": QDateTime(),
             "changed_date": QDateTime(),
         }
         self._state = WriteState.Unserialised
         self._reader = None
+
+    @cache
+    @staticmethod
+    def max_version() -> QVersionNumber:
+        v, _ = QVersionNumber().fromString(CURRENT_VERSION)
+        return v
 
     def open(self, mode: Literal["r", "w"], path: str | None = None) -> bool:
         if mode == "r" and path:
@@ -102,25 +132,26 @@ class LessonFile:
                     logging.INFO, f"Started reading operation for file {osp.basename(path)}"
                 )
 
-                self._reader = XmlReader(self._tempdir, self._logger)
-                success = self._reader.read_metadata()
-                if success:
-                    self._metadata = self._reader.metadata
-                    self._state = WriteState.SerialisedFile
-                    self._logger.set_file_id(self._metadata["file_id"])
-                    success &= self._reader.read_lesson()
-                    success &= self._reader.read_table()
-                    self._reader.finish_reading()
-                    self._logger.log(logging.INFO, "Finished reading operation.")
-                    return success
+                self._reader = XmlReader(TchPath(self._tempdir.name), self._logger)
+                if self._reader.start_reading():
+                    success = self._reader.read_metadata()
+                    if success:
+                        self._metadata = self._reader.metadata
+                        self._state = WriteState.SerialisedFile
+                        self._logger.set_file_id(self._metadata["file_id"])
+                        success &= self._reader.read_lesson()
+                        success &= self._reader.read_table()
+                        self._reader.finish_reading()
+                        self._logger.log(logging.INFO, "Finished reading operation.")
+                        return success
+                self._logger.log(logging.CRITICAL, "tch-file is missing components.")
                 return False
 
-            except BadZipFile as e:
+            except BadZipFile:
                 self._logger.log(logging.CRITICAL, "File could not be opened: Permission denied.")
                 return False
 
         elif mode == "w":
-            self._metadata["version"] = CURRENT_VERSION
             self._metadata["file_id"] = self.generate_file_id()
             self._metadata["creation_date"] = QDateTime.currentDateTime()
             return True
@@ -295,10 +326,6 @@ class LessonFile:
         return self._metadata["file_id"]
 
     @property
-    def version(self) -> int:
-        return self._metadata["version"]
-
-    @property
     def path(self) -> str | None:
         if self._f:
             return self._f.filename
@@ -363,14 +390,11 @@ class XmlWriter:
 
         writer.writeStartDocument()
         writer.writeStartElement("tch")
-        print("1")
 
         tablemodel.xml(writer)
-        print("2")
 
         writer.writeEndElement()
         writer.writeEndDocument()
-        print("3")
 
         return xml_data
 
@@ -402,7 +426,8 @@ class ReadState(Enum):
 class XmlReader(QObject):
     readingProgessChanged = pyqtSignal(int)
 
-    def __init__(self, extracted_files: tempfile.TemporaryDirectory, io_logger: logging.Logger):
+    def __init__(self, extracted_files: TchPath, io_logger: IOLogger):
+        super().__init__()
         self._logger = io_logger
         self._tchpath = extracted_files
         self._reading_progess = 0
@@ -413,13 +438,11 @@ class XmlReader(QObject):
         self._cached_table_model = None
 
     def start_reading(self) -> bool:
-        required_files = ["structure.xml", "lesson.xml", "metadata.xml"]
-        dir_path = Path(self._tchpath.name)
-
-        if all((dir_path / f).exists() for f in required_files):
+        if self._tchpath.has_required_files():
             self._reading_state = ReadState.Reading
             self._reading_progess = 0
             return True
+        self._logger.log(logging.CRITICAL, "File is missing required data.")
         return False
 
     def finish_reading(self) -> None:
@@ -461,10 +484,9 @@ class XmlReader(QObject):
         return False
 
     def read_metadata(self) -> bool:
-        if self._reading == ReadState.Reading:
+        if self._reading_state == ReadState.Reading:
             metadata = FileMetaData()
-            path = Path(self._tchpath.name) / "metadata.xml"
-            qfile = QFile(path.as_posix())
+            qfile = self._tchpath.metadata
             if not qfile.open(QFile.OpenModeFlag.ReadOnly):
                 self._logger.log(logging.CRITICAL, "Metadata file could not be opened")
                 return False
@@ -474,6 +496,7 @@ class XmlReader(QObject):
                 self._logger.log(logging.CRITICAL, "Xml data incompatible")
                 qfile.close()
                 return False
+            self.raise_progress(4)
 
             while not reader.atEnd():
                 token = reader.readNext()
@@ -481,21 +504,12 @@ class XmlReader(QObject):
                 try:
                     if token == QXmlStreamReader.TokenType.StartElement:
                         match reader.name():
-                            case "version":
-                                metadata["current_version"] = int(reader.text())
-                                if metadata["current_version"] > CURRENT_VERSION:
-                                    self._logger.log(
-                                        logging.CRITICAL, "File version not compatible"
-                                    )
-                                    qfile.close()
-                                    return False
-                                self.raise_progress(4)
                             case "file_id":
-                                metadata["file_id"] = uuid.UUID(reader.text())
+                                metadata["file_id"] = uuid.UUID(reader.readElementText())
                                 self.raise_progress(4)
                             case "creation_date":
                                 metadata["creation_date"] = QDateTime.fromString(
-                                    reader.text(), Qt.DateFormat.ISODate
+                                    reader.readElementText(), Qt.DateFormat.ISODate
                                 )
                                 if not metadata["creation_date"].isValid():
                                     self._logger.log(
@@ -506,7 +520,7 @@ class XmlReader(QObject):
                                 self.raise_progress(4)
                             case "changed_date":
                                 metadata["changed_date"] = QDateTime.fromString(
-                                    reader.text(), Qt.DateFormat.ISODate
+                                    reader.readElementText(), Qt.DateFormat.ISODate
                                 )
                                 if not metadata["changed_date"].isValid():
                                     self._logger.log(
@@ -517,7 +531,9 @@ class XmlReader(QObject):
                                 self.raise_progress(4)
 
                 except ValueError:
-                    self._logger.log(logging.CRITICAL, "Missing or invalid file id.")
+                    self._logger.log(
+                        logging.CRITICAL, f"Missing or invalid file id: {reader.readElementText()}"
+                    )
                     qfile.close()
                     return False
 
@@ -526,17 +542,19 @@ class XmlReader(QObject):
                     qfile.close()
                     return False
 
-        if all(metadata.values()):
+        if FileMetaData.__required_keys__ == set(metadata.keys()) and all(metadata.values()):
             self._cached_metadata = metadata
             return True
 
-        self._logger.log(logging.CRITICAL, "Metadata could not be sufficiently parsed.")
+        self._logger.log(
+            logging.CRITICAL,
+            "Metadata could not be sufficiently parsed because values are missing.",
+        )
         return False
 
     def read_lesson(self) -> bool:
-        if self._reading == ReadState.Reading:
-            path = Path(self._tchpath.name) / "lesson.xml"
-            qfile = QFile(path.as_posix())
+        if self._reading_state == ReadState.Reading:
+            qfile = self._tchpath.lesson
             if not qfile.open(QFile.OpenModeFlag.ReadOnly):
                 self._logger.log(logging.CRITICAL, "Lesson data file could not be opened")
                 return False
@@ -566,26 +584,23 @@ class XmlReader(QObject):
 
     def read_table(self) -> bool:
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
-        if self._reading == ReadState.Reading:
-            struct_f = Path(self._tchpath.name) / "struct.xml"
-            resources_dir = Path(self._tchpath.name) / "resources"
-            qfile = QFile(struct_f.as_posix())
+        if self._reading_state == ReadState.Reading:
+            qfile = self._tchpath.structure
             if qfile.open():
                 self._logger.log(logging.CRITICAL, "Table structure file could not be opened")
                 return False
-            reader = QXmlStreamReader(struct_f)
+            reader = QXmlStreamReader(qfile)
 
             if not self.validate_file(reader):
                 self._logger.log(logging.CRITICAL, "Xml data incompatible")
                 qfile.close()
                 return False
 
+            # Defining all required variables
             row, column, header = 0, 0, 0
             progress_increment = 0
             in_table, writing_row, writing_cell = False, False, False
-
-            tmodel = None
-            cell = None
+            tmodel, cell = None, None
 
             while not reader.atEnd():
                 token = reader.readNext()
@@ -602,7 +617,7 @@ class XmlReader(QObject):
                             )
                             in_table = True
 
-                        except (ValueError, TypeError) as e:
+                        except (ValueError, TypeError):
                             self._logger.log(
                                 logging.CRITICAL, "Row or column number is NaN or values not found."
                             )
@@ -674,7 +689,7 @@ class XmlReader(QObject):
                                         definition = get_definitions(attrs.value("type"))
                                         res_file = attrs.value("file")
                                         if definition and res_file:
-                                            res_path = resources_dir / res_file
+                                            res_path = self._tchpath.resource(res_file)
                                             resobj = tmodel.rescont.save(
                                                 definition.type(), res_path
                                             )
@@ -734,5 +749,34 @@ class XmlReader(QObject):
 
     @staticmethod
     def validate_file(reader: QXmlStreamReader) -> bool:
-        token = reader.readNext()
-        return token == QXmlStreamReader.TokenType.StartElement and reader.name() == "tch"
+        """Validates an xml-file to check for the tch-element and version number."""
+        reader.readNextStartElement()
+        return (
+            reader.tokenType() == QXmlStreamReader.TokenType.StartElement
+            and reader.name() == "tch"
+            and XmlReader.validate_version(reader.attributes().value("version"))
+        )
+
+    @staticmethod
+    def validate_version(version: str) -> bool:
+        print(f"Validating: {version}")
+        return bool(version.isnumeric() and int(CURRENT_VERSION) >= int(version))
+
+    @staticmethod
+    def read_header(
+        tmodel: TableModel, visual_index: int, attrs: QXmlStreamAttributes, logger: IOLogger
+    ) -> bool:
+        if visual_index < tmodel.columnCount():
+            text, num = attrs.value("text"), int(attrs.value("size"))
+            tmodel.setHeaderData(
+                visual_index,
+                Qt.Orientation.Horizontal,
+                text,
+                Qt.ItemDataRole.DisplayRole,
+            )
+            tmodel.setHeaderData(
+                visual_index,
+                Qt.Orientation.Horizontal,
+                QSize(num, 0),
+                Qt.ItemDataRole.SizeHintRole,
+            )

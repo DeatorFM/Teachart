@@ -64,9 +64,7 @@ FILE_EXTENSIONS = {
 
 def supported_audio_extensions() -> tuple[str]:
     supported = QMediaFormat().supportedFileFormats(QMediaFormat.ConversionMode.Decode)
-    return tuple(
-        [FILE_EXTENSIONS[fformat] for fformat in supported if fformat in FILE_EXTENSIONS.keys()]
-    )
+    return tuple([FILE_EXTENSIONS[fformat] for fformat in supported if fformat in FILE_EXTENSIONS])
 
 
 class AudioModel(BaseElementModel):

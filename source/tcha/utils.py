@@ -20,7 +20,7 @@ def clean_mode_enabled() -> bool:
 
 
 def source_id() -> str:
-    return QApplication.instance().source_id()
+    return QApplication.instance().source_id() if QApplication.instance() else "0"
 
 
 def core() -> QApplication:

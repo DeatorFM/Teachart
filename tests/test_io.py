@@ -1,13 +1,14 @@
 from pathlib import Path
+from pprint import pprint
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QXmlStreamReader
+from PyQt6.QtCore import QBuffer, QIODevice, Qt, QXmlStreamReader
 from PyQt6.QtGui import QImage, QImageWriter, QPainter
 from PyQt6.QtWidgets import QApplication
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def qapp():
     app = QApplication.instance()
     if not app:
@@ -15,8 +16,13 @@ def qapp():
     yield app
 
 
+import uuid
+
 from nativeelements.audioelement import AudioElementDefinitions
 from nativeelements.pictureelement import PictureElementDefinitions
+from PyQt6.QtCore import QDate, QDateTime, Qt, QTime
+from tcha.lesson import Lesson
+from tcha.lfio import FileMetaData, XmlReader
 
 
 @pytest.fixture
@@ -41,11 +47,55 @@ class MockResourceObject:
     def qfile(self) -> QIODevice:
         return self._data
 
+    @property
+    def path(self) -> str:
+        return self._filename
+
     def set_compressed_file(self) -> None:
         pass
 
     def add_member(self) -> None:
         pass
+
+
+class MockTchPath:
+    def __init__(
+        self,
+        *,
+        struct_io: QIODevice = QBuffer(),
+        lesson_io: QIODevice = QBuffer(),
+        metadata_io: QIODevice = QBuffer(),
+    ):
+        self._struct_io = struct_io
+        self._lesson_io = lesson_io
+        self._metadata_io = metadata_io
+
+    def has_required_files(self) -> bool:
+        return True
+
+    @property
+    def structure(self) -> QIODevice:
+        return self._struct_io
+
+    @property
+    def lesson(self) -> QIODevice:
+        return self._lesson_io
+
+    @property
+    def metadata(self) -> QIODevice:
+        return self._metadata_io
+
+
+class MockIOLogger:
+    def __init__(self):
+        self._messages = []
+
+    def log(self, level: int, msg: str):
+        self._messages.append((level, msg))
+
+    @property
+    def messages(self) -> list:
+        return self._messages
 
 
 @pytest.fixture
@@ -98,20 +148,270 @@ def xml_audiomodel() -> dict[str, bool]:
     }
 
 
+@pytest.fixture
+def xml_lesson_model() -> dict[str, bool]:
+    return {
+        # Valid cases
+        '<lesson course_name="Math 101" course_id="1" date="2460551" time="32400000" duration="45" source_id="a1b2c3">Great lesson on algebra</lesson>': True,
+        '<lesson course_name="Physics" course_id="25" date="2460551" time="50400000" duration="90" source_id="ff00aa">Introduction to mechanics</lesson>': True,
+        '<lesson course_name="Chemistry" course_id="100" date="2460000" time="0" duration="60" source_id="123abc"></lesson>': True,
+        '<lesson course_name="Biology" course_id="5" date="2460551" time="86399000" duration="120" source_id="deadbeef">Lab session</lesson>': True,
+        '<lesson course_name="History" course_id="0" date="2460551" time="0" duration="0" source_id="1">Empty values</lesson>': True,
+        '<lesson course_name="Art" course_id="-10" date="2460551" time="0" duration="-30" source_id="abc123">Negative values become absolute</lesson>': True,
+        '<lesson course_name="" course_id="99" date="2460551" time="0" duration="45" source_id="f1f2f3">Empty course_name sets course_id to 0</lesson>': True,
+        '<lesson course_name="Music" course_id="7" date="-100" time="32400000" duration="60" source_id="cafe">Negative date accepted</lesson>': True,
+        '<lesson course_name="PE" course_id="3" date="2460551" time="0" duration="45" source_id="ABCDEF">Uppercase hex</lesson>': True,
+        '<lesson course_name="English" course_id="2" date="2460551" time="0" duration="45" source_id="0001">Leading zeros in hex</lesson>': True,
+        '<lesson course_id="1" date="2460551" time="32400000" duration="45" source_id="abc123">Missing course_name</lesson>': True,
+        # Invalid cases - missing attributes
+        '<lesson course_name="Math" date="2460551" time="32400000" duration="45" source_id="abc123">Missing course_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" time="32400000" duration="45" source_id="abc123">Missing date</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" duration="45" source_id="abc123">Missing time</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" source_id="abc123">Missing duration</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45">Missing source_id</lesson>': False,
+        # Invalid cases - wrong data types
+        '<lesson course_name="Math" course_id="not_a_number" date="2460551" time="32400000" duration="45" source_id="abc123">Invalid course_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="not_a_number" time="32400000" duration="45" source_id="abc123">Invalid date</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="not_a_number" duration="45" source_id="abc123">Invalid time</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="not_a_number" source_id="abc123">Invalid duration</lesson>': False,
+        '<lesson course_name="Math" course_id="1.5" date="2460551" time="32400000" duration="45" source_id="abc123">Float course_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551.5" time="32400000" duration="45" source_id="abc123">Float date</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45.5" source_id="abc123">Float duration</lesson>': False,
+        # Invalid cases - invalid hexadecimal source_id
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="xyz">Invalid hex source_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="abc xyz">Hex with space</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="12.34">Hex with dot</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="">Empty source_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="0">Zero hex source_id</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="0000">All zeros hex</lesson>': False,
+        '<lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="g123">Invalid hex character</lesson>': False,
+    }
+
+
+@pytest.fixture
+def xml_lesson() -> dict[bytes, tuple[bool, Lesson]]:
+    return {
+        # Valid lesson data - should succeed
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Math 101" course_id="1" date="2460551" time="32400000" duration="45" source_id="a1b2c3">Great lesson on algebra</lesson></tch>': (
+            True,
+            Lesson(
+                source_id="a1b2c3",
+                datetime=QDateTime(
+                    QDate.fromJulianDay(2460551), QTime.fromMSecsSinceStartOfDay(32400000)
+                ),
+                course_name="Math 101",
+                course_id=1,
+                duration=45,
+                comment="Great lesson on algebra",
+            ),
+        ),
+        # Valid lesson with empty comment
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Physics" course_id="25" date="2460551" time="50400000" duration="90" source_id="ff00aa"></lesson></tch>': (
+            True,
+            Lesson(
+                source_id="ff00aa",
+                datetime=QDateTime(
+                    QDate.fromJulianDay(2460551), QTime.fromMSecsSinceStartOfDay(50400000)
+                ),
+                course_name="Physics",
+                course_id=25,
+                duration=90,
+                comment="",
+            ),
+        ),
+        # Valid lesson with negative values (converted to absolute)
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Art" course_id="-10" date="2460551" time="0" duration="-30" source_id="abc123">Test</lesson></tch>': (
+            True,
+            Lesson(
+                source_id="abc123",
+                datetime=QDateTime(QDate.fromJulianDay(2460551), QTime.fromMSecsSinceStartOfDay(0)),
+                course_name="Art",
+                course_id=10,
+                duration=30,
+                comment="Test",
+            ),
+        ),
+        # Empty course_name sets course_id to 0
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="" course_id="99" date="2460551" time="0" duration="45" source_id="f1f2f3">Test</lesson></tch>': (
+            True,
+            Lesson(
+                source_id="f1f2f3",
+                datetime=QDateTime(QDate.fromJulianDay(2460551), QTime.fromMSecsSinceStartOfDay(0)),
+                course_name="",
+                course_id=0,
+                duration=45,
+                comment="Test",
+            ),
+        ),
+        # Wrong root element - validation fails
+        b'<?xml version="1.0"?><wrong version="1"><lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="abc123">Test</lesson></wrong>': (
+            False,
+            None,
+        ),
+        # Version too high - validation fails
+        b'<?xml version="1.0"?><tch version="999"><lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="abc123">Test</lesson></tch>': (
+            False,
+            None,
+        ),
+        # Missing lesson element - returns default Lesson
+        b'<?xml version="1.0"?><tch version="1"></tch>': (
+            True,
+            "DEFAULT",
+        ),
+        # Invalid course_id - returns default Lesson
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Math" course_id="not_a_number" date="2460551" time="32400000" duration="45" source_id="abc123">Test</lesson></tch>': (
+            True,
+            "DEFAULT",
+        ),
+        # Invalid source_id (not hex) - returns default Lesson
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="xyz">Test</lesson></tch>': (
+            True,
+            "DEFAULT",
+        ),
+        # Missing source_id - returns default Lesson
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45">Test</lesson></tch>': (
+            True,
+            "DEFAULT",
+        ),
+        # Empty/zero source_id - returns default Lesson
+        b'<?xml version="1.0"?><tch version="1"><lesson course_name="Math" course_id="1" date="2460551" time="32400000" duration="45" source_id="0">Test</lesson></tch>': (
+            True,
+            "DEFAULT",
+        ),
+    }
+
+
+@pytest.fixture
+def xml_metadata() -> dict[bytes, tuple[bool, FileMetaData]]:
+    return {
+        # Valid metadata - should succeed
+        b'<?xml version="1.0"?><tch version="1"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            True,
+            {
+                "file_id": uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+                "creation_date": QDateTime.fromString("2026-01-15T10:30:00", Qt.DateFormat.ISODate),
+                "changed_date": QDateTime.fromString("2026-08-20T14:45:00", Qt.DateFormat.ISODate),
+            },
+        ),
+        # Version too high - should fail
+        b'<?xml version="1.0"?><tch version="999"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            False,
+            None,
+        ),
+        # Invalid UUID format - should fail with ValueError
+        b'<?xml version="1.0"?><tch version="1"><file_id>invalid-uuid-format</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            False,
+            None,
+        ),
+        # Invalid creation_date - should succeed but correct the date to currentDateTime
+        b'<?xml version="1.0"?><tch version="1"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>invalid-date</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            True,
+            {
+                "file_id": uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+                "creation_date": QDateTime.currentDateTime(),  # Will be corrected
+                "changed_date": QDateTime.fromString("2026-08-20T14:45:00", Qt.DateFormat.ISODate),
+            },
+        ),
+        # Invalid changed_date - should succeed but correct the date to currentDateTime
+        b'<?xml version="1.0"?><tch version="1"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>not-a-date</changed_date></tch>': (
+            True,
+            {
+                "file_id": uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+                "creation_date": QDateTime.fromString("2026-01-15T10:30:00", Qt.DateFormat.ISODate),
+                "changed_date": QDateTime.currentDateTime(),  # Will be corrected
+            },
+        ),
+        # Missing file_id - should fail (all() check fails)
+        b'<?xml version="1.0"?><tch version="1"><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            False,
+            None,
+        ),
+        # Missing version - should fail (all() check fails)
+        b'<?xml version="1.0"?><tch><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>': (
+            False,
+            None,
+        ),
+        # Empty tch element - should fail
+        b'<?xml version="1.0"?><tch></tch>': (False, None),
+        # Wrong root element - should fail validation
+        b'<?xml version="1.0"?><wrong version="1"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></wrong>': (
+            False,
+            None,
+        ),
+    }
+
+
 class TestXmlParsing:
     def test_picturemodel(self, qapp, test_picture_factory, xml_picturemodel, mock_settings):
         """Test element parsing of PictureElement"""
 
         for xml, result in xml_picturemodel.items():
-            print(xml)
             test_resobj = MockResourceObject(test_picture_factory(), "nice_pic.png")
             reader = QXmlStreamReader(xml)
             if reader.readNextStartElement():
                 assert reader.name() == "element"
                 model = PictureElementDefinitions.model_from_xml(reader.attributes(), test_resobj)
-                print(model)
                 assert all([model]) == result
+
+    def test_audiomodel(self, qapp, xml_audiomodel):
+        """Test element xml parsing for AudioElement"""
+        for xml, result in xml_audiomodel.items():
+            test_resobj = MockResourceObject(QBuffer(), "nice_sound.mp3")
+            reader = QXmlStreamReader(xml)
+            if reader.readNextStartElement():
+                assert reader.name() == "element"
+                model = AudioElementDefinitions.model_from_xml(reader.attributes(), test_resobj)
+                assert all([model]) == result
+
+    def test_lesson_parsing(self, qapp, xml_lesson_model):
+        for xml, result in xml_lesson_model.items():
+            reader = QXmlStreamReader(xml)
+            if reader.readNextStartElement():
+                assert reader.name() == "lesson"
+                model = Lesson.read(reader, True)
+                assert all([model]) == result
+
+    def test_metadata_reading(self, xml_metadata):
+        for xml, result in xml_metadata.items():
+            success, metadata_obj = result
+            buffer = QBuffer()
+            buffer.setData(xml)
+            print(buffer.data())
+            tchpath = MockTchPath(metadata_io=buffer)
+            logger = MockIOLogger()
+            reader = XmlReader(tchpath, logger)
+            try:
+                assert reader.start_reading()
+                assert reader.read_metadata() == success
+                assert all([reader.metadata]) == all([metadata_obj])
+            except AssertionError as e:
+                pprint(logger.messages)
+                raise e
+
+    def test_lesson_reading(self, xml_lesson):
+        for xml, result in xml_lesson.items():
+            success, lesson_obj = result
+            buffer = QBuffer()
+            buffer.setData(xml)
+            print(buffer.data())
+            tchpath = MockTchPath(lesson_io=buffer)
+            logger = MockIOLogger()
+            reader = XmlReader(tchpath, logger)
+            try:
+                assert reader.start_reading()
+                assert reader.read_lesson() == success
+                if lesson_obj == "DEFAULT":
+                    assert reader.lesson_model is not None
+                    assert reader.lesson_model.course_id == 0
+                    assert reader.lesson_model.duration == 0
+                    assert reader.lesson_model.source_id == "0"
+                    assert reader.lesson_model.comment == ""
+                else:
+                    assert reader.lesson_model == lesson_obj
+            except AssertionError as e:
+                pprint(logger.messages, width=500)
+                raise e
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-s"])
+    pytest.main([__file__, "-v"])
