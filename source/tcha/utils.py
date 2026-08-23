@@ -1,9 +1,11 @@
 import ctypes
+import json
 from argparse import ArgumentParser
 from ctypes import wintypes
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+from typing import TypedDict
 
 from PyQt6.QtWidgets import QApplication
 from tcha.consts import DisplayMode
@@ -32,6 +34,11 @@ class LaunchConfig:
     opened_path: Path | None
     debug: bool
     clean: bool
+    test: bool
+    test_parameters: dict
+
+
+class TestParameters(TypedDict): ...
 
 
 @cache
@@ -42,13 +49,32 @@ def _parser() -> ArgumentParser:
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--clean", action="store_true", help="Enable clean mode")
+    parser.add_argument("--test", action="store_true", help="Enable test mode")
+    parser.add_argument(
+        "--test-params",
+        type=str,
+        default="{}",
+        help='Test parameters as JSON string (e.g., \'{"source_id": "123"}\')',
+    )
     return parser
 
 
 def parse_args() -> LaunchConfig:
     parser = _parser()
     parsed = parser.parse_args()
-    return LaunchConfig(Path(parsed.path) if parsed.path else None, parsed.debug, parsed.clean)
+
+    try:
+        test_params = json.loads(parsed.test_params)
+    except json.JSONDecodeError:
+        test_params = {}
+
+    return LaunchConfig(
+        Path(parsed.path) if parsed.path else None,
+        parsed.debug,
+        parsed.clean,
+        parsed.test,
+        test_params,
+    )
 
 
 def evened(dec: float) -> int | float:
