@@ -86,9 +86,9 @@ class ResourceObject(QObject):
 
     @property
     @abstractmethod
-    def path(self) -> str | None:
+    def path(self) -> Path:
         """Return the path to a resource if existing else None"""
-        return None
+        return Path()
 
     @property
     @abstractmethod
@@ -148,20 +148,21 @@ class UniqueResourceObject(ResourceObject):
 class FileResourceObject(UniqueResourceObject):
     """ResourceObject with external resource that can be shared between models."""
 
-    def __init__(self, num: int, path: str, rtype=ResourceType.NONE, parent=None):
+    def __init__(self, num: int, path: Path, rtype=ResourceType.NONE, parent=None):
         super().__init__(num, rtype, parent)
 
-        self._f = QFile(path)
+        self._f = QFile(str(path))
         self._f.open(QFile.OpenModeFlag.ReadOnly)
 
     @property
-    def name(self):
-        return self.path
+    def name(self) -> str:
+        """Returns the object name. On FileResourceObject this is always a POSIX compliant path (/)."""
+        return self.path.as_posix()
 
     @property
-    def path(self) -> str | None:
+    def path(self) -> Path:
         """Returns the original path of the resource if existing."""
-        return osp.normpath(self._f.fileName())
+        return Path(self._f.fileName())
 
     def qfile(self) -> QFile | None:
         """Returns the filepath as a QFile object."""
@@ -171,7 +172,7 @@ class FileResourceObject(UniqueResourceObject):
 
     def filename(self) -> str | None:
         """Returns a filename that is used for serialisation as long as the file extension is provided."""
-        return f"{self._type.name.lower()}{self._type_num}.{Path(self.path).suffix.strip('.')}"
+        return f"{self._type.name.lower()}{self._type_num}.{self.path.suffix.strip('.')}"
 
     def close(self) -> None:
         """Safely close file handle"""
@@ -234,19 +235,17 @@ class ResourceContainer(QObject):
     def temppath(self) -> Path:
         return Path(self.tempdir.name)
 
-    def save(self, restype: ResourceType, path: str) -> ResourceObject:
+    def save(self, restype: ResourceType, path: Path) -> ResourceObject:
         """Creates and saves ResourceObject with a file in ResourceContainer and returns an identical object if existing"""
-        if not osp.exists(path) and osp.isfile(path):
+        if not path.exists() and path.is_file():
             raise FileNotFoundError
         self._internal_counter += 1
 
-        normalised_path = osp.normpath(osp.abspath(path))
-
         try:
-            return self._objects[normalised_path]
+            return self._objects[path.as_posix()]
         except KeyError:
             res_object = FileResourceObject(
-                self.count_type(restype) + 1, normalised_path, restype, self
+                self.count_type(restype) + 1, path, restype, self
             )
             res_object.resourceExpired.connect(self.delete)
             self._objects[res_object.name] = res_object
