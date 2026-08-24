@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from random import getrandbits
 from typing import Any, Self
+from pathlib import Path
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from PyQt6.QtCore import (
@@ -247,7 +248,7 @@ class CellModel(QAbstractListModel):
                 case ResourceFlag.HasResource:
                     resource = definition.get_file()
                     if resource:
-                        resobj = rescont.save(definition.type(), resource)
+                        resobj = rescont.save(definition.type(), Path(resource))
                         assert isinstance(resobj, ResourceObject)
                     else:
                         return
@@ -255,7 +256,7 @@ class CellModel(QAbstractListModel):
                 case ResourceFlag.Optional:
                     resource = definition.get_file()
                     if resource:
-                        resobj = rescont.save(definition.type(), resource)
+                        resobj = rescont.save(definition.type(), Path(resource))
                         assert isinstance(resobj, ResourceObject)
                     else:
                         resobj = rescont.create(definition.type())

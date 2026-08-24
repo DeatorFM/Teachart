@@ -57,6 +57,22 @@ class MockResourceObject:
     def add_member(self) -> None:
         pass
 
+class MockPath:
+    def __init__(self, path: str):
+        self._path = Path(path)
+
+    def as_posix(self) -> str:
+        return self._path.as_posix()
+
+    def exists(self) -> bool:
+        return True
+
+    def is_file(self) -> bool:
+        return True
+
+    @property
+    def path(self) -> Path:
+        return self._path
 
 class MockTchPath:
     def __init__(
@@ -84,6 +100,9 @@ class MockTchPath:
     @property
     def metadata(self) -> QIODevice:
         return self._metadata_io
+
+    def resource(self, basename: str) -> MockPath:
+        return MockPath(basename)
 
 
 class MockIOLogger:
