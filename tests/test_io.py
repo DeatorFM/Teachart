@@ -3,7 +3,7 @@ from pprint import pprint
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QBuffer, QIODevice, Qt, QXmlStreamReader
+from PyQt6.QtCore import QBuffer, QDate, QDateTime, QIODevice, Qt, QTime, QXmlStreamReader
 from PyQt6.QtGui import QImage, QImageWriter, QPainter
 from PyQt6.QtWidgets import QApplication
 
@@ -598,10 +598,13 @@ class TestXmlParsing:
                     tmodel = TableModel.new_from_xml(reader.attributes())
 
                 if tmodel and reader.name() == "header":
-                    assert xml_reader.read_header(tmodel) == next(successes)
+                    assert xml_reader.read_header(tmodel, header, reader.attributes()) == next(
+                        successes
+                    )
                     assert tmodel.headerData(
                         header, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
                     ) == next(hitems)
+                    header += 1
 
 
 if __name__ == "__main__":

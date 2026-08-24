@@ -757,8 +757,6 @@ class XmlReader(QObject):
                     QSize(width, 0),
                     Qt.ItemDataRole.SizeHintRole,
                 )
-                header += 1
-                self.raise_progress(progress_increment)
                 return True
             self._logger.log(
                 logging.ERROR,
