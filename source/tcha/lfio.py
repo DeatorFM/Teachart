@@ -631,33 +631,9 @@ class XmlReader(QObject):
                             case "header":
                                 attrs = reader.attributes()
 
-                                try:
-                                    if header < tmodel.columnCount():
-                                        tmodel.setHeaderData(
-                                            header,
-                                            Qt.Orientation.Horizontal,
-                                            str(attrs.value("text")),
-                                            Qt.ItemDataRole.DisplayRole,
-                                        )
-                                        tmodel.setHeaderData(
-                                            header,
-                                            Qt.Orientation.Horizontal,
-                                            QSize(int(attrs.value("size")), 0),
-                                            Qt.ItemDataRole.SizeHintRole,
-                                        )
-                                        header += 1
-                                        self.raise_progress(progress_increment)
-                                        continue
-                                    self._logger.log(
-                                        logging.ERROR,
-                                        "Skipped horizontal header definition because it would exceed defined column count.",
-                                    )
-                                except (ValueError, TypeError):
-                                    self._logger.log(
-                                        logging.ERROR,
-                                        "Invalid value for header size and text. Check if values for header size or text are correct.",
-                                    )
-                                    continue
+                                self.read_header(tmodel, header, attrs)
+                                header += 1
+                                self.raise_progress(progress_increment)
 
                             case "row":
                                 if row < tmodel.rowCount():
@@ -762,21 +738,36 @@ class XmlReader(QObject):
         print(f"Validating: {version}")
         return bool(version.isnumeric() and int(CURRENT_VERSION) >= int(version))
 
-    @staticmethod
     def read_header(
-        tmodel: TableModel, visual_index: int, attrs: QXmlStreamAttributes, logger: IOLogger
+        self, tmodel: TableModel, visual_index: int, attrs: QXmlStreamAttributes
     ) -> bool:
-        if visual_index < tmodel.columnCount():
-            text, num = attrs.value("text"), int(attrs.value("size"))
-            tmodel.setHeaderData(
-                visual_index,
-                Qt.Orientation.Horizontal,
-                text,
-                Qt.ItemDataRole.DisplayRole,
+        """Reads header data and writes it to the model if successful"""
+        try:
+            if visual_index < tmodel.columnCount():
+                tmodel.setHeaderData(
+                    visual_index,
+                    Qt.Orientation.Horizontal,
+                    str(attrs.value("text")),
+                    Qt.ItemDataRole.DisplayRole,
+                )
+                width = int(attrs.value("size")) if int(attrs.value("size")) > 29 else 30
+                tmodel.setHeaderData(
+                    visual_index,
+                    Qt.Orientation.Horizontal,
+                    QSize(width, 0),
+                    Qt.ItemDataRole.SizeHintRole,
+                )
+                header += 1
+                self.raise_progress(progress_increment)
+                return True
+            self._logger.log(
+                logging.ERROR,
+                "Skipped horizontal header definition because it would exceed defined column count.",
             )
-            tmodel.setHeaderData(
-                visual_index,
-                Qt.Orientation.Horizontal,
-                QSize(num, 0),
-                Qt.ItemDataRole.SizeHintRole,
+            return False
+        except (ValueError, TypeError):
+            self._logger.log(
+                logging.ERROR,
+                "Invalid value for header size and text. Check if values for header size or text are correct.",
             )
+            return False

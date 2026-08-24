@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Type
 
@@ -22,7 +21,6 @@ from PyQt6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
-    QPersistentModelIndex,
     QRect,
     QSize,
     Qt,
@@ -48,7 +46,6 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
-from tcha.error import LFExceptions, LoggableError
 from tcha.resmanager import (
     CompressedResourceObject,
     FileResourceObject,
@@ -94,7 +91,9 @@ class PictureModel(BaseElementModel):
 
         self._item_size = QSize(size.width(), self._height)
 
-        self._original_aspect_ratio: float = size.height() / size.width()
+        self._original_aspect_ratio: float = (
+            size.height() / size.width() if not size.isNull() else 1
+        )
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeEmptyElement("element")

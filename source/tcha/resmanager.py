@@ -86,9 +86,9 @@ class ResourceObject(QObject):
 
     @property
     @abstractmethod
-    def path(self) -> Path:
+    def path(self) -> Path | None:
         """Return the path to a resource if existing else None"""
-        return Path()
+        return None
 
     @property
     @abstractmethod
@@ -153,6 +153,9 @@ class FileResourceObject(UniqueResourceObject):
 
         self._f = QFile(str(path))
         self._f.open(QFile.OpenModeFlag.ReadOnly)
+
+    def is_valid(self) -> bool:
+        return self._f.isOpen()
 
     @property
     def name(self) -> str:
@@ -244,9 +247,7 @@ class ResourceContainer(QObject):
         try:
             return self._objects[path.as_posix()]
         except KeyError:
-            res_object = FileResourceObject(
-                self.count_type(restype) + 1, path, restype, self
-            )
+            res_object = FileResourceObject(self.count_type(restype) + 1, path, restype, self)
             res_object.resourceExpired.connect(self.delete)
             self._objects[res_object.name] = res_object
             return self._objects[res_object.name]

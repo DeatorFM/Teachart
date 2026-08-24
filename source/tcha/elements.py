@@ -1,12 +1,11 @@
 import importlib
 from functools import cache
 
-from PyQt6.QtCore import QMimeData
-
 from nativeelements.baseelement import (
     BaseElementDefinitions,
     BaseElementToolset,
 )
+from PyQt6.QtCore import QMimeData
 
 """
 Module to import element modules.

@@ -20,9 +20,9 @@ import uuid
 
 from nativeelements.audioelement import AudioElementDefinitions
 from nativeelements.pictureelement import PictureElementDefinitions
-from PyQt6.QtCore import QDate, QDateTime, Qt, QTime
 from tcha.lesson import Lesson
 from tcha.lfio import FileMetaData, XmlReader
+from tcha.tablemodel import HeaderDataItem, TableModel
 
 
 @pytest.fixture
@@ -57,6 +57,7 @@ class MockResourceObject:
     def add_member(self) -> None:
         pass
 
+
 class MockPath:
     def __init__(self, path: str):
         self._path = Path(path)
@@ -73,6 +74,7 @@ class MockPath:
     @property
     def path(self) -> Path:
         return self._path
+
 
 class MockTchPath:
     def __init__(
@@ -138,6 +140,25 @@ def test_picture_factory():
         return buffer
 
     return _create_picture
+
+
+@pytest.fixture
+def xml_textmodel() -> dict[str, bool]:
+    return {
+        '<element type="TextElement" file="essay.html"/>': True,
+        '<element type="TextElement" file="notes.html"/>': True,
+        '<element type="TextElement" file="chapter1.html"/>': True,
+        '<element type="TextElement" file="text_with_underscores.html"/>': True,
+        '<element type="TextElement" file="text-with-dashes.html"/>': True,
+        '<element type="TextElement" file="123456.html"/>': True,
+        '<element type="TextElement" file="very_long_filename_that_is_still_valid.html"/>': True,
+        '<element type="TextElement" file="file with spaces.html"/>': True,
+        '<element type="TextElement" file="файл.html"/>': True,  # Unicode filename
+        '<element type="TextElement" file="a.html"/>': True,  # Single character filename
+        '<element type="TextElement"/>': False,  # Missing file attribute
+        "<element/>": False,  # Missing both attributes
+        '<element type="TextElement" file=""/>': False,  # Empty file attribute
+    }
 
 
 @pytest.fixture
@@ -301,6 +322,137 @@ def xml_lesson() -> dict[bytes, tuple[bool, Lesson]]:
 
 
 @pytest.fixture
+def xml_header() -> dict[str, tuple[list[bool], list[HeaderDataItem]]]:
+    """Test XML for header parsing in read_table().
+    Values are tuples of (expected return values, expected HeaderDataItems)."""
+    return {
+        # Valid cases - all headers succeed
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="3"><headers><header text="Column 1" size="100"/><header text="Column 2" size="150"/><header text="Column 3" size="200"/></headers></table></tch>': (
+            [True, True, True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "Column 1"),
+                HeaderDataItem(1, Qt.Orientation.Horizontal, 150, True, "Column 2"),
+                HeaderDataItem(2, Qt.Orientation.Horizontal, 200, True, "Column 3"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Name" size="250"/></headers></table></tch>': (
+            [True],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 250, True, "Name")],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="2"><headers><header text="" size="100"/><header text="Valid Header" size="50"/></headers></table></tch>': (
+            [True, True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, ""),
+                HeaderDataItem(1, Qt.Orientation.Horizontal, 50, True, "Valid Header"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Zero Size" size="0"/></headers></table></tch>': (
+            [True],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 30, True, "Zero Size")],  # 0 becomes 30
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="2"><headers><header text="First" size="100"/><header text="Special chars: äöü €" size="120"/></headers></table></tch>': (
+            [True, True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "First"),
+                HeaderDataItem(1, Qt.Orientation.Horizontal, 120, True, "Special chars: äöü €"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Very long header text that contains many characters and should still be valid" size="300"/></headers></table></tch>': (
+            [True],
+            [
+                HeaderDataItem(
+                    0,
+                    Qt.Orientation.Horizontal,
+                    300,
+                    True,
+                    "Very long header text that contains many characters and should still be valid",
+                )
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Large Size" size="9999"/></headers></table></tch>': (
+            [True],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 9999, True, "Large Size")],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Min Size 29" size="29"/></headers></table></tch>': (
+            [True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 30, True, "Min Size 29")
+            ],  # 29 becomes 30
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Min Size 30" size="30"/></headers></table></tch>': (
+            [True],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 30, True, "Min Size 30")],
+        ),
+        # Invalid cases - missing attributes (no HeaderDataItem created on failure)
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header size="100"/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="No Size"/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        # Invalid cases - wrong data types
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Invalid Size" size="not_a_number"/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Float Size" size="100.5"/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Negative" size="-50"/></headers></table></tch>': (
+            [True],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 30, True, "Negative")],  # -50 becomes 30
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Empty Size" size=""/></headers></table></tch>': (
+            [False],
+            [],
+        ),
+        # Mixed valid/invalid - exceeding column count
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="2"><headers><header text="H1" size="100"/><header text="H2" size="100"/><header text="H3" size="100"/></headers></table></tch>': (
+            [True, True, False],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "H1"),
+                HeaderDataItem(1, Qt.Orientation.Horizontal, 100, True, "H2"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="H1" size="100"/><header text="H2" size="100"/></headers></table></tch>': (
+            [True, False],
+            [HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "H1")],
+        ),
+        # Mixed valid/invalid - some headers have errors
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="3"><headers><header text="Valid" size="100"/><header text="Invalid" size="abc"/><header text="Valid2" size="150"/></headers></table></tch>': (
+            [True, False, True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "Valid"),
+                HeaderDataItem(2, Qt.Orientation.Horizontal, 150, True, "Valid2"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="3"><headers><header text="Valid" size="100"/><header text="No Size"/><header text="Valid2" size="150"/></headers></table></tch>': (
+            [True, False, True],
+            [
+                HeaderDataItem(0, Qt.Orientation.Horizontal, 100, True, "Valid"),
+                HeaderDataItem(2, Qt.Orientation.Horizontal, 150, True, "Valid2"),
+            ],
+        ),
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="2"><headers><header size="100"/><header text="Valid" size="150"/></headers></table></tch>': (
+            [False, True],
+            [HeaderDataItem(1, Qt.Orientation.Horizontal, 150, True, "Valid")],
+        ),
+        # Edge case - empty headers section
+        '<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers></headers></table></tch>': (
+            [],
+            [],
+        ),
+    }
+
+
+@pytest.fixture
 def xml_metadata() -> dict[bytes, tuple[bool, FileMetaData]]:
     return {
         # Valid metadata - should succeed
@@ -430,6 +582,26 @@ class TestXmlParsing:
             except AssertionError as e:
                 pprint(logger.messages, width=500)
                 raise e
+
+    def test_header(self, xml_header):
+        for xml, result in xml_header.items():
+            successes, hitems = iter(result[0]), iter(result[1])
+            reader = QXmlStreamReader(xml)
+            xml_reader = XmlReader(MockTchPath(), MockIOLogger())
+            tmodel: TableModel | None = None
+            header = 0
+
+            while not reader.atEnd():
+                reader.readNextStartElement()
+
+                if reader.name() == "table":
+                    tmodel = TableModel.new_from_xml(reader.attributes())
+
+                if tmodel and reader.name() == "header":
+                    assert xml_reader.read_header(tmodel) == next(successes)
+                    assert tmodel.headerData(
+                        header, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
+                    ) == next(hitems)
 
 
 if __name__ == "__main__":

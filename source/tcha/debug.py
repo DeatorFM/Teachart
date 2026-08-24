@@ -89,7 +89,7 @@ class ResourceViewModel(QAbstractTableModel):
                 case 1:
                     return str(resobj.type_num)
                 case 2:
-                    return resobj.path if resobj.path else "Not an external resource"
+                    return resobj.path.as_posix() if resobj.path else "Not an external resource"
                 case 3:
                     print(resobj.member_count)
                     return str(resobj.member_count)
