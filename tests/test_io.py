@@ -453,6 +453,144 @@ def xml_header() -> dict[str, tuple[list[bool], list[HeaderDataItem]]]:
 
 
 @pytest.fixture
+def xml_table() -> dict[bytes, bool]:
+    return {
+        # Valid cases
+        # Simple 1x1 table
+        b'<?xml version="1.0"?><tch version="1"><table rows="1" columns="1">'
+        b'<headers><header text="Column 1" size="100"/></headers>'
+        b'<row><cell><element type="TextElement" file="test.html"/></cell></row>'
+        b"</table></tch>": True,
+        # 2x2 table
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="2">'
+        b'<headers><header text="Col1" size="100"/><header text="Col2" size="150"/></headers>'
+        b'<row><cell><element type="TextElement" file="a.html"/></cell><cell><element type="TextElement" file="b.html"/></cell></row>'
+        b'<row><cell><element type="TextElement" file="c.html"/></cell><cell><element type="TextElement" file="d.html"/></cell></row>'
+        b"</table></tch>": True,
+        # 3x3 table with multiple elements per cell
+        b'<?xml version="1.0"?><tch version="1"><table rows="3" columns="3">'
+        b'<headers><header text="A" size="80"/><header text="B" size="90"/><header text="C" size="100"/></headers>'
+        b'<row><cell><element type="TextElement" file="1.html"/><element type="TextElement" file="2.html"/></cell><cell><element type="TextElement" file="3.html"/></cell><cell></cell></row>'
+        b'<row><cell><element type="TextElement" file="4.html"/></cell><cell><element type="TextElement" file="5.html"/></cell><cell><element type="TextElement" file="6.html"/></cell></row>'
+        b'<row><cell></cell><cell></cell><cell><element type="TextElement" file="7.html"/></cell></row>'
+        b"</table></tch>": True,
+        # Table with empty cells
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Table with mixed element types
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="2">'
+        b'<headers><header text="Media" size="200"/><header text="Text" size="150"/></headers>'
+        b'<row><cell><element type="PictureElement" file="img.jpg" width="800" height="600" rotation="0" adjusted="0"/></cell><cell><element type="TextElement" file="text.html"/></cell></row>'
+        b'<row><cell><element type="AudioElement" file="audio.mp3" name="Sound" repeating="0" repeats="1" pause_length="0" start_time="0" end_time="0"/></cell><cell><element type="TextElement" file="desc.html"/></cell></row>'
+        b"</table></tch>": True,
+        # Large table 5x4
+        b'<?xml version="1.0"?><tch version="1"><table rows="5" columns="4">'
+        b'<headers><header text="Col1" size="100"/><header text="Col2" size="100"/><header text="Col3" size="100"/><header text="Col4" size="100"/></headers>'
+        b'<row><cell><element type="TextElement" file="1.html"/></cell><cell></cell><cell></cell><cell></cell></row>'
+        b'<row><cell></cell><cell><element type="TextElement" file="2.html"/></cell><cell></cell><cell></cell></row>'
+        b'<row><cell></cell><cell></cell><cell><element type="TextElement" file="3.html"/></cell><cell></cell></row>'
+        b'<row><cell></cell><cell></cell><cell></cell><cell><element type="TextElement" file="4.html"/></cell></row>'
+        b'<row><cell><element type="TextElement" file="5.html"/></cell><cell><element type="TextElement" file="6.html"/></cell><cell><element type="TextElement" file="7.html"/></cell><cell><element type="TextElement" file="8.html"/></cell></row>'
+        b"</table></tch>": True,
+        # Invalid cases
+        # Missing rows attribute
+        b'<?xml version="1.0"?><tch version="1"><table columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": False,
+        # Missing columns attribute
+        b'<?xml version="1.0"?><tch version="1"><table rows="2">'
+        b'<headers><header text="H1" size="100"/></headers>'
+        b"<row><cell></cell></row>"
+        b"<row><cell></cell></row>"
+        b"</table></tch>": False,
+        # Missing both rows and columns attributes
+        b'<?xml version="1.0"?><tch version="1"><table>'
+        b'<headers><header text="H1" size="100"/></headers>'
+        b"<row><cell></cell></row>"
+        b"</table></tch>": False,
+        # Zero rows
+        b'<?xml version="1.0"?><tch version="1"><table rows="0" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"</table></tch>": False,
+        # Zero columns
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="0">'
+        b"<headers></headers>"
+        b"<row></row><row></row>"
+        b"</table></tch>": False,
+        # Negative rows
+        b'<?xml version="1.0"?><tch version="1"><table rows="-1" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"</table></tch>": False,
+        # Negative columns
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="-1">'
+        b"<headers></headers>"
+        b"<row></row><row></row>"
+        b"</table></tch>": False,
+        # Row count mismatch (declared 3, provided 2)
+        b'<?xml version="1.0"?><tch version="1"><table rows="3" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Row count mismatch (declared 1, provided 2)
+        b'<?xml version="1.0"?><tch version="1"><table rows="1" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Column count mismatch in row (declared 2, provided 3 cells)
+        b'<?xml version="1.0"?><tch version="1"><table rows="1" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Missing headers section
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="2">'
+        b"<row><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Header count mismatch (declared 3 columns, only 2 headers)
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="3">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell><cell></cell></row>"
+        b"</table></tch>": True,
+        # Non-numeric rows attribute
+        b'<?xml version="1.0"?><tch version="1"><table rows="two" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": False,
+        # Non-numeric columns attribute
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="three">'
+        b'<headers><header text="H1" size="100"/></headers>'
+        b"<row><cell></cell></row>"
+        b"<row><cell></cell></row>"
+        b"</table></tch>": False,
+        # Float values for rows/columns
+        b'<?xml version="1.0"?><tch version="1"><table rows="2.5" columns="2">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell></row>"
+        b"<row><cell></cell><cell></cell></row>"
+        b"</table></tch>": False,
+        # Missing table element entirely
+        b'<?xml version="1.0"?><tch version="1">'
+        b'<headers><header text="H1" size="100"/></headers>'
+        b"</tch>": False,
+        # Empty tch document
+        b'<?xml version="1.0"?><tch version="1"></tch>': False,
+        # Row with missing cells
+        b'<?xml version="1.0"?><tch version="1"><table rows="2" columns="3">'
+        b'<headers><header text="H1" size="100"/><header text="H2" size="100"/><header text="H3" size="100"/></headers>'
+        b"<row><cell></cell><cell></cell><cell></cell></row>"
+        b"<row><cell></cell></row>"
+        b"</table></tch>": True,
+    }
+
+
+@pytest.fixture
 def xml_metadata() -> dict[bytes, tuple[bool, FileMetaData]]:
     return {
         # Valid metadata - should succeed
@@ -591,20 +729,39 @@ class TestXmlParsing:
             tmodel: TableModel | None = None
             header = 0
 
-            while not reader.atEnd():
-                reader.readNextStartElement()
-
+            print(xml)
+            while not reader.readNextStartElement():
                 if reader.name() == "table":
                     tmodel = TableModel.new_from_xml(reader.attributes())
 
                 if tmodel and reader.name() == "header":
-                    assert xml_reader.read_header(tmodel, header, reader.attributes()) == next(
-                        successes
-                    )
-                    assert tmodel.headerData(
-                        header, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
-                    ) == next(hitems)
-                    header += 1
+                    try:
+                        assert xml_reader.read_header(tmodel, header, reader.attributes()) == next(
+                            successes
+                        )
+                        assert tmodel.headerData(
+                            header, Qt.Orientation.Horizontal, Qt.ItemDataRole.EditRole
+                        ) == next(hitems)
+                        header += 1
+
+                    except AssertionError as e:
+                        pprint(xml_reader.logger.messages)
+                        raise e
+
+    def test_table(self, qapp, mock_settings, xml_table):
+        for xml, result in xml_table.items():
+            buffer = QBuffer()
+            buffer.setData(xml)
+            print(buffer.data())
+            tchpath = MockTchPath(struct_io=buffer)
+            reader = XmlReader(tchpath, MockIOLogger())
+            assert reader.start_reading()
+            try:
+                assert reader.read_table() == result
+            except AssertionError as e:
+                pprint(reader.logger.messages)
+                raise e
+            buffer.close()
 
 
 if __name__ == "__main__":

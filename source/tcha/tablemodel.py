@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
+from pathlib import Path
 from random import getrandbits
 from typing import Any, Self
-from pathlib import Path
 
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from PyQt6.QtCore import (
@@ -547,7 +547,7 @@ class TableModel(QAbstractTableModel):
             Qt.Orientation.Vertical: [],
         }
 
-        print(f"Model has id: {self._model_id}")
+        # print(f"Model has id: {self._model_id}")
         self._rescont = ResourceContainer(self)
 
     @property
@@ -625,9 +625,6 @@ class TableModel(QAbstractTableModel):
         converter = self.visual_column_order()
         for i in range(self.columnCount()):
             yield column[converter[i]]
-
-    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
-        return self.createIndex(row, column, 0)
 
     def increase_counter(self) -> int:
         """Return the number of items created."""
@@ -844,7 +841,7 @@ class TableModel(QAbstractTableModel):
             return False
 
         mime_data = decode_mime_data(data)
-        if not mime_data:
+        if not mime_data:  # noqa: SIM103
             return False
 
         return True

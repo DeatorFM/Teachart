@@ -449,6 +449,10 @@ class XmlReader(QObject):
         self._reading = ReadState.ReadingFinished
 
     @property
+    def logger(self):
+        return self._logger
+
+    @property
     def read_state(self) -> ReadState:
         return self._reading_state
 
@@ -586,7 +590,7 @@ class XmlReader(QObject):
         """Reads table and returns a table model. If errors occur the tabel structure is amended if possible otherwise and invalid table will be returned."""
         if self._reading_state == ReadState.Reading:
             qfile = self._tchpath.structure
-            if qfile.open():
+            if not qfile.open(QFile.OpenModeFlag.ReadOnly):
                 self._logger.log(logging.CRITICAL, "Table structure file could not be opened")
                 return False
             reader = QXmlStreamReader(qfile)
@@ -640,13 +644,13 @@ class XmlReader(QObject):
                                     column = 0
                                     writing_row = True
                                     continue
-                                self._logger(
+                                self._logger.log(
                                     logging.ERROR,
                                     f"The table row was skipped because too many were parsed than specified in the definitions or the column count of the row doesn't match the definition: Specified rows: {tmodel.rowCount()}; Specified columns: {tmodel.columnCount()}",
                                 )
                                 writing_row = False
 
-                            case "cell":
+                            case "cell" if writing_row:
                                 if column < tmodel.columnCount():
                                     cell = tmodel.data(tmodel.index(row, column))
                                     writing_cell = True
@@ -716,12 +720,15 @@ class XmlReader(QObject):
                                 break
                             self._logger.log(
                                 logging.ERROR,
-                                "The number of parsed rows does not match the actual number. Some rows' content might be missing.",
+                                f"The number of parsed rows does not match the actual number. Some rows' content might be missing. Parsed: {row}. Actual: {tmodel.rowCount()}",
                             )
                             in_table = False
                             break
 
-            return True
+            self._cached_table_model = tmodel
+            self.readingProgessChanged.emit(100)
+            return tmodel is not None
+        return False
 
     @staticmethod
     def validate_file(reader: QXmlStreamReader) -> bool:
@@ -735,7 +742,6 @@ class XmlReader(QObject):
 
     @staticmethod
     def validate_version(version: str) -> bool:
-        print(f"Validating: {version}")
         return bool(version.isnumeric() and int(CURRENT_VERSION) >= int(version))
 
     def read_header(
@@ -747,7 +753,7 @@ class XmlReader(QObject):
                 tmodel.setHeaderData(
                     visual_index,
                     Qt.Orientation.Horizontal,
-                    str(attrs.value("text")),
+                    attrs.value("text"),
                     Qt.ItemDataRole.DisplayRole,
                 )
                 width = int(attrs.value("size")) if int(attrs.value("size")) > 29 else 30
@@ -766,6 +772,6 @@ class XmlReader(QObject):
         except (ValueError, TypeError):
             self._logger.log(
                 logging.ERROR,
-                "Invalid value for header size and text. Check if values for header size or text are correct.",
+                "Invalid value for header size or text. Check if values for header size or text are correct.",
             )
             return False

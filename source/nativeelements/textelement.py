@@ -165,11 +165,6 @@ class TextModel(QTextDocument, BaseElementModel):
         self._resource.delete_member()
         self._resource = None
 
-    def __del__(self) -> None:
-        if self._resource:
-            self._resource.delete_member()
-            self._resource = None
-
 
 class TextEditor(BaseTextElementEditor):
     currentPropsChanged = pyqtSignal(dict)
