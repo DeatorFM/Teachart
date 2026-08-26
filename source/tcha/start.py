@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
 from tcha.base import BaseMainWindow
 from tcha.consts import CloseState
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
-from tcha.lfio import ProgressLogger
 from ui.start_view import Ui_StartWindow
 
 

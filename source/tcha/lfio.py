@@ -362,8 +362,7 @@ class XmlWriter:
 
         writer.writeStartDocument()
         writer.writeStartElement("tch")
-
-        writer.writeTextElement("version", str(CURRENT_VERSION))
+        writer.writeAttribute("version", CURRENT_VERSION)
 
         writer.writeTextElement("file_id", str(metadata["file_id"]))
 
@@ -390,6 +389,7 @@ class XmlWriter:
 
         writer.writeStartDocument()
         writer.writeStartElement("tch")
+        writer.writeAttribute("version", CURRENT_VERSION)
 
         tablemodel.xml(writer)
 
@@ -408,6 +408,7 @@ class XmlWriter:
 
         writer.writeStartDocument()
         writer.writeStartElement("tch")
+        writer.writeAttribute("version", CURRENT_VERSION)
 
         lesson_model.xml(writer)
 
