@@ -3,7 +3,7 @@ from pprint import pprint
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QBuffer, QDate, QDateTime, QIODevice, Qt, QTime, QXmlStreamReader
+from PyQt6.QtCore import QBuffer, QDate, QDateTime, QIODevice, Qt, QTime, QXmlStreamReader, QSize
 from PyQt6.QtGui import QImage, QImageWriter, QPainter
 from PyQt6.QtWidgets import QApplication
 
@@ -21,8 +21,10 @@ import uuid
 from nativeelements.audioelement import AudioElementDefinitions
 from nativeelements.pictureelement import PictureElementDefinitions
 from tcha.lesson import Lesson
-from tcha.lfio import FileMetaData, XmlReader
+from tcha.lfio import FileMetaData, XmlReader, XMLWriter
 from tcha.tablemodel import HeaderDataItem, TableModel
+from tcha.resmanager import ResourceType
+from nativelements.textelement import TextElementDefinitions
 
 
 @pytest.fixture
@@ -762,6 +764,32 @@ class TestXmlParsing:
                 pprint(reader.logger.messages)
                 raise e
             buffer.close()
+
+    def test_lesson_writing(self):
+        model = Lesson("B548CA69F4E5", QDateTime.fromString("2026-01-15T10:30:00", Qt.DateFormat.ISODate), "Algebra", 20, 60, "Basic principles of algebra on page 24")
+        xml = XmlWriter.write_lesson(model)
+        assert xml.data() == b'<?xml version="1.0"?><tch version="1"><lesson course_name="Algebra" course_id="20" date="26015" time="36186000" duration="60" source_id="B548CA69F4E5">Great lesson on algebra</lesson></tch>'
+
+    def test_metadata_writing(self): 
+        metadata = FileMetaData()
+        metadata["file_id"] = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+        metadata["creation_date"] = QDateTime.fromString("2026-01-15T10:30:00", Qt.DateFormat.ISODate)
+        metadata["changed_date"] = QDateTime.fromString("2026-08-20T14:45:00", Qt.DateFormat.ISODate)
+        xml = XmlWriter.write_metadata_xml(metadata)
+        assert xml.data() == b'<?xml version="1.0"?><tch version="1"><file_id>550e8400-e29b-41d4-a716-446655440000</file_id><creation_date>2026-01-15T10:30:00</creation_date><changed_date>2026-08-20T14:45:00</changed_date></tch>'
+
+    def test_table_model_writing(self):
+        output = b'<?xml version="1.0"?><tch version="1"><table rows="1" columns="1"><headers><header text="Column 1" size="100"/></headers><row><cell><element type="TextElement" file="text1.html"/></cell></row></table></tch>'
+        tmodel = TableModel.new(1, 1)
+        index = tmodel.index(0, 0)
+        tmodel.setHeaderData(index, Qt.ItemDataRole.DisplayRole, "Column 1")
+        tmodel.setHeaderData(index, Qt.ItemDataRole.SizeHintRole, QSize(100, 0))
+        resobj = tmodel.rescont.create(ResourceType.TEXT)
+        emodel = TextElementDefinitions.create_model(resobj)
+        item = tmodel.data(index)
+        item.append(emodel)
+        xml = XmlWriter.write_table(tmodel)
+        assert xml.data() == output
 
 
 if __name__ == "__main__":
