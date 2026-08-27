@@ -249,7 +249,6 @@ class CellModel(QAbstractListModel):
                     resource = definition.get_file()
                     if resource:
                         resobj = rescont.save(definition.type(), Path(resource))
-                        assert isinstance(resobj, ResourceObject)
                     else:
                         return
 
@@ -257,7 +256,6 @@ class CellModel(QAbstractListModel):
                     resource = definition.get_file()
                     if resource:
                         resobj = rescont.save(definition.type(), Path(resource))
-                        assert isinstance(resobj, ResourceObject)
                     else:
                         resobj = rescont.create(definition.type())
 

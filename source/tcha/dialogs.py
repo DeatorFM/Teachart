@@ -126,3 +126,5 @@ class DialogManager:
     def is_defined(self, wtype: str) -> bool:
         """Returns True if the window type 'wtype' has been logged to the Dialog Manager."""
         return wtype in self._dialogs
+
+    

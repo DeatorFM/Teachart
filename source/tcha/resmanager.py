@@ -13,6 +13,12 @@ from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
 
+class Compressor(metaclass=ABCMeta):
+    @abstractmethod
+    @staticmethod
+    def compressed(self, resobj: FileResourceObject) -> Path | None:
+        return None
+
 
 class ResourceType(enum.Enum):
     """Defines ResourceType. Class can be inherited to create custom types or use 'OTHER'."""
@@ -139,7 +145,7 @@ class UniqueResourceObject(ResourceObject):
 
     def filename(self) -> str | None:
         """Returns a filename that is used for serialisation as long as the file extension is provided."""
-        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}"
+        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}" if self._extension else None
 
     def __str__(self):
         return self.name
@@ -184,31 +190,6 @@ class FileResourceObject(UniqueResourceObject):
 
     def __str__(self):
         return self.path
-
-
-class CompressedResourceObject(FileResourceObject):
-    def __init__(self, num: int, path: str, rtype=ResourceType.NONE, parent=None):
-        """File object with different name and path definition"""
-        super().__init__(num, path, rtype, parent)
-
-        self._name = path
-        self._original_file = path
-        self._compressed = False if ".compressed" not in path else True
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def original_resource(self) -> str:
-        return self._original_file
-
-    def set_compressed_file(self, path: str) -> None:
-        qfile = QFile(path)
-        if qfile.exists():
-            qfile.open(QFile.OpenModeFlag.ReadOnly)
-            self._f = qfile
-            self._compressed = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,9 +241,9 @@ class ResourceContainer(QObject):
         self._objects[res_object.name] = res_object
         return res_object
 
-    def get(self, name: str) -> ResourceObject:
+    def get(self, name: str) -> ResourceObject | None:
         """Returns ResourceObject with the corresponding name. Raises 'KeyError' if object doesn't exist"""
-        return self._objects[name]
+        return self._objects.get(name)
 
     def make_path(self, extension: str) -> str:
         """Creates path to temporary folder and returns its random generated path as a string"""

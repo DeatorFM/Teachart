@@ -72,12 +72,6 @@ class PictureModel(BaseElementModel):
         self._resource = resource
         self._resource.add_member()
 
-        if Settings.value("User/editor.compress_image") and isinstance(
-            self._resource, CompressedResourceObject
-        ):
-            compressed_file = self.compress_resource()
-            self._resource.set_compressed_file(compressed_file)
-
         reader = QImageReader()
         reader.setDevice(self.resource.qfile())
         size = reader.size()

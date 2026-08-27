@@ -115,3 +115,20 @@ def test_file_model():
     ]
 
     yield OpenFileModel(RECENT, PINNED)
+
+class MockPath:
+    def __init__(self, path: str):
+        self._path = Path(path)
+
+    def as_posix(self) -> str:
+        return self._path.as_posix()
+
+    def exists(self) -> bool:
+        return True
+
+    def is_file(self) -> bool:
+        return True
+
+    @property
+    def path(self) -> Path:
+        return self._path

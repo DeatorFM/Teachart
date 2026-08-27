@@ -83,7 +83,7 @@ class AudioModel(BaseElementModel):
         pause_length: int = 0,
         start_time: int = 0,
         end_time: int = 0,
-        chapters: list = [],
+        chapters: list = None,
         current_time: int = 0,
         parent=None,
     ):
@@ -96,9 +96,9 @@ class AudioModel(BaseElementModel):
         self._pause_length = pause_length  # Secs between repeat cycles
         self._start_time = start_time  # Msecs from start of track
         self._end_time = end_time  #  Msecs from end of track
-        self._chapters = chapters
+        self._chapters = chapters if chapter is not None else []
         self._current_time = current_time
-        self._text = os.path.basename(self.resource.path)
+        self._text = self.resource.path.name
 
         self._item_size = QSize(100, 49)
 
