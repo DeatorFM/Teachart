@@ -44,7 +44,7 @@ class DialogManager:
         """Define custom mapping for Dialog with class name 'wtype'. If 'multi_ins't' is True a container"""
         if wtype not in self._dialogs:
             if container and hasattr(wclass, "wid"):
-                self._dialogs[wtype] = DialogContainer(wclass)
+                self._dialogs[wtype] = [wclass, DialogContainer(wclass)]
                 self._containers.append(wtype)
                 return True
             else:
@@ -73,7 +73,7 @@ class DialogManager:
                 if winst:
                     if winst.windowState() & Qt.WindowState.WindowMinimized:
                         winst.setWindowState(winst.windowState() & ~Qt.WindowState.WindowMinimized)
-                    winst.activeWindow()
+                    winst.activateWindow()
                     winst.raise_()
                 else:
                     winst = wclass(*args, **kwargs)
@@ -106,14 +106,16 @@ class DialogManager:
         result = True
         for wtype in self._dialogs:
             if wtype in self._containers:
-                cont: DialogContainer = self._dialogs[wtype]
-                for key, value in cont.items():
+                _, cont = self._dialogs[wtype]
+                for key, value in list(cont.items()):
                     if value.close():
                         del cont[key]
                         continue
                     result = False
             else:
                 _, winst = self._dialogs[wtype]
+                if winst is None:
+                    continue
                 if winst.close():
                     self._dialogs[wtype] = [self._dialogs[wtype][0], None]
                     continue
@@ -126,5 +128,3 @@ class DialogManager:
     def is_defined(self, wtype: str) -> bool:
         """Returns True if the window type 'wtype' has been logged to the Dialog Manager."""
         return wtype in self._dialogs
-
-    

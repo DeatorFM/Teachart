@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import QApplication
@@ -116,6 +118,7 @@ def test_file_model():
 
     yield OpenFileModel(RECENT, PINNED)
 
+
 class MockPath:
     def __init__(self, path: str):
         self._path = Path(path)
@@ -132,3 +135,10 @@ class MockPath:
     @property
     def path(self) -> Path:
         return self._path
+
+    @property
+    def suffix(self) -> str:
+        return self._path.suffix
+
+    def __str__(self):
+        return str(self._path)

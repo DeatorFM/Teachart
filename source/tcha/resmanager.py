@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-import os.path as osp
 import random
 import string
 import tempfile
@@ -12,12 +11,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
-
-class Compressor(metaclass=ABCMeta):
-    @abstractmethod
-    @staticmethod
-    def compressed(self, resobj: FileResourceObject) -> Path | None:
-        return None
 
 
 class ResourceType(enum.Enum):
@@ -49,7 +42,6 @@ class ResourceObject(QObject):
 
     def add_member(self) -> None:
         """Increases member count when a model starts using this resource"""
-        print("Added member to resource")
         self._member_count += 1
 
     def delete_member(self) -> None:
@@ -57,8 +49,7 @@ class ResourceObject(QObject):
         self._member_count -= 1
         if self._member_count == 0:
             self.resourceExpired.emit(self.name, self._type, self._type_num)
-            if self._f:
-                self._f.close()
+            self.close()
             print("Object is expired")
 
     def adjust_type_num(self, num: int) -> bool:
@@ -145,7 +136,11 @@ class UniqueResourceObject(ResourceObject):
 
     def filename(self) -> str | None:
         """Returns a filename that is used for serialisation as long as the file extension is provided."""
-        return f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}" if self._extension else None
+        return (
+            f"{self._type.name.lower()}{self._type_num}.{self._extension.strip('.')}"
+            if self._extension
+            else None
+        )
 
     def __str__(self):
         return self.name
@@ -189,7 +184,7 @@ class FileResourceObject(UniqueResourceObject):
             self._f.close()
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
 
 @dataclass(frozen=True, slots=True)
@@ -288,7 +283,11 @@ class ResourceContainer(QObject):
     def to_transfer_objects(self) -> list[ResourceTransferObject]:
         tobjects = []
         for obj in self.contents():
-            tobjects.append(ResourceTransferObject(obj.type, obj.filename(), obj.path, obj.data))
+            tobjects.append(
+                ResourceTransferObject(
+                    obj.type, obj.filename(), obj.path.as_posix() if obj.path else None, obj.data
+                )
+            )
         return tobjects
 
     def close_file_streams(self) -> None:
