@@ -133,6 +133,10 @@ class MockPath:
         return True
 
     @property
+    def name(self) -> str:
+        return self._path.name
+
+    @property
     def path(self) -> Path:
         return self._path
 

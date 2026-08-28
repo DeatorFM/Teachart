@@ -66,8 +66,50 @@ class TestTextModel:
 
 class TestPictureModel:
 
-    def test_creation(self, qapp, test_picture): ...
+    @pytest.fixture
+    def test_model(self, qapp, test_picture):
+        resobj = MockFileResourceObject(1, Path("Pictures/clown.png"), test_picture, ResourceType.IMAGE)
+        model = PictureModel(resobj)
+        assert model.width == 200
+        assert model.height == 200
+        assert model.rotation == 0
+        assert model.adjusted == False
+        assert model.original_aspect_ratio == 1.0
+        yield model
+
+    def test_modifications(self, qapp, test_model):
+        test_model.set_width(100)
+        assert test_model.width == 100
+        assert test_model.current_aspect_ratio == 2.0
+        test_model.set_height(150)
+        assert test_model.height == 150
+        assert test_model.current_aspect_ratio == 150 / 100
+
+        assert test_model.set_rotation(90)
+        assert test_model.set_rotation(45) == False
+        assert test_model.rotation == 90
+        assert test_model.rotate_by(180)
+        assert test_model.rotate_by(130) == False
+        assert test_model.rotation == 270
+
+        test_model.set_adjusted(True)
+        assert test_model.adjusted
+
+
 
 class TestAudioModel:
 
-    def test_creation(self, qapp): ...
+    @pytest.fixture
+    def test_model(self, qapp):
+        resobj = MockFileResourceObject(1, Path("Music/Mozart.mp3"), QBuffer(), ResourceType.AUDIO)
+        model = AudioModel(resobj)
+        assert resobj.member_count == 1
+        assert model.is_repeating == False
+        assert model.repeats == 1
+        assert model.pause_length == 0
+        assert model.start_time == 0
+        assert model.end_time == 0
+        assert model.text == "Mozart.mp3"
+        yield model
+
+    def test_modifications(self, qapp): ...

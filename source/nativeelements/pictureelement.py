@@ -86,7 +86,7 @@ class PictureModel(BaseElementModel):
         self._item_size = QSize(size.width(), self._height)
 
         self._original_aspect_ratio: float = (
-            size.height() / size.width() if not size.isNull() else 1
+            size.height() / size.width() if not size.isNull() else 1.0
         )
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
@@ -187,24 +187,24 @@ class PictureModel(BaseElementModel):
         self.set_width(width)
         self.set_height(height)
 
-    def set_rotation(self, rotation: int) -> None:
+    def set_rotation(self, rotation: int) -> bool:
         if rotation % 90 == 0:
             self._rotation = rotation
-        else:
-            raise ValueError("Number must be a multiple of 90.")
+            return True
+        return False
 
-    def rotate_by(self, incr: int) -> None:
+    def rotate_by(self, incr: int) -> bool:
         if incr % 90 == 0:
             self._rotation = self.rotation + incr
-        else:
-            raise ValueError("Number must be a multiple of 90.")
+            return True
+        return False
 
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
 
     def presentable_item(self) -> QGraphicsPixmapItem:
-        pixmap = QPixmap(self.resource.path)
+        pixmap = QPixmap(self.resource.path.as_posix())
         if self.rotation > 0:
             transformation = QTransform()
             transformation.rotate(float(self.rotation))
