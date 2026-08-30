@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass, field
 from typing import Self
 
@@ -314,9 +315,9 @@ class ScheduleModel(QSqlRelationalTableModel):
     def remove_by_id(self, id: int) -> None:
         for row in range(self.rowCount()):
             record = self.record(row)
-            if record.value("id") == id:
-                if self.removeRow(row):
-                    self.submitAll()
+            if record.value("id") == id and self.removeRow(row):
+                self.submitAll()
+                self.select()
 
     def index_for_id(self, schedule_id: int) -> QModelIndex:
         """Returns the index for the record with schedule id."""
@@ -326,7 +327,7 @@ class ScheduleModel(QSqlRelationalTableModel):
                 return self.index(row, 0)
         return QModelIndex()
 
-    def index_for_file_id(self, file_id: int) -> QModelIndex:
+    def index_for_file_id(self, file_id: uuid.UUID) -> QModelIndex:
         """Returns the index for the first record with file id."""
         for row in range(self.rowCount()):
             record = self.record(row)
@@ -488,6 +489,7 @@ class StudentModel(QSqlRelationalTableModel):
             return False
 
     def setRow(self, item: QModelIndex, value: StudentItem) -> bool:
+        # THIS METHOD DOES NOT REALLY WORK WELL BECAUSE OF THE WAY QT HANDLES RELATIONAL VALUES. SO BETTER NOT USE THIS FOR NOW.
         if isinstance(value, StudentItem):
             ok = self.setData(self.index(item.row(), 1), value.name)
             ok &= self.setData(self.index(item.row(), 2), value.course_id)

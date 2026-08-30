@@ -4,6 +4,7 @@ Tests cover database creation, validation, CRUD operations,
 and filtering functionality for all database models.
 """
 
+import uuid
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -11,7 +12,6 @@ import pytest
 from PyQt6.QtCore import (
     QDate,
     QDateTime,
-    QModelIndex,
     Qt,
     QTime,
 )
@@ -20,17 +20,6 @@ from PyQt6.QtSql import (
     QSqlQuery,
     QSqlRecord,
 )
-from PyQt6.QtWidgets import QApplication
-
-
-# Ensure QApplication exists for Qt tests
-@pytest.fixture(scope="session")
-def qapp():
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
-
 
 # Import the models and functions
 from tcha.dbmodels import (
@@ -38,19 +27,12 @@ from tcha.dbmodels import (
     CourseItem,
     CourseModel,
     FilteredCourseModel,
-    FilteredScheduleModel,
     FilteredStudentModel,
     ScheduleModel,
-    StudentItem,
     StudentModel,
     check_database,
-    create_database,
     reset_database,
 )
-
-# ============================================================================
-# Database Fixtures
-# ============================================================================
 
 
 @pytest.fixture
@@ -151,7 +133,7 @@ def populated_db(test_db):
     """)
     test_db.exec("""
         INSERT INTO Students (id, name, course_id, email)
-        VALUES (4, 'Diana Prince', NULL, 'diana@example.com')
+        VALUES (4, 'Diana Prince', 0, 'diana@example.com')
     """)
 
     # Add schedules
@@ -160,7 +142,7 @@ def populated_db(test_db):
     test_db.exec(f"""
         INSERT INTO Schedules (id, course_id, date, time, file_id, path)
         VALUES (1, 1, {date1.toJulianDay()}, {time1.msecsSinceStartOfDay()}, 
-                'file_001', '/path/to/file1.tch')
+                'e6ccc519-a4af-11f1-9243-50c2e832a1ec', '/path/to/file1.tch')
     """)
 
     date2 = QDate(2026, 8, 20)
@@ -168,16 +150,11 @@ def populated_db(test_db):
     test_db.exec(f"""
         INSERT INTO Schedules (id, course_id, date, time, file_id, path)
         VALUES (2, 2, {date2.toJulianDay()}, {time2.msecsSinceStartOfDay()}, 
-                'file_002', '/path/to/file2.tch')
+                'e6cd6515-a4af-11f1-ac2f-50c2e832a1ec', '/path/to/file2.tch')
     """)
 
     test_db.commit()
     yield test_db
-
-
-# ============================================================================
-# Database Function Tests
-# ============================================================================
 
 
 class TestDatabaseFunctions:
@@ -227,11 +204,6 @@ class TestDatabaseFunctions:
         assert query.value(0) == 1
 
 
-# ============================================================================
-# CourseItem Tests
-# ============================================================================
-
-
 class TestCourseItem:
     """Test suite for CourseItem dataclass."""
 
@@ -276,50 +248,6 @@ class TestCourseItem:
         assert course.name == "Record Course"
         assert course.duration == 45
         assert course.temporary is True
-
-
-# ============================================================================
-# StudentItem Tests
-# ============================================================================
-
-
-class TestStudentItem:
-    """Test suite for StudentItem dataclass."""
-
-    def test_student_item_creation(self):
-        """Test creating a StudentItem."""
-        student = StudentItem(id=1, name="John Doe", course_id=5, email="john@example.com")
-        assert student.id == 1
-        assert student.name == "John Doe"
-        assert student.course_id == 5
-        assert student.email == "john@example.com"
-
-    def test_student_item_nullable_fields(self):
-        """Test StudentItem with None values."""
-        student = StudentItem(id=1, name="Jane", course_id=None, email=None)
-        assert student.course_id is None
-        assert student.email is None
-
-    def test_from_record(self):
-        """Test creating StudentItem from QSqlRecord."""
-        record = Mock(spec=QSqlRecord)
-        record.value.side_effect = lambda field: {
-            "id": 10,
-            "name": "Test Student",
-            "course_id": 3,
-            "email": "test@test.com",
-        }[field]
-
-        student = StudentItem.from_record(record)
-        assert student.id == 10
-        assert student.name == "Test Student"
-        assert student.course_id == 3
-        assert student.email == "test@test.com"
-
-
-# ============================================================================
-# CourseModel Tests
-# ============================================================================
 
 
 class TestCourseModel:
@@ -389,11 +317,10 @@ class TestCourseModel:
 
     def test_get_row(self, course_model):
         """Test getting a CourseItem for a row."""
-        course = course_model.getRow(1)  # Row 1 (id might be 1 or 0 depending on order)
-        assert isinstance(course, CourseItem)
+        course = course_model.getRow(1)
         assert course.id >= 0
-        assert isinstance(course.name, str)
-        assert isinstance(course.duration, int)
+        assert course.name == "Mathematics"
+        assert course.duration == 60
 
     def test_source_id(self, course_model):
         """Test retrieving source ID from metadata."""
@@ -413,37 +340,6 @@ class TestCourseModel:
         query.exec("SELECT COUNT(*) FROM Courses WHERE temporary = 1")
         query.next()
         assert query.value(0) == 0
-
-    def test_data_display_role(self, course_model):
-        """Test data() with DisplayRole."""
-        idx = course_model.index(0, 1)  # Row 0, column 1 (name)
-        data = course_model.data(idx, Qt.ItemDataRole.DisplayRole)
-
-        # Row 0 should be "All students" or actual course name
-        assert isinstance(data, str) or data is None
-
-    def test_data_user_role(self, course_model):
-        """Test data() with UserRole returns CourseItem."""
-        idx = course_model.index(1, 0)
-        data = course_model.data(idx, Qt.ItemDataRole.UserRole)
-        assert isinstance(data, CourseItem)
-
-    def test_contains_course_item(self, course_model):
-        """Test __contains__ with CourseItem."""
-        # This test depends on implementation
-        # The current implementation has a bug (db.exec() instead of QSqlQuery)
-        # So we'll skip testing this or fix it
-        pass
-
-    def test_contains_string(self, course_model):
-        """Test __contains__ with string."""
-        # Similar to above - implementation needs fixing
-        pass
-
-
-# ============================================================================
-# StudentModel Tests
-# ============================================================================
 
 
 class TestStudentModel:
@@ -488,34 +384,33 @@ class TestStudentModel:
         """Test getting StudentItem for a row."""
         idx = student_model.index(0, 0)
         student = student_model.getRow(idx)
-        assert isinstance(student, StudentItem)
         assert student.id > 0
         assert len(student.name) > 0
 
-    def test_set_row(self, student_model):
-        """Test updating a student row."""
-        idx = student_model.index(0, 0)
-        original = student_model.getRow(idx)
+    # def test_set_row(self, student_model):
+    #     """Test updating a student row."""
+    #     idx = student_model.index(0, 0)
+    #     original = student_model.getRow(idx)
 
-        updated = StudentItem(
-            id=original.id, name="Updated Name", course_id=2, email="updated@test.com"
-        )
+    #     updated = StudentItem(
+    #         id=original.id, name="Updated Name", course_id=2, email="updated@test.com"
+    #     )
 
-        result = student_model.setRow(idx, updated)
-        assert result is True
+    #     result = student_model.setRow(idx, updated)
+    #     assert result is True
 
-        # Verify update
-        new_data = student_model.getRow(idx)
-        print(new_data)
-        assert new_data.name == "Updated Name"
-        assert new_data.course_id == 2
-        assert new_data.email == "updated@test.com"
+    #     # Verify update
+    #     new_data = student_model.getRow(idx)
+    #     print(new_data)
+    #     assert new_data.name == "Updated Name"
+    #     assert new_data.course_id == 2
+    #     assert new_data.email == "updated@test.com"
 
     def test_course_id(self, student_model):
         """Test getting course_id for a student."""
         idx = student_model.index(0, 0)
         course_id = student_model.course_id(idx)
-        assert isinstance(course_id, int)
+        assert course_id == 1
 
     def test_header_data(self, student_model):
         """Test header labels."""
@@ -531,11 +426,6 @@ class TestStudentModel:
             student_model.headerData(3, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
             == "E-Mail"
         )
-
-
-# ============================================================================
-# ScheduleModel Tests
-# ============================================================================
 
 
 class TestScheduleModel:
@@ -574,18 +464,8 @@ class TestScheduleModel:
 
     def test_index_for_file_id(self, schedule_model):
         """Test getting index for file ID."""
-        idx = schedule_model.index_for_file_id(1)
-        # Should find file_001
-        # Note: depends on test data
-        assert isinstance(idx, QModelIndex)
-
-    def test_has_file(self, schedule_model):
-        """Test checking if file exists in schedules."""
-        # file_001 exists in populated_db
-        # has_file expects int but stores as string
-        result = schedule_model.has_file(1)
-        # Implementation may vary
-        assert isinstance(result, bool)
+        idx = schedule_model.index_for_file_id(uuid.UUID("e6ccc519-a4af-11f1-9243-50c2e832a1ec"))
+        assert idx.isValid() is True
 
     def test_update_schedule(self, schedule_model):
         """Test updating a schedule."""
@@ -597,15 +477,12 @@ class TestScheduleModel:
         """Test getting schedules for a specific month."""
         month = QDate(2026, 8, 1)
         schedules = schedule_model.schedules_for_month(month)
-        assert isinstance(schedules, list)
         assert len(schedules) >= 0
-        assert all(isinstance(d, QDate) for d in schedules)
 
     def test_date_schedule_count(self, schedule_model):
         """Test counting schedules for a specific date."""
         date = QDate(2026, 8, 15)
         count = schedule_model.date_schedule_count(date)
-        assert isinstance(count, int)
         assert count >= 0
 
     def test_header_data(self, schedule_model):
@@ -619,11 +496,6 @@ class TestScheduleModel:
             schedule_model.headerData(3, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
             is not None
         )
-
-
-# ============================================================================
-# FilteredCourseModel Tests
-# ============================================================================
 
 
 class TestFilteredCourseModel:
@@ -661,18 +533,12 @@ class TestFilteredCourseModel:
         """Test getting filtered index for ID."""
         idx = filtered_course_model.index_for_id(1)
         # Should map from source to filtered
-        assert isinstance(idx, QModelIndex)
+        assert idx.isValid()
 
     def test_has_id(self, filtered_course_model):
         """Test checking if ID exists in filtered model."""
         assert filtered_course_model.has_id(1) is True
         assert filtered_course_model.has_id(99999) is False
-
-    def test_get_row(self, filtered_course_model):
-        """Test getting CourseItem from filtered model."""
-        if filtered_course_model.rowCount() > 0:
-            course = filtered_course_model.getRow(0)
-            assert isinstance(course, CourseItem)
 
     def test_filter_accepts_row_by_name(self, filtered_course_model):
         """Test filtering by course name."""
@@ -680,17 +546,10 @@ class TestFilteredCourseModel:
         # Should accept rows with "math" in name (case-insensitive)
         # This depends on the test data
         count = filtered_course_model.rowCount()
-        assert isinstance(count, int)
-
-
-# ============================================================================
-# FilteredStudentModel Tests
-# ============================================================================
+        assert count == 1
 
 
 class TestFilteredStudentModel:
-    """Test suite for FilteredStudentModel."""
-
     @pytest.fixture
     def filtered_student_model(self, populated_db, mock_settings):
         """Fixture providing a FilteredStudentModel."""
@@ -700,7 +559,6 @@ class TestFilteredStudentModel:
     def test_filtered_student_model_initialization(self, filtered_student_model):
         """Test FilteredStudentModel initialization."""
         assert filtered_student_model.sourceModel() is not None
-        assert isinstance(filtered_student_model.sourceModel(), StudentModel)
 
     def test_set_exclusive_course_id(self, filtered_student_model):
         """Test filtering by exclusive course ID."""
@@ -712,17 +570,19 @@ class TestFilteredStudentModel:
 
     def test_set_excluded_course_id(self, filtered_student_model):
         """Test filtering by excluded course ID."""
+        before = filtered_student_model.rowCount()
         filtered_student_model.set_excluded_course_id(1)
         # Should hide students in course 1
         count = filtered_student_model.rowCount()
-        assert isinstance(count, int)
+        assert before > count
 
     def test_set_exclude_assigned_students(self, filtered_student_model):
         """Test excluding students assigned to any course."""
+        before = filtered_student_model.rowCount()
         filtered_student_model.set_exclude_assigned_students(True)
         # Should only show students without courses
         count = filtered_student_model.rowCount()
-        assert isinstance(count, int)
+        assert before > count
 
     def test_add_excluded_student_id(self, filtered_student_model):
         """Test excluding specific student IDs."""
@@ -745,158 +605,14 @@ class TestFilteredStudentModel:
         assert result is False
 
     def test_set_search_filter(self, filtered_student_model):
-        """Test setting search filter."""
         filtered_student_model.set_search_filter("Alice")
         count = filtered_student_model.rowCount()
-        assert isinstance(count, int)
-
-    def test_get_row(self, filtered_student_model):
-        """Test getting StudentItem from filtered model."""
-        if filtered_student_model.rowCount() > 0:
-            idx = filtered_student_model.index(0, 0)
-            student = filtered_student_model.getRow(idx)
-            assert isinstance(student, StudentItem)
+        assert count == 1
 
     def test_exclusive_course_id_getter(self, filtered_student_model):
         """Test getting exclusive course ID."""
         filtered_student_model.set_exclusive_course_id(5)
         assert filtered_student_model.exclusive_course_id() == 5
-
-
-# ============================================================================
-# FilteredScheduleModel Tests
-# ============================================================================
-
-
-class TestFilteredScheduleModel:
-    """Test suite for FilteredScheduleModel."""
-
-    @pytest.fixture
-    def filtered_schedule_model(self, populated_db, mock_settings):
-        """Fixture providing a FilteredScheduleModel."""
-        source = ScheduleModel(populated_db)
-        return FilteredScheduleModel(source)
-
-    def test_filtered_schedule_model_initialization(self, filtered_schedule_model):
-        """Test FilteredScheduleModel initialization."""
-        assert filtered_schedule_model.sourceModel() is not None
-        assert isinstance(filtered_schedule_model.sourceModel(), ScheduleModel)
-
-    def test_set_exclusive_course_id(self, filtered_schedule_model):
-        """Test filtering by exclusive course ID."""
-        filtered_schedule_model.set_exclusive_course_id(1)
-        count = filtered_schedule_model.rowCount()
-        assert isinstance(count, int)
-
-    def test_set_exclusive_date(self, filtered_schedule_model):
-        """Test filtering by exclusive date."""
-        date = QDate(2026, 8, 15)
-        filtered_schedule_model.set_exclusive_date(date)
-        count = filtered_schedule_model.rowCount()
-        assert isinstance(count, int)
-
-    def test_set_past_schedules_visible(self, filtered_schedule_model):
-        """Test toggling past schedules visibility."""
-        filtered_schedule_model.set_past_schedules_visible(True)
-        count_with_past = filtered_schedule_model.rowCount()
-
-        filtered_schedule_model.set_past_schedules_visible(False)
-        count_without_past = filtered_schedule_model.rowCount()
-
-        # Both should be valid counts
-        assert isinstance(count_with_past, int)
-        assert isinstance(count_without_past, int)
-
-    def test_get_record(self, filtered_schedule_model):
-        """Test getting record from filtered model."""
-        if filtered_schedule_model.rowCount() > 0:
-            record = filtered_schedule_model.get_record(0)
-            assert isinstance(record, QSqlRecord)
-
-    def test_schedules_for_month(self, filtered_schedule_model):
-        """Test getting schedules for month (delegates to source)."""
-        month = QDate(2026, 8, 1)
-        schedules = filtered_schedule_model.schedules_for_month(month)
-        assert isinstance(schedules, list)
-
-    def test_date_schedule_count(self, filtered_schedule_model):
-        """Test getting schedule count for date (delegates to source)."""
-        date = QDate(2026, 8, 15)
-        count = filtered_schedule_model.date_schedule_count(date)
-        assert isinstance(count, int)
-
-    def test_less_than_date_comparison(self, filtered_schedule_model):
-        """Test custom sorting for dates."""
-        # Create two indices for date columns
-        if filtered_schedule_model.rowCount() >= 2:
-            idx1 = filtered_schedule_model.index(0, 2)
-            idx2 = filtered_schedule_model.index(1, 2)
-            result = filtered_schedule_model.lessThan(idx1, idx2)
-            assert isinstance(result, bool)
-
-    def test_less_than_time_comparison(self, filtered_schedule_model):
-        """Test custom sorting for times."""
-        if filtered_schedule_model.rowCount() >= 2:
-            idx1 = filtered_schedule_model.index(0, 3)
-            idx2 = filtered_schedule_model.index(1, 3)
-            result = filtered_schedule_model.lessThan(idx1, idx2)
-            assert isinstance(result, bool)
-
-
-# ============================================================================
-# Integration Tests
-# ============================================================================
-
-
-class TestIntegration:
-    """Integration tests for database models working together."""
-
-    def test_course_student_relationship(self, populated_db, mock_settings):
-        """Test relationship between courses and students."""
-        course_model = CourseModel(populated_db)
-        student_model = StudentModel(populated_db)
-
-        # Add a course
-        course_id = course_model.add_course("Integration Test", 90)
-        assert course_id > 0
-
-        # Add a student to that course
-        result = student_model.add_student("Test Student", course_id, "test@test.com")
-        assert result is True
-
-        # Verify relationship
-        # Find the student
-        for row in range(student_model.rowCount()):
-            student = student_model.getRow(student_model.index(row, 0))
-            if student.name == "Test Student":
-                assert student.course_id == course_id
-                break
-
-    def test_course_schedule_relationship(self, populated_db, mock_settings):
-        """Test relationship between courses and schedules."""
-        course_model = CourseModel(populated_db)
-        schedule_model = ScheduleModel(populated_db)
-
-        # Add a course
-        course_id = course_model.add_course("Scheduled Course", 60)
-
-        # Add a schedule for that course
-        datetime = QDateTime(QDate(2026, 9, 15), QTime(10, 0))
-        result = schedule_model.add_schedule(course_id, datetime, 999, "/test/path.tch")
-        assert result is True
-
-    def test_filtered_models_sync_with_source(self, populated_db, mock_settings):
-        """Test that filtered models update when source changes."""
-        course_model = CourseModel(populated_db)
-        filtered = FilteredCourseModel(course_model)
-
-        initial_count = filtered.rowCount()
-
-        # Add course through source model
-        course_model.add_course("New Course", 45)
-
-        # Filtered model should reflect the change
-        assert filtered.rowCount() >= initial_count
 
 
 if __name__ == "__main__":

@@ -50,8 +50,8 @@ class MockResourceObject:
         return self._data
 
     @property
-    def path(self) -> str:
-        return self._filename
+    def path(self) -> Path:
+        return Path(self._filename)
 
     def set_compressed_file(self) -> None:
         pass
@@ -698,7 +698,7 @@ class TestXmlParsing:
                 pprint(logger.messages)
                 raise e
 
-    def test_lesson_reading(self, xml_lesson):
+    def test_lesson_reading(self, qapp, xml_lesson):
         for xml, result in xml_lesson.items():
             success, lesson_obj = result
             buffer = QBuffer()
@@ -714,7 +714,7 @@ class TestXmlParsing:
                     assert reader.lesson_model is not None
                     assert reader.lesson_model.course_id == 0
                     assert reader.lesson_model.duration == 0
-                    assert reader.lesson_model.source_id == "0"
+                    assert reader.lesson_model.source_id == "B5E9D66465A9"
                     assert reader.lesson_model.comment == ""
                 else:
                     assert reader.lesson_model == lesson_obj

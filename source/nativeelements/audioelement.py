@@ -43,10 +43,8 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
-from tcha.error import LFExceptions
 from tcha.resmanager import (
     FileResourceObject,
-    ResourceContainer,
     ResourceObject,
     ResourceType,
 )
@@ -83,7 +81,7 @@ class AudioModel(BaseElementModel):
         pause_length: int = 0,
         start_time: int = 0,
         end_time: int = 0,
-        chapters: list = None,
+        chapters: list | None = None,
         current_time: int = 0,
         parent=None,
     ):
@@ -96,9 +94,9 @@ class AudioModel(BaseElementModel):
         self._pause_length = pause_length  # Secs between repeat cycles
         self._start_time = start_time  # Msecs from start of track
         self._end_time = end_time  #  Msecs from end of track
-        self._chapters = chapters if chapter is not None else []
+        self._chapters = chapters if chapters is not None else []
         self._current_time = current_time
-        self._text = self.resource.path.name
+        self._text = self._resource.path.name
 
         self._item_size = QSize(100, 49)
 

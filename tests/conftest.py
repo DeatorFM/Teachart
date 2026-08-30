@@ -6,11 +6,11 @@ from PyQt6.QtWidgets import QApplication
 from tcha.start import OpenFileModel
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def qapp():
     app = QApplication.instance()
-    if not app:
-        app = QApplication([])
+    if not app or isinstance(app, MockApplication):
+        app = MockApplication([])
     yield app
 
 
@@ -117,6 +117,14 @@ def test_file_model():
     ]
 
     yield OpenFileModel(RECENT, PINNED)
+
+
+class MockApplication(QApplication):
+    def debug_enabled(self) -> bool:
+        return False
+
+    def source_id(self) -> str:
+        return "B5E9D66465A9"
 
 
 class MockPath:

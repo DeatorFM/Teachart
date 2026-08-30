@@ -21,6 +21,7 @@ def clean_mode_enabled() -> bool:
     return QApplication.instance().clean_mode_enabled()
 
 
+@cache
 def source_id() -> str:
     return QApplication.instance().source_id() if QApplication.instance() else "0"
 

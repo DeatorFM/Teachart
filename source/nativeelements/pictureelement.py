@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Type
 
 from nativeelements.audioelement import AudioElementDefinitions
 from nativeelements.baseelement import (
@@ -47,7 +46,6 @@ from PyQt6.QtWidgets import (
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
 from tcha.resmanager import (
-    CompressedResourceObject,
     FileResourceObject,
     ResourceContainer,
     ResourceObject,
@@ -60,7 +58,7 @@ from ui.element_toolsets import PictureToolsetView
 class PictureModel(BaseElementModel):
     def __init__(
         self,
-        resource: FileResourceObject | CompressedResourceObject,
+        resource: FileResourceObject,
         width: int = 1,
         height: int = 1,
         rotation: int = 0,

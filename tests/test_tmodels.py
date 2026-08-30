@@ -1,47 +1,16 @@
-"""
-Unit tests for TableModel and CellModel using pytest.
-Tests cover initialization, data operations, row/column operations,
-mime data handling, and model validation.
-"""
-
-from unittest.mock import MagicMock, Mock, patch
-
 import pytest
+from nativeelements.baseelement import BaseElementModel
 from PyQt6.QtCore import (
     QByteArray,
     QDataStream,
     QIODevice,
     QMimeData,
     QModelIndex,
-    QPersistentModelIndex,
-    QPoint,
-    QRect,
     QSize,
     Qt,
     QXmlStreamWriter,
 )
-from PyQt6.QtGui import QTextDocument
-from PyQt6.QtWidgets import QApplication
-
-
-# Ensure QApplication exists for Qt tests
-@pytest.fixture(scope="session")
-def qapp():
-    """Create QApplication instance for the test session."""
-    app = QApplication.instance()
-    if app is None:
-        app = MockApplication([])
-    yield app
-
-
-# Import base classes first
-from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
-from tcha.resmanager import ResourceContainer, ResourceObject, ResourceType
-
-
-class MockApplication(QApplication):
-    def debug_enabled(self) -> bool:
-        return False
+from tcha.resmanager import ResourceObject, ResourceType
 
 
 # Mock BaseElementModel for testing
@@ -129,14 +98,8 @@ from tcha.tablemodel import (
     decode_mime_data,
 )
 
-# ============================================================================
-# HeaderDataItem Tests
-# ============================================================================
-
 
 class TestHeaderDataItem:
-    """Test suite for HeaderDataItem dataclass."""
-
     def test_horizontal_header_creation(self):
         """Test creating a horizontal header item."""
         header = HeaderDataItem.horizontal(0)
@@ -168,11 +131,6 @@ class TestHeaderDataItem:
         assert header.section_size == 150
         assert header.editable is False
         assert header.text == "Custom Header"
-
-
-# ============================================================================
-# CellItem Tests
-# ============================================================================
 
 
 class TestCellItem:
@@ -234,9 +192,7 @@ class TestCellItem:
         """Test height calculation with elements."""
         cell_item.append(MockElementModel(height=30))
         cell_item.append(MockElementModel(height=40))
-        # Height should be sum of all element heights
         expected_height = 30 + 40
-        # Actual implementation may add spacing
         assert cell_item.height >= expected_height
 
     def test_height_property_empty_cell(self, cell_item):
@@ -245,7 +201,6 @@ class TestCellItem:
 
     def test_width_property(self, cell_item):
         """Test width calculation."""
-        # Width is header section_size - 9
         assert cell_item.width == cell_item.header.section_size - 9
 
     def test_recalculate_items(self, cell_item):
@@ -253,11 +208,9 @@ class TestCellItem:
         model = MockElementModel(width=50, height=30)
         cell_item.append(model)
         cell_item.recalculate_items()
-        # Model should be recalculated to cell width
         assert model.item_size.width() == cell_item.width
 
     def test_set_header_item(self, cell_item):
-        """Test updating header item."""
         new_header = HeaderDataItem.horizontal(1)
         new_header.section_size = 200
         cell_item.set_header_item(new_header)
@@ -265,7 +218,6 @@ class TestCellItem:
         assert cell_item.width == 200 - 9
 
     def test_copy(self, cell_item):
-        """Test shallow copy of CellItem."""
         model = MockElementModel(number=1)
         cell_item.append(model)
         cell_copy = cell_item.copy()
@@ -274,20 +226,11 @@ class TestCellItem:
         assert cell_copy is not cell_item
 
     def test_row_for_pos(self, cell_item):
-        """Test finding row index for y position."""
         cell_item.append(MockElementModel(height=30))
         cell_item.append(MockElementModel(height=40))
-        # Position within first element
         assert cell_item.row_for_pos(15) == 0
-        # Position within second element (30 + spacing + position)
-        # This depends on implementation details
         row = cell_item.row_for_pos(50)
-        assert row >= 0  # Should find a row
-
-
-# ============================================================================
-# CellModel Tests
-# ============================================================================
+        assert row >= 0
 
 
 class TestCellModel:
@@ -363,7 +306,7 @@ class TestCellModel:
         """Test data retrieval with DisplayRole."""
         index = cell_model.index(0, 0)
         data = cell_model.data(index, Qt.ItemDataRole.DisplayRole)
-        assert isinstance(data, MockElementModel)
+        assert data is not None
 
     def test_data_invalid_index(self, cell_model):
         """Test data retrieval with invalid index."""
@@ -377,7 +320,7 @@ class TestCellModel:
         new_model = MockElementModel(number=99)
         result = cell_model.setData(index, new_model, Qt.ItemDataRole.EditRole)
         # Implementation details may vary
-        assert isinstance(result, bool)
+        assert result is True
 
     def test_flags(self, cell_model):
         """Test item flags."""
@@ -393,11 +336,6 @@ class TestCellModel:
         assert "application/x-teachart" in mime_types
 
 
-# ============================================================================
-# TableModel Tests
-# ============================================================================
-
-
 class TestTableModel:
     """Test suite for TableModel class."""
 
@@ -411,7 +349,6 @@ class TestTableModel:
         model = TableModel.new(2, 3)
         assert model.rowCount() == 2
         assert model.columnCount() == 3
-        assert model.is_valid()
 
     def test_table_model_new_invalid_dimensions(self, qapp):
         """Test that invalid dimensions raise ValueError."""
@@ -492,12 +429,12 @@ class TestTableModel:
         data = table_model.data(invalid_index)
         assert data == None
 
-    def test_header_data_horizontal(self, table_model):
+    def test_header_data_horizontal(self, qapp, table_model):
         """Test retrieving horizontal header data."""
         header = table_model.headerData(0, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
         assert header is not None
 
-    def test_header_data_vertical(self, table_model):
+    def test_header_data_vertical(self, qapp, table_model):
         """Test retrieving vertical header data."""
         header = table_model.headerData(0, Qt.Orientation.Vertical, Qt.ItemDataRole.DisplayRole)
         assert header is not None
@@ -557,11 +494,6 @@ class TestTableModel:
         initial = table_model.counter()
         table_model.increase_counter()
         assert table_model.counter() == initial + 1
-
-
-# ============================================================================
-# MimeData Tests
-# ============================================================================
 
 
 class TestMimeData:

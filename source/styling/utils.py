@@ -127,6 +127,10 @@ class Svg:
                 "Source must be either string containing xml or ElementTree.Element object."
             )
 
+    @property
+    def tree(self) -> ET.Element:
+        return self._tree
+
     @classmethod
     def from_file(cls: Svg, path: str) -> Svg:
         path_obj = QFile(path)
@@ -136,7 +140,6 @@ class Svg:
     def colored(self, color: QColor) -> Svg:
         hex_color = color.name(QColor.NameFormat.HexRgb)
         opacity = color.alphaF()
-        # print(opacity)
 
         tree = copy.deepcopy(self._tree)
 
@@ -175,6 +178,19 @@ class Svg:
         tree.set("transform", f"rotate({rotation}, 12, 12)")
 
         return Svg(ET.tostring(tree, "unicode"))
+
+    @property
+    def rotation(self) -> int:
+        value = self._tree.get("transform")
+        if value:
+            cleaned = value.removeprefix("rotate(").strip("()")
+            values = cleaned.split(",")
+            if len(values) > 0:
+                try:
+                    return int(values[0])
+                except (ValueError, TypeError):
+                    pass
+        return 0
 
     def __str__(self):
         return ET.tostring(self._tree)

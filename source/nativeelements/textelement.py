@@ -125,7 +125,7 @@ class TextModel(QTextDocument, BaseElementModel):
     def delegate(self, toolset: BaseElementToolset, parent=None) -> TextDelegate:
         return TextDelegate(toolset, parent)
 
-    def presentable_item(self) -> QGraphicsTextItem:
+    def presentable_item(self) -> QGraphicsSvgItem:
         # item = QGraphicsTextItem()
         bytearr = QByteArray()
         buffer = QBuffer()
@@ -159,7 +159,7 @@ class TextModel(QTextDocument, BaseElementModel):
         return data
 
     def attrs(self) -> tuple[str]:
-        return tuple(["resource"])
+        return ("resource",)
 
     def close(self) -> None:
         self._resource.delete_member()
