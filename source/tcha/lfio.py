@@ -76,9 +76,12 @@ class TchPath:
             raise FileNotFoundError("Extracted files not found")
 
     def has_required_files(self) -> bool:
-        return all(
-            file in self._dir.iterdir() for file in ["structure.xml", "lesson.xml", "metadata.xml"]
-        )
+        files = [file.name for file in self._dir.iterdir()]
+        return all(file in files for file in ["structure.xml", "lesson.xml", "metadata.xml"])
+
+    @property
+    def dir(self) -> Path:
+        return self._dir
 
     @property
     def structure(self) -> QFile:
@@ -96,10 +99,12 @@ class TchPath:
         return str(self._dir / "resources" / basename) if self._has_resources else ""
 
 
-class LessonFile:
+class LessonFile(QObject):
+    progressChanged = pyqtSignal(int)
     """Provides file stream for serialised TCH-Documents"""
 
     def __init__(self):
+        super().__init__()
         self._save_buffer: SaveBuffer | None = None
 
         self._f: ZipFile | None = None
@@ -133,16 +138,21 @@ class LessonFile:
                 )
 
                 self._reader = XmlReader(TchPath(self._tempdir.name), self._logger)
+                self._reader.readingProgessChanged.connect(self.progressChanged.emit)
                 if self._reader.start_reading():
                     success = self._reader.read_metadata()
                     if success:
                         self._metadata = self._reader.metadata
                         self._state = WriteState.SerialisedFile
                         self._logger.set_file_id(self._metadata["file_id"])
+                        self._logger.log(
+                            logging.INFO, f"Started reading file of id: {self._metadata['file_id']}"
+                        )
                         success &= self._reader.read_lesson()
                         success &= self._reader.read_table()
                         self._reader.finish_reading()
                         self._logger.log(logging.INFO, "Finished reading operation.")
+                        self._reader.readingProgessChanged.disconnect()
                         return success
                 self._logger.log(logging.CRITICAL, "tch-file is missing components.")
                 return False
@@ -286,14 +296,13 @@ class LessonFile:
         """Returns TableModel if file is loaded."""
         if self._reader and self._reader.read_state == ReadState.ReadingFinished:
             model = self._reader.table_model
-            self._reader.clear_cache()
             return model
         else:
             self._reader.start_reading()
             if self._reader.read_table():
                 self._reader.finish_reading()
                 model = self._reader.table_model
-                self._reader.clear_cache()
+                self._reader.clear_caches()
                 return model
         return None
 
@@ -301,7 +310,6 @@ class LessonFile:
         """Returns Lesson model if file is loaded and could be read otherwise returns the default value."""
         if self._reader and self._reader.read_state == ReadState.ReadingFinished:
             model = self._reader.lesson_model
-            self._reader.clear_caches()
             return model
         else:
             self._reader.start_reading()
@@ -312,12 +320,20 @@ class LessonFile:
                 return model
         return None
 
+    def clear_caches(self) -> bool:
+        """Clears the reader's cache and returns True. If no reader initialised False is returned."""
+        if self._reader:
+            self._reader.clear_caches()
+            return True
+        return False
+
     def set_metadata(self, metadata: FileMetaData) -> None:
         self._metadata = metadata
 
     def generate_file_id(self) -> uuid.UUID:
         return uuid.uuid1()
 
+    @property
     def logger(self) -> IOLogger | None:
         return self._logger
 
@@ -443,7 +459,10 @@ class XmlReader(QObject):
             self._reading_state = ReadState.Reading
             self._reading_progess = 0
             return True
-        self._logger.log(logging.CRITICAL, "File is missing required data.")
+        self._logger.log(
+            logging.CRITICAL,
+            f"File is missing required data. Exisiting components: {[file.name for file in self._tchpath.dir.iterdir()]}",
+        )
         return False
 
     def finish_reading(self) -> None:
@@ -476,7 +495,8 @@ class XmlReader(QObject):
         self._reading_state = ReadState.Idling
 
     def raise_progress(self, by: int) -> None:
-        self._reading_progess += by
+        self._reading_progess += int(by)
+        print(f"Progress= {self._reading_progess}")
         self.readingProgessChanged.emit(self._reading_progess)
 
     def read_all(self) -> bool:
@@ -618,7 +638,7 @@ class XmlReader(QObject):
                         try:
                             tmodel: TableModel = TableModel.new_from_xml(attrs)
                             progress_increment = 68 / (
-                                tmodel.rowCount() * tmodel.columnCount() + tmodel.columnCount()
+                                tmodel.rowCount() * tmodel.columnCount() + tmodel.columnCount() + 1
                             )
                             in_table = True
 
@@ -672,16 +692,18 @@ class XmlReader(QObject):
                                         if definition and res_file:
                                             res_path = self._tchpath.resource(res_file)
                                             resobj = tmodel.rescont.save(
-                                                definition.type(), res_path
+                                                definition.type(), Path(res_path)
                                             )
                                             model = definition.model_from_xml(attrs, resobj)
                                             if model:
                                                 cell.append(model)
+                                                continue
                                             else:
                                                 self._logger.log(
                                                     logging.ERROR,
                                                     "Invalid values required to parse the element. Element is skipped.",
                                                 )
+                                                continue
                                         self._logger.log(
                                             logging.ERROR,
                                             f"Cell element of type '{attrs.value('type')}' or resource file is not defined. Element is skipped.",
@@ -718,6 +740,7 @@ class XmlReader(QObject):
                         case "table":
                             if row == tmodel.rowCount():
                                 in_table = False
+                                self.raise_progress(100 - self._reading_progess)
                                 break
                             self._logger.log(
                                 logging.ERROR,
@@ -727,7 +750,6 @@ class XmlReader(QObject):
                             break
 
             self._cached_table_model = tmodel
-            self.readingProgessChanged.emit(100)
             return tmodel is not None
         return False
 

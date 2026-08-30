@@ -1,5 +1,7 @@
 import logging
+import os
 import random
+import shutil
 import typing
 import uuid
 from dataclasses import dataclass
@@ -189,9 +191,9 @@ class IOLogger:
     def __init__(self, file_id: uuid.UUID | None = None):
         self._file_id = file_id
         self._logfile = (
-            self.logdir() / f"{file_id}.log"
+            IOLogger.logdir() / f"{file_id}.log"
             if file_id
-            else self.logdir() / f"unknown_{random.randbytes(32)}.log"
+            else IOLogger.logdir() / f"unknown_{random.getrandbits(32)}.log"
         )
         self._level = logging.NOTSET
 
@@ -206,6 +208,7 @@ class IOLogger:
 
     def _setup_logger(self) -> None:
         self._logger = logging.getLogger(str(self._session))
+        self._logger.setLevel(logging.INFO)
         self._session += 1
         self._logger.handlers.clear()
 
@@ -221,10 +224,15 @@ class IOLogger:
             self._logger.handlers.clear()
 
         old_logfile = self._logfile
-        new_logfile = self.logdir() / f"{file_id}.log"
+        new_logfile = IOLogger.logdir() / f"{file_id}.log"
 
-        if old_logfile.exists():
+        if old_logfile.exists() and not new_logfile.exists():
             old_logfile.rename(new_logfile)
+        elif new_logfile.exists():
+            old_records = old_logfile.read_text()
+            new_records = new_logfile.read_text()
+            new_logfile.write_text(new_records + old_records)
+            os.remove(old_logfile.as_posix())
 
         self._logfile = new_logfile
         self._file_id = file_id

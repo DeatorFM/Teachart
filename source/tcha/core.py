@@ -31,7 +31,7 @@ from tcha.dbmodels import (
 )
 from tcha.dialogs import DialogManager, Editor, PresenterView
 from tcha.elements import get_all_definitions
-from tcha.error import ErrorCode, ErrorLogger
+from tcha.error import ErrorCode, IOLogger
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, Values
 from tcha.start import OpenFileModel
@@ -146,8 +146,8 @@ class AppCore(QApplication, metaclass=MetaApp):
             self._first_time()
             return
 
-        if not ErrorLogger.logdir().exists():
-            ErrorLogger.logdir().mkdir(parents=True, exist_ok=True)
+        if not IOLogger.logdir().exists():
+            IOLogger.logdir().mkdir(parents=True, exist_ok=True)
 
         # Check database
         dbpath = Settings.value("User/dbpath")
@@ -281,7 +281,7 @@ class AppCore(QApplication, metaclass=MetaApp):
         editor_window.show()
         return editor_window.wid
 
-    def open_file(self, path: Path, caller=None) -> int:
+    def open_file(self, path: Path, caller: BaseMainWindow | None = None) -> int:
         if (
             path
             and path.exists()
@@ -295,9 +295,9 @@ class AppCore(QApplication, metaclass=MetaApp):
                 lf.progressChanged.connect(caller.set_progress)
                 translated_label = self.tr("Loading")
                 status_label = f"{translated_label} {path.name}"
-                caller.set_status_bar_mgs(status_label)
+                caller.set_status_bar_msg(status_label)
 
-            if self.open("r", str(path)):
+            if lf.open("r", str(path)):
                 editor_window = self._dialog_manager.open(
                     "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
                 )
@@ -313,11 +313,9 @@ class AppCore(QApplication, metaclass=MetaApp):
                 if lf.logger.evaluate() == ErrorCode.NonCritical:
                     QMessageBox.warning(
                         editor_window,
+                        self.tr("File reading error"),
                         self.tr(
-                            "File reading error",
-                            self.tr(
-                                "There was an error while reading the file. The document may not be displayed correctly."
-                            ),
+                            "There was an error while reading the file. The document may not be displayed correctly."
                         ),
                     )
 

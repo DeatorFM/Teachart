@@ -171,6 +171,7 @@ class Ui_StartWindow(object):
         start_window.setStatusBar(self.status_bar)
 
         self.loading_bar = QProgressBar(start_window)
+        self.loading_bar.setMaximum(100)
         self.loading_bar.setFixedWidth(80)
         self.loading_bar.setVisible(False)
         self.status_bar.addPermanentWidget(self.loading_bar)

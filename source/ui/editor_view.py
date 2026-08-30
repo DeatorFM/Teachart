@@ -176,6 +176,7 @@ class Ui_Editor(object):
         self.statusbar.addWidget(self.tb_row_up)
 
         self.loading_bar = QProgressBar(MainWindow)
+        self.loading_bar.setMaximum(100)
         self.loading_bar.setFixedWidth(80)
         self.loading_bar.setVisible(False)
         self.statusbar.addPermanentWidget(self.loading_bar)

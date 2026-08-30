@@ -177,7 +177,7 @@ class OpenFileModel(QAbstractTableModel):
 
 class StartWindow(BaseMainWindow):
     dialogCalled = pyqtSignal(str)
-    fileOpened = pyqtSignal(Path)
+    fileOpened = pyqtSignal(Path, BaseMainWindow)
 
     def __init__(
         self,
@@ -253,12 +253,12 @@ class StartWindow(BaseMainWindow):
 
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:
-            self.fileOpened.emit(index.data())
+            self.fileOpened.emit(index.data(), self)
 
     def open_scheduled(self, index: QModelIndex) -> None:
         new_idx = self._schedule_model.index(index.row(), 5)
         path = self._schedule_model.data(new_idx)
-        self.fileOpened.emit(Path(path))
+        self.fileOpened.emit(Path(path), self)
 
     def open_file_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -282,19 +282,19 @@ class StartWindow(BaseMainWindow):
             message = tr("No upcoming lessons today.")
         else:
             translated = tr("upcoming lessons today")
-            message = "{} {}".format(count, translated)
+            message = f"{count} {translated}"
 
         self.ui.status_bar.showMessage(message)
 
     def set_status_bar_msg(self, msg: str) -> None:
-        self.ui.statusbar.showMessage(msg)
+        self.ui.status_bar.showMessage(msg)
 
     def set_progress(self, value: int) -> None:
         self.ui.loading_bar.setVisible(True)
         self.ui.loading_bar.setValue(value)
 
     def reset_progress(self) -> None:
-        self.ui.statusbar.clearMessage()
+        self.ui.status_bar.clearMessage()
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
 
