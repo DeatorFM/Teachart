@@ -105,8 +105,8 @@ class MockTchPath:
     def metadata(self) -> QIODevice:
         return self._metadata_io
 
-    def resource(self, basename: str) -> MockPath:
-        return MockPath(basename)
+    def resource(self, basename: str) -> str:
+        return basename
 
 
 class MockIOLogger:
