@@ -1,7 +1,7 @@
+import datetime
 import logging
 import os
 import random
-import shutil
 import typing
 import uuid
 from dataclasses import dataclass
@@ -11,6 +11,7 @@ from pathlib import Path
 from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
+from PyQt6.QtWidgets import QApplication
 from tcha.utils import debug_enabled
 
 
@@ -186,6 +187,8 @@ class MetaLogger(type):
 
 
 class IOLogger:
+    """Logger for IO operations with .tch-files. Records all events and evaluates the success of the io operation."""
+
     _session = 0
 
     def __init__(self, file_id: uuid.UUID | None = None):
@@ -213,11 +216,14 @@ class IOLogger:
         self._logger.handlers.clear()
 
         handler = logging.FileHandler(self._logfile)
-        formatter = logging.Formatter("%(asctime)s - %(message)s")
+        formatter = logging.Formatter(
+            f"%(asctime)s - {self._file_id} - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
 
     def set_file_id(self, file_id: uuid.UUID) -> None:
+        """Renames the log file to the given file id. If a file with file_id already exists logs will be appended to the existing file."""
         if self._logger and self._logger.handlers:
             for handler in self._logger.handlers:
                 handler.close()
@@ -240,6 +246,7 @@ class IOLogger:
         self._setup_logger()
 
     def log(self, level: int, message: str) -> None:
+        """Log messsage with given level and message."""
         if level == logging.DEBUG and not debug_enabled():
             return
         self._logger.log(level, message)
@@ -257,4 +264,69 @@ class IOLogger:
         return ErrorCode.NoError
 
 
-class StandardLogger(metaclass=MetaLogger): ...
+class StandardLogger:
+    """Manages logger for current session of AppCore instance."""
+
+    _logger = None
+
+    @staticmethod
+    def logdir() -> Path:
+        from tcha.settings import Settings
+
+        Settings.user_path() / "sessionlogs"
+
+    @classmethod
+    def init_logger(cls) -> bool:
+        """Initialises the logger for the session."""
+        if not cls._logger:
+            cls.get_logger()
+            return True
+        return False
+
+    @classmethod
+    def get_logger(cls) -> logging.Logger:
+        """Gets the current logger. If no logger set up a new logger is created as long as a QApplication instance exists."""
+        if QApplication.instanceExists():
+            if not cls._logger:
+                logger = logging.getLogger(QApplication.instance().sessionId())
+                if debug_enabled():
+                    stream_handler = logging.StreamHandler()
+                    stream_handler.setLevel(logging.DEBUG)
+                    logger.addHandler(stream_handler)
+
+                now = datetime.datetime.now(datetime.UTC)
+                logpath = cls.logdir() / f"session_{now:%Y%m%d%H%M%S}.log"
+                file_handler = logging.FileHandler(str(logpath))
+                formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+                file_handler.setFormatter(formatter)
+                logger.addHandler(file_handler)
+                cls._logger = logger
+            return cls._logger
+        raise RuntimeError("QApplication not initialised")
+
+    # Convenience methods to log messages without retrieving the current instance
+
+    @classmethod
+    def debug(cls, *args, **kwargs):
+        if cls._logger:
+            cls._logger.debug(*args, **kwargs)
+
+    @classmethod
+    def info(cls, *args, **kwargs):
+        if cls._logger:
+            cls._logger.info(*args, **kwargs)
+
+    @classmethod
+    def warning(cls, *args, **kwargs):
+        if cls._logger:
+            cls._logger.warning(*args, **kwargs)
+
+    @classmethod
+    def error(cls, *args, **kwargs):
+        if cls._logger:
+            cls._logger.error(*args, **kwargs)
+
+    @classmethod
+    def critical(cls, *args, **kwargs):
+        if cls._logger:
+            cls._logger.critical(*args, **kwargs)

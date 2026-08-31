@@ -81,6 +81,7 @@ class TchPath:
 
     @property
     def dir(self) -> Path:
+        """Path to temporary directory with extracted files."""
         return self._dir
 
     @property

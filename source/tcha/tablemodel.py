@@ -1051,7 +1051,6 @@ class TableModel(QAbstractTableModel):
         return self.is_valid()
 
     def __del__(self) -> None:
-        print("TableModel deleted")
         if self._data:
             self.clear()
 
@@ -1112,6 +1111,6 @@ class IndexModel(QAbstractListModel):
         return None
 
     def flags(self, index: QModelIndex):
-        if index.row() not in map(lambda x: self._vheader.visualIndex(x.row()), self._inactive):
+        if index.row() not in (self._vheader.visualIndex(x.row()) for x in self._inactive):
             return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         return Qt.ItemFlag.NoItemFlags
