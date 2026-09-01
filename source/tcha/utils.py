@@ -5,7 +5,7 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, NotRequired
 
 from PyQt6.QtWidgets import QApplication
 from tcha.consts import DisplayMode
@@ -32,15 +32,17 @@ def core() -> QApplication:
 
 @dataclass(frozen=True)
 class LaunchConfig:
-    opened_path: Path | None
-    debug: bool
-    clean: bool
-    test: bool
-    test_parameters: dict
+    opened_path: Path | None # Opens editor with path on launch
+    debug: bool #  Activates debug features on launch
+    clean: bool # Starts the application in a initialised state
+    test: dict # Define test parameters the app should launch with
 
-
-class TestParameters(TypedDict): ...
-
+class TestParameters(TypedDict):
+    source_id: NotRequired[str] # Launch with custom source id for the session
+    db: NotRequired[str] # Launch with a specific database file
+    theme: NotRequired[str] # Launch with a specified theme or theme file: e.g. "native:dark", "lollipop", "themes/matcha.taste"
+    language: NotRequired[str] # Launch with specified language or language file: e.g. "German", "langs/German.ts"
+    confetti: NotRequired[bool] # Shows a confetti at startup
 
 @cache
 def _parser() -> ArgumentParser:
@@ -50,13 +52,7 @@ def _parser() -> ArgumentParser:
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--clean", action="store_true", help="Enable clean mode")
-    parser.add_argument("--test", action="store_true", help="Enable test mode")
-    parser.add_argument(
-        "--test-params",
-        type=str,
-        default="{}",
-        help='Test parameters as JSON string (e.g., \'{"source_id": "123"}\')',
-    )
+    parser.add_argument("--test", help="Enable test mode", type=str, default="{}", help='Test parameters as JSON string (e.g., \'{"source_id": "123"}\')')
     return parser
 
 
@@ -65,7 +61,7 @@ def parse_args() -> LaunchConfig:
     parsed = parser.parse_args()
 
     try:
-        test_params = json.loads(parsed.test_params)
+        test_params = json.loads(parsed.test)
     except json.JSONDecodeError:
         test_params = {}
 
@@ -73,7 +69,7 @@ def parse_args() -> LaunchConfig:
         Path(parsed.path) if parsed.path else None,
         parsed.debug,
         parsed.clean,
-        parsed.test,
+        any(test_params),
         test_params,
     )
 
