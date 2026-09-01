@@ -31,7 +31,7 @@ from tcha.dbmodels import (
 )
 from tcha.dialogs import DialogManager, Editor, PresenterView
 from tcha.elements import get_all_definitions
-from tcha.error import ErrorCode, IOLogger
+from tcha.error import ErrorCode, IOLogger, StandardLogger
 from tcha.lfio import LessonFile
 from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, Values
 from tcha.start import OpenFileModel
@@ -114,12 +114,12 @@ class AppCore(QApplication, metaclass=MetaApp):
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
         self._launch_config = parse_args()
+        if self._launch_config.test:
+            self._parse_test_parameter()
         self._restart_planned = False
 
+        StandardLogger.init_logger()
         self._startup_checks()
-
-        load_theme(Settings.value("User/appearance"), self)
-        apply_style(self)
 
         self._course_model = CourseModel(self._db)
         self._schedule_model = ScheduleModel(self._db)
@@ -150,7 +150,7 @@ class AppCore(QApplication, metaclass=MetaApp):
             IOLogger.logdir().mkdir(parents=True, exist_ok=True)
 
         # Check database
-        dbpath = Settings.value("User/dbpath")
+        dbpath = self._launch_config.test_params.get("db", Settings.value("User/dbpath"))
 
         if exists(dbpath):
             print(f"Data base file in '{dbpath}' found.")
@@ -175,6 +175,9 @@ class AppCore(QApplication, metaclass=MetaApp):
             self._db = create_database()
             Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
 
+        load_theme(Settings.value("User/appearance"), self)
+        apply_style(self)
+
     def _first_time(self) -> None:
         qsettings = Values.default_qsettings(clean=self._launch_config.clean)
         Settings.set_qsettings(qsettings)
@@ -186,6 +189,12 @@ class AppCore(QApplication, metaclass=MetaApp):
         print("Selected language", language)
         Settings.set_value("User/language", language.name)
 
+    def _parse_test_parameters(self) -> None:
+        for key in self._launch_config.test_params:
+            match key:
+                case "source_id":
+                    ...
+
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
 
@@ -195,10 +204,9 @@ class AppCore(QApplication, metaclass=MetaApp):
     def clean_mode_enabled(self) -> bool:
         return self._launch_config.clean
 
+    @cache  # noqa: B019
     def source_id(self) -> str:
-        return self._course_model.source_id()
-
-    def setup_logger(self) -> None: ...
+        return self._launch_config.test_params.get("source_id", self._course_model.source_id())
 
     def language_dialog(self) -> Locale:
         language, result = QInputDialog.getItem(
