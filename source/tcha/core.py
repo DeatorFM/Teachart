@@ -119,13 +119,18 @@ class AppCore(QApplication, metaclass=MetaApp):
         self._restart_planned = False
 
         StandardLogger.init_logger()
-        self._startup_checks()
+        self._load_settings()
 
         self._course_model = CourseModel(self._db)
         self._schedule_model = ScheduleModel(self._db)
         self._file_model = OpenFileModel(
             Settings.value("Application/recent"),
             Settings.value("Application/pinned"),
+        )
+        self._source_id = (
+            self._course_model.source_id()
+            if not self._launch_config.test
+            else self._launch_config.test_params.get("source_id", self._course_model.source_id())
         )
 
         self.init_display_mode = WinApi.get_display_mode()
@@ -141,7 +146,29 @@ class AppCore(QApplication, metaclass=MetaApp):
     def arguments() -> list[str]:
         return super().arguments()
 
-    def _startup_checks(self) -> None:
+    def _load_settings(self) -> None:
+        if not Settings.qsettings().allKeys() or self._launch_config.clean:
+            self._first_time()
+        if self._launch_config.test:
+            self._set_launch_settings(
+                dbpath=self._launch_config.test_params.get(
+                    "db", Path(Settings.value("User/dbpath"))
+                ),
+                appearance=self._launch_config.test_params.get(
+                    "theme", Settings.value("User/appearance")
+                ),
+                language=self._launch_config.test_params.get(
+                    "language", Settings.value("User/language")
+                ),
+            )
+        else:
+            self._set_launch_settings(
+                dbpath=Path(Settings.value("User/dbpath")),
+                appearance=Settings.value("User/appearance"),
+                language=Settings.value("User/language"),
+            )
+
+    def _set_launch_settings(self, *, dbpath: Path, appearance: str, language: Locale) -> None:
         if not Settings.qsettings().allKeys() or self._launch_config.clean:
             self._first_time()
             return
@@ -150,12 +177,10 @@ class AppCore(QApplication, metaclass=MetaApp):
             IOLogger.logdir().mkdir(parents=True, exist_ok=True)
 
         # Check database
-        dbpath = self._launch_config.test_params.get("db", Settings.value("User/dbpath"))
-
-        if exists(dbpath):
+        if dbpath.exists() and dbpath.is_file():
             print(f"Data base file in '{dbpath}' found.")
             db = QSqlDatabase.addDatabase("QSQLITE")
-            db.setDatabaseName(dbpath)
+            db.setDatabaseName(str(dbpath))
             if db.open() and check_database(db):
                 self._db = db
             else:
@@ -175,7 +200,7 @@ class AppCore(QApplication, metaclass=MetaApp):
             self._db = create_database()
             Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
 
-        load_theme(Settings.value("User/appearance"), self)
+        load_theme(appearance, self)
         apply_style(self)
 
     def _first_time(self) -> None:

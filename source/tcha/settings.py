@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QVBoxLayout,
-    QWidget,
 )
 from styling.properties import NTHEME_PROPERTIES
 from tcha.dbmodels import create_database, reset_database
@@ -449,7 +448,7 @@ class Values:
         "User/always_schedule": Value(False, bool, False, lambda val: word_as_bool(val)),
         "User/editor.compress_image": Value(False, bool, False, lambda val: word_as_bool(val)),
         "User/editor.single_selection": Value(False, bool, False, lambda val: word_as_bool(val)),
-        "User/dbpath": Value("NoDB", str, True),
+        "User/dbpath": Value(" ", str, True),
         "Application/pinned": Value([], list, True),
         "Application/recent": Value([], list, True),
         "Application/first_startup": Value(True, bool, False, lambda val: word_as_bool(val)),
@@ -509,7 +508,7 @@ class Values:
         )
 
         # TODO: Change before production
-        settings.setValue("dbpath", "NoDB")
+        settings.setValue("dbpath", Path(" "))
         settings.endGroup()
 
         settings.beginGroup("Application")

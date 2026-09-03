@@ -1,6 +1,8 @@
 import json
+import os.path as osp
 import zipfile
 from importlib import import_module
+from pathlib import Path
 
 from PyQt6.QtCore import (
     QByteArray,
@@ -51,7 +53,11 @@ def _load_native_theme(name: str, app: QApplication) -> bool:
 def _load_extern_theme(fname: str, app: QApplication) -> bool:
     from tcha.settings import Settings
 
-    taste_file = Settings.user_path() / "themes" / f"{fname}.taste"
+    taste_file = (
+        Path(fname)
+        if fname.endswith(".taste") and osp.exists(fname)
+        else Settings.user_path() / "themes" / f"{fname}.taste"
+    )
     try:
         with zipfile.ZipFile(taste_file, "r") as f_taste:
             properties = json.loads(f_taste.read("properties.json"))

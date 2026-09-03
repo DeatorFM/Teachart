@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import ctypes
-import json
-from argparse import ArgumentParser
+from argparse import SUPPRESS, ArgumentParser
 from ctypes import wintypes
 from dataclasses import dataclass
 from functools import cache
@@ -9,6 +10,8 @@ from typing import NotRequired, TypedDict
 
 from PyQt6.QtWidgets import QApplication
 from tcha.consts import DisplayMode
+
+# AppCore values convenience access
 
 
 @cache
@@ -36,12 +39,12 @@ class LaunchConfig:
     debug: bool  #  Activates debug features on launch
     clean: bool  # Starts the application in a initialised state
     test: bool
-    test_params: dict  # Define test parameters the app should launch with
+    test_params: TestParameters  # Define test parameters the app should launch with
 
 
 class TestParameters(TypedDict):
     source_id: NotRequired[str]  # Launch with custom source id for the session
-    db: NotRequired[str]  # Launch with a specific database file
+    db: NotRequired[Path]  # Launch with a specific database file
     theme: NotRequired[
         str
     ]  # Launch with a specified theme or theme file: e.g. "native:dark", "lollipop", "themes/matcha.taste"
@@ -52,18 +55,49 @@ class TestParameters(TypedDict):
 
 
 @cache
+def _test_parser() -> ArgumentParser:
+    from tcha.settings import Locale
+
+    parser = ArgumentParser(prog="--test", add_help=False)
+    parser.add_argument("--source_id", type=str)
+    parser.add_argument("--db", type=Path, help="Path to .tdb ot .db file with valid structure.")
+    parser.add_argument(
+        "--theme",
+        type=str,
+        help="Native theme (e.g. 'native:light'), theme from theme-folder or path to .taste-file.",
+    )
+    parser.add_argument("--language", type=lambda arg: Locale[arg], choices=["EnglishUK", "German"])
+    parser.add_argument(
+        "--confetti", type=bool, default=False, choices=[True, False], help="Not implemented yet."
+    )
+
+    return parser
+
+
+@cache
 def _parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument(
-        "path", nargs="?", default="", type=str, help="Path to file to open on launch"
+        "path", nargs="?", default="", type=Path, help="Path to file to open on launch"
     )
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
-    parser.add_argument("--clean", action="store_true", help="Enable clean mode")
+    parser.add_argument(
+        "--clean", action="store_true", help="Launch application with initialised settings."
+    )
     parser.add_argument(
         "--test",
+        action="extend",
+        nargs="*",
         type=str,
-        default="{}",
-        help='Test parameters as JSON string (e.g., \'{"source_id": "123"}\')',
+        help="Enable test features and change parameters by specifying in the arguments (e.g. --test source_id=B473DE34A)",
+    )
+    parser.add_argument(
+        "--debug",
+        type=int,
+        nargs="?",
+        const=30,
+        default=SUPPRESS,
+        choices=[0, 10, 20, 30, 40, 50],
+        help="Specify to enable debug features. You can set the logging level by passing and int otherwise it will be set to 30.",
     )
     return parser
 
@@ -72,10 +106,10 @@ def parse_args() -> LaunchConfig:
     parser = _parser()
     parsed = parser.parse_args()
 
-    try:
-        test_params = json.loads(parsed.test)
-    except json.JSONDecodeError:
-        test_params = {}
+    test_params = {}
+    if parsed.test:
+        test_parser = _test_parser()
+        test_params = test_parser.parse_args(parsed.test).__dict__
 
     return LaunchConfig(
         Path(parsed.path) if parsed.path else None,
