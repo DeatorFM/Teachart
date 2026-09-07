@@ -169,6 +169,7 @@ class AppCore(QApplication, metaclass=MetaApp):
             )
 
     def _set_launch_settings(self, *, dbpath: Path, appearance: str, language: Locale) -> None:
+        """Applies settings of arguments"""
         if not Settings.qsettings().allKeys() or self._launch_config.clean:
             self._first_time()
             return

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 from argparse import SUPPRESS, ArgumentParser
+from collections.abc import Iterable
 from ctypes import wintypes
 from dataclasses import dataclass
 from functools import cache
@@ -37,6 +38,7 @@ def core() -> QApplication:
 class LaunchConfig:
     opened_path: Path | None  # Opens editor with path on launch
     debug: bool  #  Activates debug features on launch
+    logging_level: int
     clean: bool  # Starts the application in a initialised state
     test: bool
     test_params: TestParameters  # Define test parameters the app should launch with
@@ -55,10 +57,11 @@ class TestParameters(TypedDict):
 
 
 @cache
-def _test_parser() -> ArgumentParser:
-    from tcha.settings import Locale
+def _test_parser(exit_on_error=True) -> ArgumentParser:
 
-    parser = ArgumentParser(prog="--test", add_help=False)
+    parser = ArgumentParser(
+        prog="--test", add_help=False, argument_default=SUPPRESS, exit_on_error=exit_on_error
+    )
     parser.add_argument("--source_id", type=str)
     parser.add_argument("--db", type=Path, help="Path to .tdb ot .db file with valid structure.")
     parser.add_argument(
@@ -66,53 +69,54 @@ def _test_parser() -> ArgumentParser:
         type=str,
         help="Native theme (e.g. 'native:light'), theme from theme-folder or path to .taste-file.",
     )
-    parser.add_argument("--language", type=lambda arg: Locale[arg], choices=["EnglishUK", "German"])
-    parser.add_argument(
-        "--confetti", type=bool, default=False, choices=[True, False], help="Not implemented yet."
-    )
+    parser.add_argument("--confetti", type=lambda arg: arg.lower() == "true", choices=[True, False])
 
     return parser
 
 
 @cache
-def _parser() -> ArgumentParser:
-    parser = ArgumentParser()
+def _parser(exit_on_error=True) -> ArgumentParser:
+    parser = ArgumentParser(exit_on_error=exit_on_error)
     parser.add_argument(
-        "path", nargs="?", default="", type=Path, help="Path to file to open on launch"
+        "path", nargs="?", default=None, type=Path, help="Path to file to open on launch"
     )
     parser.add_argument(
-        "--clean", action="store_true", help="Launch application with initialised settings."
+        "--clean",
+        action="store_true",
+        default=False,
+        help="Launch application with initialised settings.",
     )
     parser.add_argument(
         "--test",
         action="extend",
         nargs="*",
-        type=str,
+        type=lambda arg: f"--{arg}",
         help="Enable test features and change parameters by specifying in the arguments (e.g. --test source_id=B473DE34A)",
     )
     parser.add_argument(
         "--debug",
         type=int,
         nargs="?",
-        const=30,
-        default=SUPPRESS,
+        const=0,
+        default=30,
         choices=[0, 10, 20, 30, 40, 50],
         help="Specify to enable debug features. You can set the logging level by passing and int otherwise it will be set to 30.",
     )
     return parser
 
 
-def parse_args() -> LaunchConfig:
-    parser = _parser()
-    parsed = parser.parse_args()
+def parse_args(args: Iterable | None = None, *, exit_on_error=True) -> LaunchConfig:
+    parser = _parser(exit_on_error)
+    parsed = parser.parse_args() if args is None else parser.parse_args(args)
 
     test_params = {}
     if parsed.test:
-        test_parser = _test_parser()
+        test_parser = _test_parser(exit_on_error)
         test_params = test_parser.parse_args(parsed.test).__dict__
 
     return LaunchConfig(
         Path(parsed.path) if parsed.path else None,
+        parsed.debug > 0,
         parsed.debug,
         parsed.clean,
         any(test_params),
