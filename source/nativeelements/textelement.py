@@ -246,6 +246,7 @@ class TextModel(QTextDocument, BaseElementModel):
     def shcopy(self) -> TextModel:
         model = TextModel(self.resource)
         model.setHtml(self.toHtml())
+        model.resource.delete_member()
         return model
 
     def to_byte_array(self) -> QByteArray:
@@ -274,7 +275,7 @@ class TextEditor(BaseTextElementEditor):
     def __init__(self, target_width: float, model: TextModel, parent=None) -> None:
         super().__init__(parent)
         StandardLogger.debug(
-            f"Open TextEditor with target width: {target_width}", extra={"sender", "TEXTEDITOR"}
+            f"Open TextEditor with target width: {target_width}", extra={"sender": "TEXTEDITOR"}
         )
         self.setDocument(model)
 
@@ -315,7 +316,7 @@ class TextEditor(BaseTextElementEditor):
         return self.document()
 
     def can_copy(self) -> bool:
-        return False if self.textCursor().hasSelection() else True
+        return not self.textCursor().hasSelection()
 
     def connect_signals(self) -> None:
         self.currentCharFormatChanged.connect(self.on_char_format_changed)
@@ -462,9 +463,7 @@ class TextEditor(BaseTextElementEditor):
         self.currentPropsChanged.emit(self.current_text_props())
 
     def is_empty(self) -> bool:
-        if self.document().characterCount() <= 1:
-            return True
-        return False
+        return self.document().characterCount() <= 1
 
     def on_new_block(self) -> None:
         self.set_text_format(self.last_format)
@@ -1005,7 +1004,7 @@ class TextToolset(BaseElementToolset):
             self.ui.ac_delete_table.disconnect()
         except (RuntimeError, TypeError):
             StandardLogger.error(
-                "Disconnection error with TextToolset", extra={"sender", "TEXTTOOLSET"}
+                "Disconnection error with TextToolset", extra={"sender": "TEXTTOOLSET"}
             )
 
         self._fontProperties.clear()

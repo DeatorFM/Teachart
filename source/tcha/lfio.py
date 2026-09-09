@@ -133,7 +133,7 @@ class LessonFile(QObject):
                 self._tempdir = tempfile.TemporaryDirectory(".tmp", "TCHA", delete=False)
                 StandardLogger.debug(
                     f"Created temporary directory at {self._tempdir.name}",
-                    extra={"sender", "LESSONFILE"},
+                    extra={"sender": "LESSONFILE"},
                 )
                 self._f = ZipFile(path, mode)
                 self._f.extractall(self.temppath)
@@ -258,7 +258,7 @@ class LessonFile(QObject):
 
         StandardLogger.info(
             "Prepare save operation: Writing buffer to LessonFile object",
-            extra={"sender", "LESSONFILE"},
+            extra={"sender": "LESSONFILE"},
         )
         struct_buffer = XmlWriter.write_struct_xml(tablemodel)
         lesson_buffer = XmlWriter.write_lesson_xml(lesson)

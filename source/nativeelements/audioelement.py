@@ -210,6 +210,7 @@ class AudioModel(BaseElementModel):
             self.end_time,
         )
         model.set_text(self.text)
+        model.resource.delete_member()
         return model
 
     def to_byte_array(self) -> QByteArray:
@@ -325,7 +326,7 @@ class AudioEditor(BaseElementEditor):
             self._loaded = True
 
     def set_playback_state(self, state: QMediaPlayer.PlaybackState) -> None:
-        StandardLogger.info(f"Playback state set to {state}", extra={"sender", "AUDIOEDITOR"})
+        StandardLogger.info(f"Playback state set to {state}", extra={"sender": "AUDIOEDITOR"})
         if state == QMediaPlayer.PlaybackState.StoppedState:
             self.player.stop()
             self.ui.swi_PlayPause.changeState(1)
@@ -337,7 +338,7 @@ class AudioEditor(BaseElementEditor):
             self.player.pause()
             self.ui.swi_PlayPause.changeState(1)
         StandardLogger.error(
-            f"Error on playback: {self.player.errorString()}", extra={"sender", "AUDIOEDITOR"}
+            f"Error on playback: {self.player.errorString()}", extra={"sender": "AUDIOEDITOR"}
         )
 
     def on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
@@ -381,7 +382,7 @@ class AudioEditor(BaseElementEditor):
             if self._repeats > 0:
                 StandardLogger.debug(
                     f"Repeating. Remaining repeats: {self._repeats}",
-                    extra={"sender", "AUDIOEDITOR"},
+                    extra={"sender": "AUDIOEDITOR"},
                 )
                 self._repeats -= 1
                 QTimer.singleShot(
@@ -506,7 +507,7 @@ class AudioDelegate(BaseElementDelegate):
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
-            StandardLogger.debug(f"Media status:  {status}", extra={"sender", "AUDIOEDITOR"})
+            StandardLogger.debug(f"Media status:  {status}", extra={"sender": "AUDIOEDITOR"})
             self._toolset.connect_editor(self._cached_editor)
             self._toolset.enable_presenter_mode(self.pres_mode)
             self._cached_editor.player.mediaStatusChanged.disconnect(self.on_media_status_changed)
@@ -623,7 +624,7 @@ class AudioToolset(BaseElementToolset):
         self.set_start_end_time(model.start_time, model.end_time)
 
     def set_track_length(self, duration: int) -> None:
-        StandardLogger.debug(f"Duration is {duration}", extra={"sender", "AUDIOTOOLSET"})
+        StandardLogger.debug(f"Duration is {duration}", extra={"sender": "AUDIOTOOLSET"})
         self.ui.hs_PlayTime.setMaximum(duration)
         self.ui.hs_PlayTime.setTickInterval(duration // 100)
 

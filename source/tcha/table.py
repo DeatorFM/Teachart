@@ -236,7 +236,7 @@ class CellEditor(QListView):
     def move_element_down(self) -> None:
         model = self.model()
         index = self.currentIndex()
-        if not index.row() == model.rowCount() - 1:
+        if index.row() != model.rowCount() - 1:
             model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
 
     def clear_item(self) -> None:

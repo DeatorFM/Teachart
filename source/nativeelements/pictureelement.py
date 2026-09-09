@@ -216,6 +216,7 @@ class PictureModel(BaseElementModel):
 
     def shcopy(self) -> PictureModel:
         model = PictureModel(self.resource, self.width, self.height, self.rotation, self.adjusted)
+        model.resource.delete_member()
         return model
 
     def to_byte_array(self) -> QByteArray:

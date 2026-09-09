@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import typing
 from functools import cache
-from os.path import abspath, exists
+from os.path import abspath
 from pathlib import Path
 from shutil import rmtree
 from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QDateTime, QPersistentModelIndex, QTimer, pyqtSignal
+from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon
-from PyQt6.QtSql import QSqlDatabase
+from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -151,11 +151,11 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def session_info(self) -> str:
         return f"""
-Session-ID:    {self.sessionId()}\n
-Debug ON:      {self._launch_config.debug}\n
-Database file: {self._launch_config.test_params.get("db", Settings.value("User/dbpath"))}\n
-Source-ID:     {self.source_id()}\n
-Language:      {self._launch_config.test_params.get("language", Settings.value("User/language").name)}\n
+Session-ID:    {self.sessionId()}
+Debug ON:      {self._launch_config.debug}
+Database file: {self._launch_config.test_params.get("db", Settings.value("User/dbpath"))}
+Source-ID:     {self.source_id()}
+Language:      {self._launch_config.test_params.get("language", Settings.value("User/language").name)}
 Appearance:    {self._launch_config.test_params.get("User/appearance", Settings.value("User/appearance"))}
 """
 
@@ -245,7 +245,16 @@ Appearance:    {self._launch_config.test_params.get("User/appearance", Settings.
 
     @cache  # noqa: B019
     def source_id(self) -> str:
-        return self._launch_config.test_params.get("source_id", self._course_model.source_id())
+        def from_db() -> str:
+            if self._db:
+                query = QSqlQuery(self._db)
+                query.prepare("SELECT value FROM metadata WHERE key = 'source_id'")
+                if query.exec() and query.next():
+                    return query.value(0)
+                return "0"
+            return "0"
+
+        return self._launch_config.test_params.get("source_id", from_db())
 
     def language_dialog(self) -> Locale:
         language, result = QInputDialog.getItem(
@@ -297,7 +306,7 @@ Appearance:    {self._launch_config.test_params.get("User/appearance", Settings.
 
     def _on_window_closed(self, wtype: str, wid: int):
         window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
-        StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender", "APPCORE"})
+        StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender": "APPCORE"})
         if window.close_state == CloseState.CanCloseLater and self._restart_planned:
             self._dialog_manager.mark_closed(wtype, wid)
             self.restart()

@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import random
+import sys
 import typing
 import uuid
 from dataclasses import dataclass
@@ -246,6 +247,8 @@ class IOLogger:
 
     def log(self, level: int, message: str) -> None:
         """Log messsage with given level and message."""
+        from tcha.utils import debug_enabled
+
         if level == logging.DEBUG and not debug_enabled():
             return
         self._logger.log(level, message)
@@ -272,13 +275,13 @@ class StandardLogger:
     def logdir() -> Path:
         from tcha.settings import Settings
 
-        Settings.user_path() / "sessionlogs"
+        return Settings.user_path() / "sessionlogs"
 
     @classmethod
     def init_logger(cls, level: int) -> bool:
         """Initialises the logger for the session."""
         if not cls._logger:
-            cls.get_logger()
+            cls.get_logger(level)
             return True
         return False
 
@@ -287,25 +290,33 @@ class StandardLogger:
         """Gets the current logger. If no logger set up a new logger is created as long as a QApplication instance exists."""
         from tcha.utils import debug_enabled
 
-        if QApplication.instanceExists():
+        if QApplication.instance():
             if not cls._logger:
                 logger = logging.getLogger(QApplication.instance().sessionId())
+                logger.setLevel(level)
+                logger.propagate = False
                 if debug_enabled():
-                    stream_handler = logging.StreamHandler()
-                    formatter = logging.Formatter("%(levelname)s %(sender)s - %(message)s")
+                    stream_handler = logging.StreamHandler(sys.stdout)
+                    formatter = logging.Formatter(
+                        "%(levelname)s %(sender)s - %(message)s",
+                        defaults={"sender": "APP"},
+                    )
                     stream_handler.setFormatter(formatter)
                     stream_handler.setLevel(logging.DEBUG)
                     logger.addHandler(stream_handler)
 
                 now = datetime.datetime.now(datetime.UTC)
+                if not cls.logdir().exists():
+                    cls.logdir().mkdir()
                 logpath = cls.logdir() / f"session_{now:%Y%m%d%H%M%S}.log"
                 if level > 0:
                     file_handler = logging.FileHandler(str(logpath))
                     formatter = logging.Formatter(
-                        "%(asctime)s - %(levelname)s - %(sender)s - %(message)s"
+                        "%(asctime)s - %(levelname)s - %(sender)s - %(message)s",
+                        defaults={"sender": "APP"},
                     )
                     file_handler.setFormatter(formatter)
-                    file_handler.setLevel(int)
+                    file_handler.setLevel(level)
                     logger.addHandler(file_handler)
                 cls._logger = logger
             return cls._logger

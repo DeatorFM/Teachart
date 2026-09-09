@@ -5,10 +5,10 @@ import random
 import string
 import tempfile
 from abc import ABCMeta, abstractmethod
-from collections.abc import KeysView, ValuesView
+from collections.abc import Callable, KeysView, ValuesView
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
 from tcha.error import StandardLogger
@@ -48,13 +48,14 @@ class ResourceObject(QObject):
     def delete_member(self) -> None:
         """Decreases member count in case a model stops using this resource"""
         self._member_count -= 1
-        if self._member_count == 0:
-            self.resourceExpired.emit(self.name, self._type, self._type_num)
-            self.close()
+        print(f"New member count: {self._member_count}")
+        if self._member_count < 1:
             StandardLogger.debug(
                 f"Object of name '{self.name}' and type '{self.type.name}' of no. {self.type_num} has expired.",
                 extra={"sender": "RESOURCEOBJECT"},
             )
+            self.resourceExpired.emit(self.name, self._type, self._type_num)
+            self.close()
 
     def adjust_type_num(self, num: int) -> bool:
         """Adjusts the type number and returns True if adjusted."""
@@ -268,11 +269,18 @@ class ResourceContainer(QObject):
     def delete(self, name: str, restype: ResourceType, num: int) -> bool:
         """Removes object with given name ResourceTyoe and number from container"""
         try:
-            StandardLogger.debug(f"Deleting ResourceObject: name={name} type=restype")
+            StandardLogger.debug(
+                f"Deleting ResourceObject: name={name} type=restype",
+                extra={"sender": "RESOURCECONTAINER"},
+            )
             del self._objects[name]
             self._adjust_type_nums(restype, num)
             return True
         except KeyError:
+            StandardLogger.error(
+                f"Could not delete ResourceObject: name={name} type=restype. Not found.",
+                extra={"sender": "RESOURCECONTAINER"},
+            )
             return False
 
     def names(self) -> KeysView[str]:
