@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.properties import NTHEME_PROPERTIES
 from tcha.dbmodels import create_database, reset_database
+from tcha.error import StandardLogger
 from tcha.utils import debug_enabled, word_as_bool
 
 
@@ -47,7 +48,10 @@ def get_external_theme_names() -> Iterator[tuple[str, str]]:
                     if "name" in properties:
                         yield file.stem, properties["name"]
             except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
-                print(f"Warning: Could not read theme from {file.name}: {e}")
+                StandardLogger.warning(
+                    f"Warning: Could not read theme from {file.name}: {e}",
+                    extra={"sender": "SETTINGS"},
+                )
                 continue
 
 
@@ -201,7 +205,6 @@ class SettingsDialog(QDialog):
     def _set_ui_for_values(self) -> None:
         """Makes UI reflect the settings' values"""
         for key, value in filter(lambda x: x[0].startswith("User/"), self.settings.items()):
-            print(key, value)
             self._settings_map[key](value)
 
     def _select_appearance(self, value: str) -> None:
@@ -293,9 +296,7 @@ class SettingsDialog(QDialog):
                 "Resetting the database will delete all course, schedule and student records.\nDo you still want to proceed?"
             ),
         )
-        if response == QMessageBox.StandardButton.Yes:
-            ok = reset_database(self.database)
-            print("Comitted", ok)
+        if response == QMessageBox.StandardButton.Yes and reset_database(self.database):
             self._return_flag |= ReturnFlags.Restart
 
     def save_all(self) -> None:
@@ -368,7 +369,6 @@ class Settings:
         values = {}
 
         for key in Values.keys():  # noqa: SIM118
-            print(f"Getting key {key}")
             values[key] = Settings.value(key)
 
         return values
@@ -389,7 +389,10 @@ class Settings:
                     return definition.get(raw_value)
                 except (ValueError, TypeError):
                     pass
-            print(f"Key {key} not existing. Adding as default")
+            StandardLogger.error(
+                f"Value of setting '{key}' not existing. Adding as default",
+                extra={"sender": "SETTINGS"},
+            )
             Settings.set_default(key)
             return Settings.value(key)
         return None

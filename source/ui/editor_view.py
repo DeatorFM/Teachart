@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import CanvasTool, CellAction
+from tcha.error import StandardLogger
 from tcha.settings import Locale, Settings, TimeFormat
 from tcha.table import PresenterCanvas, Table
 from tcha.utils import debug_enabled
@@ -886,17 +887,16 @@ class Ui_Editor(object):
         self.sb_duration.setSuffix(MainWindow.tr(" min"))
 
     def add_element_actions(self, edefinitions: dict[str, BaseElementDefinitions]) -> None:
-        for key in edefinitions.keys():
+        StandardLogger.debug(f"Available menu actions {edefinitions.keys()}")
+        for key in edefinitions:  # noqa: PLC0206
             action = edefinitions[key].action(self.menu_elements)
-            print("Add Action from element", action.data())
             self.menu_elements.addAction(action)
-            print("Current menu actions", self.menu_elements.actions())
 
     def add_toolsets(
         self, window: QMainWindow, edefinitions: dict[str, BaseElementDefinitions]
     ) -> dict[str, BaseElementToolset]:
         d = {}
-        for key in edefinitions.keys():
+        for key in edefinitions:  # noqa: PLC0206
             toolset = edefinitions[key].toolset(window)
             window.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolset)
             toolset.setVisible(False)

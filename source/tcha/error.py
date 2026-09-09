@@ -12,7 +12,6 @@ from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtWidgets import QApplication
-from tcha.utils import debug_enabled
 
 
 @dataclass(frozen=True)
@@ -276,7 +275,7 @@ class StandardLogger:
         Settings.user_path() / "sessionlogs"
 
     @classmethod
-    def init_logger(cls) -> bool:
+    def init_logger(cls, level: int) -> bool:
         """Initialises the logger for the session."""
         if not cls._logger:
             cls.get_logger()
@@ -284,22 +283,30 @@ class StandardLogger:
         return False
 
     @classmethod
-    def get_logger(cls) -> logging.Logger:
+    def get_logger(cls, level: int = 0) -> logging.Logger:
         """Gets the current logger. If no logger set up a new logger is created as long as a QApplication instance exists."""
+        from tcha.utils import debug_enabled
+
         if QApplication.instanceExists():
             if not cls._logger:
                 logger = logging.getLogger(QApplication.instance().sessionId())
                 if debug_enabled():
                     stream_handler = logging.StreamHandler()
+                    formatter = logging.Formatter("%(levelname)s %(sender)s - %(message)s")
+                    stream_handler.setFormatter(formatter)
                     stream_handler.setLevel(logging.DEBUG)
                     logger.addHandler(stream_handler)
 
                 now = datetime.datetime.now(datetime.UTC)
                 logpath = cls.logdir() / f"session_{now:%Y%m%d%H%M%S}.log"
-                file_handler = logging.FileHandler(str(logpath))
-                formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-                file_handler.setFormatter(formatter)
-                logger.addHandler(file_handler)
+                if level > 0:
+                    file_handler = logging.FileHandler(str(logpath))
+                    formatter = logging.Formatter(
+                        "%(asctime)s - %(levelname)s - %(sender)s - %(message)s"
+                    )
+                    file_handler.setFormatter(formatter)
+                    file_handler.setLevel(int)
+                    logger.addHandler(file_handler)
                 cls._logger = logger
             return cls._logger
         raise RuntimeError("QApplication not initialised")

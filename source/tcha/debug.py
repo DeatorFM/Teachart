@@ -80,7 +80,6 @@ class ResourceViewModel(QAbstractTableModel):
         return 4
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole) -> str | None:
-        # print(f"Getting data for {index.row()}|{index.column()}")
         if role == Qt.ItemDataRole.DisplayRole:
             resobj = self._rescont[index.row()]
             match index.column():
@@ -91,7 +90,6 @@ class ResourceViewModel(QAbstractTableModel):
                 case 2:
                     return resobj.path.as_posix() if resobj.path else "Not an external resource"
                 case 3:
-                    print(resobj.member_count)
                     return str(resobj.member_count)
         return None
 
@@ -369,10 +367,6 @@ class TableTreeView(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool)
         self.ui = uic.loadUi("ui/debug_table.ui", self)
-        self.ui.tv_table.doubleClicked.connect(self.index_double_clicked)
-
-    def index_double_clicked(self, index: QModelIndex) -> None:
-        print("Clicked: ", index.row(), index.column())
 
     def setup_view(self, tablemodel: TableModel) -> None:
         tree_model = TreeTableModel(tablemodel, None)

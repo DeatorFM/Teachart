@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Self
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
@@ -24,6 +25,7 @@ from PyQt6.QtSql import (
     QSqlRelationalTableModel,
     QSqlTableModel,
 )
+from tcha.error import StandardLogger
 
 # Common methods
 
@@ -76,7 +78,6 @@ def create_database() -> QSqlDatabase:
     path = Settings.user_path() / "db" / f"tcha{num}.tdb"
     db.setDatabaseName(path.as_posix())
     ok = db.open()
-    print("Success", ok)
 
     for query in QUERIES.values():
         db.exec(query)
@@ -103,6 +104,8 @@ def create_database() -> QSqlDatabase:
 
 
 def check_database(db: QSqlDatabase) -> bool:
+    """Checks the database if the queries match and returns True otherwise False."""
+    StandardLogger.info(f"Checking data base at {db.databaseName()}", extra={"sender": "DBMODELS"})
     if not db.isOpen():
         db.open()
 
@@ -110,14 +113,19 @@ def check_database(db: QSqlDatabase) -> bool:
         "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
     )
     while query.next():
-        print("Table", query.value("name"), ":", query.value("sql"))
         name = query.value("name")
         if QUERIES[name].strip() == query.value("sql").strip():
             return True
         else:
-            # FUTURE ERROR HANDLER
-            print(f"Table '{name}' is invalid. Database needs to be rebuilt.")
+            StandardLogger.error(
+                f"Database at '{db.databaseName()}' has an invalid structure.",
+                extra={"sender": "DBMODELS"},
+            )
             return False
+    StandardLogger.error(
+        f"Database at '{db.databaseName()}' is missing queries.",
+        extra={"sender": "DBMODELS"},
+    )
     return False
 
 
@@ -171,6 +179,18 @@ class StudentItem:
         )
 
 
+@dataclass(frozen=True)
+class ScheduleItem:
+    id: int
+    course_id: int
+    datetime: QDateTime
+    file_id: uuid.UUID
+    path: Path
+
+    def __str__(self):
+        return f"ScheduleItem(id={self.id} course_id={self.course_id} datetime={self.datetime.toString('dd/MM/yyyy-HH:mm')} file_id={self.file_id} path={self.path!s})"
+
+
 class CourseModel(QSqlTableModel):
     courseDataChanged = pyqtSignal()
 
@@ -193,9 +213,10 @@ class CourseModel(QSqlTableModel):
                 self.courseDataChanged.emit()
                 return self.data(self.index(self.rowCount() - 1, 0))
         else:
-            print("Insert Failed")
-            print(f"Database Error: {self.database().lastError().text()}")
-            print(f"Model Error: {self.lastError().text()}")
+            StandardLogger.error(
+                f"Adding new course failed.\nDatabase Error:{self.database().lastError().text()}\nModel Error: {self.lastError().text()}",
+                extra={"sender": "COURSEMODEL"},
+            )
         return 0
 
     def remove_by_id(self, id: int) -> bool:
@@ -331,7 +352,6 @@ class ScheduleModel(QSqlRelationalTableModel):
         """Returns the index for the first record with file id."""
         for row in range(self.rowCount()):
             record = self.record(row)
-            print("Checking file id: ", record.value("file_id"), "with", file_id)
             if record.value("file_id") == str(file_id):
                 return self.index(row, 0)
         return QModelIndex()
@@ -342,7 +362,6 @@ class ScheduleModel(QSqlRelationalTableModel):
         query.prepare("SELECT course_id FROM Schedules WHERE id = ?")
         query.addBindValue(super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole))
         if query.exec() and query.next():
-            print("Return course id")
             return query.value(0)
         return 0
 
@@ -448,6 +467,21 @@ class ScheduleModel(QSqlRelationalTableModel):
                 return msecs
         return super().data(item, role)
 
+    def get_schedule(self, file_id: uuid.UUID) -> ScheduleItem | None:
+        idx = self.index_for_file_id(file_id)
+        if idx.isValid():
+            record = self.record(idx.row())
+            datetime = QDateTime()
+            datetime.setDate(QDate.fromJulianDay(record.value("date")))
+            datetime.setTime(QTime.fromMSecsSinceStartOfDay(record.value("time")))
+            return ScheduleItem(
+                record.value("id"),
+                record.value("course_id"),
+                datetime,
+                file_id,
+                Path(record.value("path")),
+            )
+
 
 class StudentModel(QSqlRelationalTableModel):
     valueChanged = pyqtSignal(QModelIndex, QVariant, QVariant)
@@ -509,7 +543,6 @@ class StudentModel(QSqlRelationalTableModel):
 
     def getRow(self, item: QModelIndex) -> StudentItem:
         record = self.record(item.row())
-        print(f"Aliased field name: {record.fieldName(2)}")
         return StudentItem.from_record(record)
 
     def course_id(self, index: QModelIndex) -> int:
@@ -517,17 +550,13 @@ class StudentModel(QSqlRelationalTableModel):
         query.prepare("SELECT course_id FROM Students WHERE id = ?")
         query.addBindValue(super().data(self.index(index.row(), 0), Qt.ItemDataRole.DisplayRole))
         if query.exec() and query.next():
-            print("Return course id")
             return query.value(0)
         return 0
 
     def on_value_change(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: list) -> None:
-        print("Value has been changed")
         self.submit()
         if topLeft.isValid() and bottomRight.isValid():
-            print("Is valid")
             new_value = self.data(self.createIndex(topLeft.row(), 2), Qt.ItemDataRole.EditRole)
-            print("New id: ", new_value)
 
     def headerData(self, section, orientation, role=...):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
@@ -582,7 +611,6 @@ class FilteredCourseModel(QSortFilterProxyModel):
 
         source_index = self.sourceModel().index(source_row, 0)
         course: CourseItem = self.sourceModel().data(source_index, Qt.ItemDataRole.UserRole)
-        print(course.source_id)
         search = self._search_str.lower()
 
         if search in course.name.lower():
@@ -629,7 +657,10 @@ class FilteredStudentModel(QSortFilterProxyModel):
     def add_excluded_student_id(self, student_id: int) -> None:
         self.beginFilterChange()
         self._excluded_student_ids.append(student_id)
-        print("Currently filtered student ids: ", self._excluded_student_ids)
+        StandardLogger.debug(
+            f"Currently filtered student ids: {self._excluded_student_ids}",
+            extra={"sender": "FILTEREDSTUDENTMODEL"},
+        )
         self.invalidateFilter()
 
     def remove_excluded_student_id(self, student_id: int) -> bool:

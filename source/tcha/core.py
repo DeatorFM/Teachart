@@ -114,11 +114,13 @@ class AppCore(QApplication, metaclass=MetaApp):
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
         self._launch_config = parse_args()
-        if self._launch_config.test:
-            self._parse_test_parameter()
         self._restart_planned = False
 
-        StandardLogger.init_logger()
+        StandardLogger.init_logger(self._launch_config.logging_level)
+        StandardLogger.info(
+            f"Launched app with arguments: {self._launch_config}", extra={"sender": "APPCORE"}
+        )
+
         self._load_settings()
 
         self._course_model = CourseModel(self._db)
@@ -134,8 +136,9 @@ class AppCore(QApplication, metaclass=MetaApp):
         )
 
         self.init_display_mode = WinApi.get_display_mode()
-        print(f"Initial display mode: {self.init_display_mode}")
-        self.setProperty("globalIndex", QPersistentModelIndex())
+        StandardLogger.info(
+            f"Initial display mode: {self.init_display_mode}", extra={"sender": "APPCORE"}
+        )
 
         self.aboutToQuit.connect(self.on_quitting)
         self.screenAdded.connect(self.on_screen_changed)
@@ -145,6 +148,16 @@ class AppCore(QApplication, metaclass=MetaApp):
     @staticmethod
     def arguments() -> list[str]:
         return super().arguments()
+
+    def session_info(self) -> str:
+        return f"""
+Session-ID:    {self.sessionId()}\n
+Debug ON:      {self._launch_config.debug}\n
+Database file: {self._launch_config.test_params.get("db", Settings.value("User/dbpath"))}\n
+Source-ID:     {self.source_id()}\n
+Language:      {self._launch_config.test_params.get("language", Settings.value("User/language").name)}\n
+Appearance:    {self._launch_config.test_params.get("User/appearance", Settings.value("User/appearance"))}
+"""
 
     def _load_settings(self) -> None:
         if not Settings.qsettings().allKeys() or self._launch_config.clean:
@@ -179,12 +192,14 @@ class AppCore(QApplication, metaclass=MetaApp):
 
         # Check database
         if dbpath.exists() and dbpath.is_file():
-            print(f"Data base file in '{dbpath}' found.")
             db = QSqlDatabase.addDatabase("QSQLITE")
             db.setDatabaseName(str(dbpath))
             if db.open() and check_database(db):
                 self._db = db
             else:
+                StandardLogger.error(
+                    f"Database invalid under path: {dbpath}", extra={"sender": "APPCORE"}
+                )
                 QMessageBox.information(
                     None,
                     tr("Database error"),
@@ -193,6 +208,9 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._db = create_database(AppInfo.db_ver)
                 Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
         else:
+            StandardLogger.error(
+                f"Database not found under path: {dbpath}", extra={"sender": "APPCORE"}
+            )
             QMessageBox.information(
                 None,
                 tr("Database error"),
@@ -203,23 +221,18 @@ class AppCore(QApplication, metaclass=MetaApp):
 
         load_theme(appearance, self)
         apply_style(self)
+        StandardLogger.debug(
+            f"Launched with following settings:\n{self.session_info()}", extra={"sender": "APPCORE"}
+        )
 
     def _first_time(self) -> None:
         qsettings = Values.default_qsettings(clean=self._launch_config.clean)
         Settings.set_qsettings(qsettings)
         Settings.set_value("Application/first_startup", False)
         self._db = create_database()
-        print("Database at", abspath(self._db.databaseName()))
         Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
         language = self.language_dialog()
-        print("Selected language", language)
         Settings.set_value("User/language", language.name)
-
-    def _parse_test_parameters(self) -> None:
-        for key in self._launch_config.test_params:
-            match key:
-                case "source_id":
-                    ...
 
     def connect_signals(self) -> None:
         self.aboutToQuit.connect(self.on_quitting)
@@ -249,7 +262,6 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def show_startup_window(self) -> bool:
         """Returns startup window based on arguments on startup"""
-        print(f"Parsed arguments: {self._launch_config}")
         if not self._launch_config.opened_path:
             self.open_start_dialog()
             return True
@@ -285,7 +297,7 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def _on_window_closed(self, wtype: str, wid: int):
         window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
-        print(f"Window is {window}")
+        StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender", "APPCORE"})
         if window.close_state == CloseState.CanCloseLater and self._restart_planned:
             self._dialog_manager.mark_closed(wtype, wid)
             self.restart()
@@ -345,6 +357,10 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._clean_up_list.append(editor_window.resource_path)
 
                 if lf.logger.evaluate() == ErrorCode.NonCritical:
+                    StandardLogger.error(
+                        f"A file operation finished with errors for file at: {path}",
+                        extra={"sender": "APPCORE"},
+                    )
                     QMessageBox.warning(
                         editor_window,
                         self.tr("File reading error"),
@@ -365,6 +381,9 @@ class AppCore(QApplication, metaclass=MetaApp):
                     wid = editor_window.wid
 
             else:
+                StandardLogger.critical(
+                    f"A file operation failed for file at: {path}", extra={"sender": "APPCORE"}
+                )
                 QMessageBox.critical(
                     None,
                     self.tr("File reading error"),
@@ -377,7 +396,7 @@ class AppCore(QApplication, metaclass=MetaApp):
             QMessageBox.information(
                 None,
                 tr("Open lesson-file"),
-                tr("File is already open or file does not exist."),
+                tr("File is already open or does not exist."),
             )
 
         return wid
@@ -402,7 +421,6 @@ class AppCore(QApplication, metaclass=MetaApp):
         code = dialog.exec()
         if code == QDialog.DialogCode.Accepted:
             if dialog.return_flags & ReturnFlags.Restart:
-                print("Restarting application")
                 button = QMessageBox.question(
                     dialog,
                     self.tr("Changes require restart"),
@@ -414,10 +432,8 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._dialog_manager.mark_closed("SettingsDialog")
                 return
             if dialog.return_flags & ReturnFlags.UpdateStyle:
-                print("Updating application style")
                 load_theme(Settings.value("User/appearance"), self)
-            if dialog.return_flags & ReturnFlags.UpdateLocale:
-                print("Updating language")
+            # ADD HANDLER FOR UpdateLocale AFTER TRANSLATIONS HAVE BEEN INPLEMENTED
         self._dialog_manager.mark_closed("SettingsDialog")
 
     def open_start_dialog(self, file_mode=False) -> None:
@@ -448,7 +464,6 @@ class AppCore(QApplication, metaclass=MetaApp):
                 self._presenter_view.showFullScreen()
 
             elif WinApi.get_display_mode() == DisplayMode.Duplicated:
-                print("Display is duplicated. Set display mode to extended.")
                 WinApi.set_display_mode(DisplayMode.Extended)
                 QTimer.singleShot(500, lambda: self._presenter_view.showFullScreen())
 
@@ -483,14 +498,24 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def restart(self) -> None:
         self._restart_planned = True
+        StandardLogger.info(
+            "Restart as been scheduled and will be executed when possible",
+            extra={"sender": "APPCORE"},
+        )
         if self._dialog_manager.close_all():
+            StandardLogger.info("Restarting")
             self.quit()
             self.restartRequested.emit()
 
     def on_quitting(self) -> None:
-        print("Saving recent and pinned files")
-        Settings.set_value("Application/recent", self._file_model.export_recent())
-        Settings.set_value("Application/pinned", self._file_model.export_pinned())
+        recent = self._file_model.export_recent()
+        pinned = self._file_model.export_pinned()
+        StandardLogger.debug(
+            f"Saved recent and pinned files.\nRecent: {recent}\nPinned: {pinned}",
+            extra={"sender": "APPCORE"},
+        )
+        Settings.set_value("Application/recent", recent)
+        Settings.set_value("Application/pinned", pinned)
 
         for path in self._clean_up_list:
             rmtree(path.as_posix(), True)

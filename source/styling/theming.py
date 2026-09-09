@@ -15,12 +15,13 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 from styling.properties import NTHEME_PROPERTIES
-from tcha.error import BinReadError
+from tcha.error import BinReadError, StandardLogger
 from tcha.settings import Values
 
 
 def load_theme(identifier: str, app: QApplication) -> None:
     if identifier.startswith("native:"):
+        StandardLogger.info(f"Updating style with theme: {identifier}", extra={"sender": "THEMING"})
         name = identifier.removeprefix("native:")
         return _load_native_theme(name, app)
 
@@ -58,6 +59,9 @@ def _load_extern_theme(fname: str, app: QApplication) -> bool:
         if fname.endswith(".taste") and osp.exists(fname)
         else Settings.user_path() / "themes" / f"{fname}.taste"
     )
+    StandardLogger.info(
+        f"Updating style with theme at path: {taste_file!s}", extra={"sender": "THEMING"}
+    )
     try:
         with zipfile.ZipFile(taste_file, "r") as f_taste:
             properties = json.loads(f_taste.read("properties.json"))
@@ -71,21 +75,33 @@ def _load_extern_theme(fname: str, app: QApplication) -> bool:
                 if ExternalTheme.has_data():
                     ExternalTheme.unregister()
                 ExternalTheme.set_resources(qt_resource_struct, qt_resource_name, qt_resource_data)
-                result = ExternalTheme.register()
-                print(f"Loaded resource data: {result}")
+                if not ExternalTheme.register():
+                    return False
                 stylesheet = f_taste.read(properties["stylesheet"])
                 app.setStyleSheet(stylesheet.decode())
                 return True
             return False
 
     except zipfile.BadZipFile:
-        print("taste-file is corrupted and cannot be opened.")
+        StandardLogger.error(
+            f"Theme at path '{taste_file!s}' could not be loaded du to corrupted file.",
+            extra={"sender": "THEMING"},
+        )
     except FileNotFoundError:
-        print("taste-file not found in User folder or taste-file is missing subfile")
-    except BinReadError:
-        print("Resource file corrupted.")
+        StandardLogger.error(
+            f"taste-file at '{taste_file!s}' not found or taste-file is missing subfile",
+            extra={"sender": "THEMING"},
+        )
+    except BinReadError as e:
+        StandardLogger.error(
+            f"Resource data corrupted for file at '{taste_file!s}'. Details: {e.args}",
+            extra={"sender": "THEMING"},
+        )
     except (KeyError, ValueError, TypeError):
-        print("taste-file has invalid data or structure")
+        StandardLogger.error(
+            "taste-file at path '{taste_file}' has invalid data or structure.",
+            extra={"sender": "THEMING"},
+        )
     return False
 
 

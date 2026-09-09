@@ -145,7 +145,6 @@ class OpenFileModel(QAbstractTableModel):
     def setData(self, index: QModelIndex, value: bool, role=Qt.ItemDataRole.EditRole):
         if isinstance(value, bool) and index.column() == 1:
             try:
-                print("Setting pinned")
                 self._data[index.row()].pinned = value
                 self.dataChanged.emit(index, index, [role])
                 return True

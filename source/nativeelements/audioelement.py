@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
+from tcha.error import StandardLogger
 from tcha.resmanager import (
     FileResourceObject,
     ResourceObject,
@@ -316,7 +317,6 @@ class AudioEditor(BaseElementEditor):
     def setup_player(self, model: AudioModel) -> QMediaPlayer:
         self.player.setAudioOutput(self.aoutput)
         self.player.setSourceDevice(model.resource.qfile())
-        print(f"Media status {self.player.mediaStatus()}")
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         if status == QMediaPlayer.MediaStatus.LoadedMedia and not self._loaded:
@@ -325,8 +325,7 @@ class AudioEditor(BaseElementEditor):
             self._loaded = True
 
     def set_playback_state(self, state: QMediaPlayer.PlaybackState) -> None:
-        print(f"Playback state set to {state}")
-        print(f"Audio Connected {self.player.hasAudio()}")
+        StandardLogger.info(f"Playback state set to {state}", extra={"sender", "AUDIOEDITOR"})
         if state == QMediaPlayer.PlaybackState.StoppedState:
             self.player.stop()
             self.ui.swi_PlayPause.changeState(1)
@@ -337,11 +336,12 @@ class AudioEditor(BaseElementEditor):
         elif state == QMediaPlayer.PlaybackState.PausedState:
             self.player.pause()
             self.ui.swi_PlayPause.changeState(1)
-        print("Error on playback: ", self.player.errorString())
+        StandardLogger.error(
+            f"Error on playback: {self.player.errorString()}", extra={"sender", "AUDIOEDITOR"}
+        )
 
     def on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
         """When the player's playback state has changed."""
-        print(f"Changed to PlayBackState {self.player.playbackState()}")
         self.playbackStateChanged.emit(state)
         if state is QMediaPlayer.PlaybackState.StoppedState:
             self.on_stop()
@@ -379,7 +379,10 @@ class AudioEditor(BaseElementEditor):
         """When the playback state is switched to 'stop'"""
         if self._model and self._model.is_repeating:
             if self._repeats > 0:
-                print("Repeating")
+                StandardLogger.debug(
+                    f"Repeating. Remaining repeats: {self._repeats}",
+                    extra={"sender", "AUDIOEDITOR"},
+                )
                 self._repeats -= 1
                 QTimer.singleShot(
                     self._model.pause_length * 1000,
@@ -390,7 +393,6 @@ class AudioEditor(BaseElementEditor):
 
     def on_reset(self) -> None:
         """When the rewind button of the toolset has been double clicked."""
-        print("Reset playback.")
         self._repeats = self._model.repeats
         self.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
 
@@ -417,7 +419,6 @@ class AudioEditor(BaseElementEditor):
         width = event.size().width()
         self.ui.main_frame.setGeometry(0, 0, width, event.size().height())
         self.ui.le_name.setFixedWidth(width - 40)
-        print(f"AudioElement resized to: {event.size()}")
 
 
 class AudioDelegate(BaseElementDelegate):
@@ -505,14 +506,13 @@ class AudioDelegate(BaseElementDelegate):
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
-            print("Media status: ", status)
+            StandardLogger.debug(f"Media status:  {status}", extra={"sender", "AUDIOEDITOR"})
             self._toolset.connect_editor(self._cached_editor)
             self._toolset.enable_presenter_mode(self.pres_mode)
             self._cached_editor.player.mediaStatusChanged.disconnect(self.on_media_status_changed)
 
     def updateEditorGeometry(self, editor, option, index):
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
-        print("Audio rect", sub_rect.width(), sub_rect.height())
         editor.setGeometry(sub_rect)
 
     def setModelData(self, editor, model, index):
@@ -520,7 +520,6 @@ class AudioDelegate(BaseElementDelegate):
 
     def destroyEditor(self, editor: AudioEditor, index: QModelIndex) -> None:
         """Disconnects signals and destroys the editor."""
-        print("Destroying AudioElement")
         editor.set_playback_state(QMediaPlayer.PlaybackState.StoppedState)
         editor.player.setSourceDevice(None)
         self._toolset.close_()
@@ -624,7 +623,7 @@ class AudioToolset(BaseElementToolset):
         self.set_start_end_time(model.start_time, model.end_time)
 
     def set_track_length(self, duration: int) -> None:
-        print(f"Duration is {duration}")
+        StandardLogger.debug(f"Duration is {duration}", extra={"sender", "AUDIOTOOLSET"})
         self.ui.hs_PlayTime.setMaximum(duration)
         self.ui.hs_PlayTime.setTickInterval(duration // 100)
 
@@ -635,7 +634,6 @@ class AudioToolset(BaseElementToolset):
         self._duration = duration
 
     def set_start_end_time(self, start: int, end: int) -> None:
-        print("Duration / start / end", self._duration, start, end)
         if self._duration > 0:
             self.ui.te_StartTime.setTime(QTime.fromMSecsSinceStartOfDay(start))
             self.ui.te_StartTime.setMaximumTime(
@@ -678,7 +676,6 @@ class AudioToolset(BaseElementToolset):
 
     def set_playback_state(self, state: QMediaPlayer.PlaybackState) -> None:
         """When the user has clicked the playpause button."""
-        print(f"Got PlayBackState {state}")
         self.playbackStateSet.emit(state)
 
     def reset(self) -> None:

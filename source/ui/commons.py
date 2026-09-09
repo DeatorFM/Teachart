@@ -192,7 +192,6 @@ class ColorAction(QWidgetAction):
         for row in range(rows):
             for column in range(count // rows):
                 color = palette.pop(0)
-                # print(color.name(QColor.NameFormat.HexRgb))
                 button = QToolButton(widget)
                 button.setAutoRaise(True)
                 button.clicked.connect(lambda state, color=color: self.handleButton(color))
@@ -205,7 +204,6 @@ class ColorAction(QWidgetAction):
     def handleButton(self, color: QColor):
         self.parent().hide()
         self.colorSelected.emit(color)
-        # print(color.name(QColor.NameFormat.HexRgb))
 
 
 class ColorMenu(QMenu):
@@ -240,7 +238,6 @@ class ComboBoxListView(QListView):
     def event(self, event: QEvent) -> bool:
         # Only handle mouse and special keys, pass other events up
         if event.type() == QEvent.Type.KeyPress:
-            print("Key press in view")
             key = event.key()
             if key not in (
                 Qt.Key.Key_Up,
@@ -281,7 +278,6 @@ class StrongLineEdit(QLineEdit):
             self.setFocus()
             e.ignore()
             return
-        print("Other focus out reason: ", e.reason())
         return super().focusOutEvent(e)
 
 
@@ -298,7 +294,6 @@ class SearchableComboBox(QComboBox):
         self.lineEdit().textEdited.connect(self.filter_items)
 
     def filter_items(self, text: str):
-        print("Text searched ", text)
         if isinstance(self.model(), (FilteredCourseModel, FilteredStudentModel)):
             self.model().set_search_filter(text)
             if self.model().rowCount() > 0:
@@ -363,10 +358,8 @@ class NoteEdit(QPlainTextEdit):
         return super().canInsertFromMimeData(source)
 
     def insertFromMimeData(self, source: QMimeData):
-        print("Pasting Data")
         if source.hasUrls():
             old_fmt = self.currentCharFormat()
-            print("Pasting Urls")
             cur = self.textCursor()
             urls = source.urls()
             cur.insertBlock()
@@ -428,7 +421,6 @@ class NoteEdit(QPlainTextEdit):
     def open_hyperlink(self, pos: QPoint) -> None:
         anchor = self.anchorAt(pos)
         url = QUrl(anchor)
-        print(f"Clicked on link: {anchor}")
         if anchor:
             result = QDesktopServices.openUrl(url)
             if not result:

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PyQt6.QtCore import QFile, QObject, pyqtSignal, pyqtSlot
+from tcha.error import StandardLogger
 
 
 class ResourceType(enum.Enum):
@@ -50,16 +51,16 @@ class ResourceObject(QObject):
         if self._member_count == 0:
             self.resourceExpired.emit(self.name, self._type, self._type_num)
             self.close()
-            print("Object is expired")
+            StandardLogger.debug(
+                f"Object of name '{self.name}' and type '{self.type.name}' of no. {self.type_num} has expired.",
+                extra={"sender": "RESOURCEOBJECT"},
+            )
 
     def adjust_type_num(self, num: int) -> bool:
         """Adjusts the type number and returns True if adjusted."""
-        print(f"Comparing {num} with own {self._type_num} of original filename {self.filename()}")
         if num < self._type_num:
             self._type_num -= 1
-            print(f"Filename is now {self.filename()}")
             return True
-        print("Filename unchanged")
         return False
 
     @property
@@ -103,7 +104,7 @@ class ResourceObject(QObject):
         """Close handle for data streams."""
         pass
 
-    def __eq__(self, value: Any) -> bool:
+    def __eq__(self, value: Any) -> bool:  # noqa: PYI032
         if isinstance(value, ResourceObject):
             return self._type == value.type and self.name == value.name
         return False
@@ -223,6 +224,10 @@ class ResourceContainer(QObject):
         try:
             return self._objects[path.as_posix()]
         except KeyError:
+            StandardLogger.debug(
+                f"Created new FileResourceObject: type={restype.name}, file={path!s}",
+                extra={"sender": "RESOURCECONTAINER"},
+            )
             res_object = FileResourceObject(self.count_type(restype) + 1, path, restype, self)
             res_object.resourceExpired.connect(self.delete)
             self._objects[res_object.name] = res_object
@@ -232,6 +237,10 @@ class ResourceContainer(QObject):
         """Creates a unique ResourceObject and returns it"""
         self._internal_counter += 1
         res_object = UniqueResourceObject(self.count_type(restype) + 1, restype, self)
+        StandardLogger.debug(
+            f"Created new UniqueResourceObject: name={res_object.name}, type={restype}",
+            extra={"sender": "RESOURCECONTAINER"},
+        )
         res_object.resourceExpired.connect(self.delete)
         self._objects[res_object.name] = res_object
         return res_object
@@ -259,7 +268,7 @@ class ResourceContainer(QObject):
     def delete(self, name: str, restype: ResourceType, num: int) -> bool:
         """Removes object with given name ResourceTyoe and number from container"""
         try:
-            print("Deleting ResourceObject")
+            StandardLogger.debug(f"Deleting ResourceObject: name={name} type=restype")
             del self._objects[name]
             self._adjust_type_nums(restype, num)
             return True
@@ -291,6 +300,9 @@ class ResourceContainer(QObject):
         return tobjects
 
     def close_file_streams(self) -> None:
+        StandardLogger.debug(
+            "Closing file streams of all resource objects", extra={"sender": "RESOURCECONTAINER"}
+        )
         for obj in self.contents():
             obj.close()
 
@@ -301,16 +313,14 @@ class ResourceContainer(QObject):
         return f"ResourceContainer: key:value {self._objects}"
 
     def __bool__(self) -> bool:
-        if self._objects:
-            return True
-        return False
+        return bool(self._objects)
 
     def __contains__(self, __x: ResourceObject | str) -> bool:
         if isinstance(__x, ResourceObject):
             if __x in self._objects.values():
                 return True
         elif isinstance(__x, str):
-            if __x in self._objects.keys():
+            if __x in self._objects:
                 return True
         else:
             raise TypeError("Only types  'ResourceObject' and 'str' are accepted.")

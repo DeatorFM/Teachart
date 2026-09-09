@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from tcha.dbmodels import *
+from tcha.error import StandardLogger
 from tcha.settings import Settings
 from tcha.utils import debug_enabled
 from ui.ui_dbmanager import AssignmentView, DbManagerView
@@ -32,16 +33,12 @@ class DbManager(QDialog, DbManagerView):
     ):
         super().__init__(parent, flags)
         self.setupUi(self)
-        print("UI intitiated")
 
         self._course_model = course_model
         self._filtered_course_model = FilteredCourseModel(self._course_model, self)
-        print("Course model initiated")
-        print("Source id is: ", self._course_model.source_id())
 
         self._student_model = StudentModel(self._course_model.database(), self)
         self._filtered_student_model = FilteredStudentModel(self._student_model, self)
-        print("Student model initiated")
 
         self._schedule_model = schedule_model
         self._filtered_schedule_model = FilteredScheduleModel(self._schedule_model, self)
@@ -114,8 +111,7 @@ class DbManager(QDialog, DbManagerView):
     def remove_course(self) -> None:
         current_idx = self.tv_courses.selectionModel().currentIndex()
         source_idx = self._filtered_course_model.mapToSource(current_idx)
-        deleted = self._course_model.removeRow(source_idx.row())
-        print("Row has been deleted ", deleted)
+        self._course_model.removeRow(source_idx.row())
         self._course_model.submitAll()
         self._course_model.select()
         self._course_model.courseDataChanged.emit()
@@ -163,7 +159,6 @@ class DbManager(QDialog, DbManagerView):
             self.assign_students()
 
     def new_student(self) -> None:
-        print("Create student for current index")
         ok, name, course_id, email = AddStudentDialog.get_student_info(
             self,
             self._course_model,
@@ -172,7 +167,7 @@ class DbManager(QDialog, DbManagerView):
             ).row(),
         )
         if ok:
-            print("Add student with info: ", name, course_id, email)
+            StandardLogger.debug(f"Add student with info: {name}, {course_id}, {email}")
             self._student_model.add_student(name, course_id, email)
 
     def assign_students(self) -> None:
@@ -186,7 +181,6 @@ class DbManager(QDialog, DbManagerView):
         if code == StudentDialogReturnCode.Assignment and students:
             for student in students:
                 student.course_id = course_id
-                print(student)
                 self._student_model.setData(
                     self._student_model.index_for_id(student.id, 2), course_id
                 )
@@ -266,12 +260,6 @@ class AddStudentDialog(QDialog):
 
         self.ui.cb_courses.setModel(course_model)
         self.ui.cb_courses.setModelColumn(1)
-        print(
-            "Set current index for id: ",
-            current_id,
-            "that is ",
-            course_model.index_for_id(current_id).row(),
-        )
         self.ui.cb_courses.setCurrentIndex(course_model.index_for_id(current_id).row())
 
     def name(self) -> str:
@@ -291,7 +279,6 @@ class AddStudentDialog(QDialog):
     ) -> tuple[StudentDialogReturnCode, str, int, str]:
         dialog = AddStudentDialog(course_model, parent, current_id)
         result = dialog.exec()
-        print(result)
         if result == QDialog.DialogCode.Accepted:
             return True, dialog.name(), dialog.course(), dialog.email()
         return False, dialog.name(), dialog.course(), dialog.email()

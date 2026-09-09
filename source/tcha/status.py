@@ -1,6 +1,8 @@
-from PyQt6.QtWidgets import QStatusBar, QLabel, QPushButton, QWidget, QSpinBox
-from PyQt6.QtCore import QObject, pyqtSignal
 import typing
+
+from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtWidgets import QLabel, QPushButton, QSpinBox, QStatusBar, QWidget
+
 
 class StatusLabel(QLabel):
     def __init__(self, text: str, permanent=False, parent=None) -> None:
@@ -10,11 +12,13 @@ class StatusLabel(QLabel):
         self.permanent = permanent
         self.setContentsMargins(5, 0, 5, 0)
 
+
 class StatusButton(QPushButton):
     def __init__(self, text: str, permanent=False, parent=None) -> None:
         super().__init__(text, parent)
         self.permanent = permanent
         self.setContentsMargins(5, 0, 5, 0)
+
 
 class StatusSpinBox(QSpinBox):
     def __init__(self, minimum: int, maximum: int, permanent=False, parent=None) -> None:
@@ -31,24 +35,24 @@ class StatusBarContainer(QObject):
 
     def __init__(self, *args: QWidget) -> None:
         super().__init__()
-        self._elements = list(args) 
+        self._elements = list(args)
 
     def add_status_widget(self, widget: QWidget, pos=-1) -> None:
-        if pos > -1: 
+        if pos > -1:
             self._elements.insert(widget, pos)
         else:
             self._elements.append(widget)
         self.elementAdded(pos)
-        
-    def show_message(self, text: str, msecs: int=0) -> None:
+
+    def show_message(self, text: str, msecs: int = 0) -> None:
         self.messageShown.emit(text, msecs)
 
     def __iter__(self) -> typing.Iterator:
         return iter(self._elements)
-    
-    
+
+
 class StatusBar(QStatusBar):
-    def __init__(self, parent = ...):
+    def __init__(self, parent=...):
         super().__init__(parent)
         self._container: StatusBarContainer | None = None
 
@@ -70,7 +74,6 @@ class StatusBar(QStatusBar):
                 continue
             self.addWidget(widget)
             widget.show()
-            print("Add widget", widget)
 
     def add(self, at: int) -> None:
         self.addWidget(self._elements[at])
@@ -78,5 +81,4 @@ class StatusBar(QStatusBar):
     def clear_status_bar(self) -> None:
         if self._container:
             for widget in self._container:
-                print("Removed", widget)
                 self.removeWidget(widget)

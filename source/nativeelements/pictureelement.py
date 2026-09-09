@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from tcha.consts import ResourceFlag
+from tcha.error import StandardLogger
 from tcha.resmanager import (
     FileResourceObject,
     ResourceContainer,
@@ -260,15 +261,16 @@ class PictureEditor(BaseElementEditor):
         # Attributes
         self._model = model
         self._max_width = max_width
-        print(f"Max width: {self._max_width}")
+        StandardLogger.debug(
+            f"Opened PictureEditr with max width: {self._max_width}",
+            extra={"sender", "PICTUREEDITOR"},
+        )
 
         self.ui.piclabel.set_max_width(max_width)
         self.ui.piclabel.setMaximumWidth(max_width)
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
 
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
-        # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        # self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
 
     @property
     def model(self) -> PictureModel:
@@ -311,7 +313,6 @@ class PictureEditor(BaseElementEditor):
         self.sizeChanged.emit(self._model.width, self._model.height)
 
     def set_size(self, width: int, height: int) -> None:
-        print(f"New picture size: {width}, {height}")
         self.setFocus()
         self._model.set_size(width, height)
         self._model.set_adjusted(True)
@@ -320,7 +321,6 @@ class PictureEditor(BaseElementEditor):
 
     def adjust_label_size(self) -> None:
         if self._model.adjusted and self._model.width > 0 and self._model.height > 0:
-            print(f"Adjusting label size to {self._model.width}, {self._model.height}")
             self.ui.piclabel.setFixedSize(self._model.size)
 
     def rotate_right(self) -> None:
@@ -400,15 +400,9 @@ class PictureDelegate(BaseElementDelegate):
 
         if model.adjusted and sub_rect.width() >= model.width:
             new_rect = QRect(sub_rect.topLeft(), model.size)
-            # print(
-            #     f"Painting image with user defined size: {new_rect.width()} * {new_rect.height()}"
-            # )
             painter.drawPixmap(new_rect, pixmap)
         else:
             model.set_adjusted(False)
-            # print(
-            #     f"Painting image with column constraints: {image_rect.width()} * {image_rect.height()}"
-            # )
             painter.drawPixmap(sub_rect, pixmap)
 
         painter.restore()
@@ -431,7 +425,6 @@ class PictureDelegate(BaseElementDelegate):
             option.rect.width(),
             parent,
         )
-        print(f"Editor opened for row {index.row()}")
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
         self.installEventFilter(editor)
         editor.setFocus()
@@ -443,9 +436,6 @@ class PictureDelegate(BaseElementDelegate):
 
     def updateEditorGeometry(self, editor: PictureEditor, option, index):
         adjusted_rect = option.rect
-        print(
-            f"Set editors geometry with width {adjusted_rect.width()} and height {adjusted_rect.height()}"
-        )
         editor.setGeometry(adjusted_rect)
         editor.adjust_label_size()
 
@@ -608,7 +598,10 @@ class PictureElementDefinitions(BaseElementDefinitions):
             elif path.suffix.lower() == ".png":
                 writer.setQuality(100)
             if writer.write(image):
-                print(f"Compressed successfully to {compressed_file.as_posix()}")
+                StandardLogger.info(
+                    f"Compressed media '{original_file}' successfully to {compressed_file.as_posix()}",
+                    extra={"sender", "PICTUREELEMENTDEFINITION"},
+                )
                 return compressed_file.as_posix()
 
         return original_file
@@ -669,7 +662,6 @@ class PictureElementDefinitions(BaseElementDefinitions):
                 width > 0 and height > 0 and rotation % 90 == 0
             ):  # Width and height values must be at least 1
                 model = PictureModel(resobj, width, height, rotation, adjusted)
-                print("Read PictureModel", model)
                 return model
             return None
 

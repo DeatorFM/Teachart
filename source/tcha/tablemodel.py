@@ -30,7 +30,8 @@ from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QHeaderView
 from tcha.consts import ResourceFlag
 from tcha.elements import get_definitions
-from tcha.resmanager import ResourceContainer, ResourceObject
+from tcha.error import StandardLogger
+from tcha.resmanager import ResourceContainer
 from tcha.utils import debug_enabled
 from ui.commons import PasteConfirmation
 
@@ -61,6 +62,7 @@ def decode_mime_data(mime_data: QMimeData) -> MimeData | None:
 
             if stream.status() == QDataStream.Status.Ok:
                 return MimeData(model_id, source_lvl, table_row, table_col, cell_row, element_data)
+    StandardLogger.error("Failed to decode mime data", extra={"sender": "TABLEMODEL"})
     return None
 
 
@@ -131,7 +133,7 @@ class CellItem(list):
     @property
     def height(self) -> int:
         if len(self) > 0:
-            return sum(map(lambda x: x.item_size.height() + 3, self))
+            return sum(map(lambda x: x.item_size.height() + 3, self))  # noqa: C417
         return 30
 
     @property
@@ -150,6 +152,7 @@ class CellItem(list):
         """Recalculates the cell's size based on headers width"""
         for item in self:
             item: BaseElementModel
+            # IMPLEMENT PARALLELISATION OF RECALCULATION
             item.recalculate_size(self.width)
 
     def set_header_item(self, hheader: HeaderDataItem) -> None:
@@ -182,7 +185,12 @@ class CellItem(list):
         return writer
 
     def __str__(self):
-        return f"CellItem: {super().__str__()}"
+        lines = []
+        position = 0
+        for index, model in enumerate(self):
+            lines.append(f"{index} {model.name} {position}")
+            position += model.item_size.height()
+        return f"CellItem (rows={len(self)} height={self.height}):\n" + "\n".join(lines)
 
 
 @dataclass
@@ -206,8 +214,8 @@ class CellModel(QAbstractListModel):
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
-        self._data: CellItem[BaseElementModel] = data
-        self._work_data = data.copy()
+        self._data: CellItem[BaseElementModel] = data  # Holds the currently saved data
+        self._work_data = data.copy()  #  Holds the data to be changed
         self.cell_index: QModelIndex = index
 
     @property
@@ -236,9 +244,17 @@ class CellModel(QAbstractListModel):
         self._data.append(model)
         self._work_data.append(model)
         self.endInsertRows()
+        StandardLogger.debug(
+            f"Added model of name '{model.name}'. Current cell structure:\n{self._work_data}"
+        )
 
     def create_model(self, definition: BaseElementDefinitions) -> None:
+        """Creates a model from a BaseElementDefinition and adds it to the work_data"""
         if definition:
+            StandardLogger.debug(
+                f"Adding model of definition '{definition.name()}' to cell at position {self.cell_index.row()}|{self.cell_index.column()}",
+                extra={"sender": "CELLMODEL"},
+            )
             rescont = self.tablemodel.rescont
 
             match definition.resource_flag():
@@ -285,7 +301,6 @@ class CellModel(QAbstractListModel):
                     del self._work_data[row]
                 self.endRemoveRows()
                 self.modelChanged.emit()
-                print("Successfully removed. Current data", self._data)
                 return True
             return False
         except IndexError:
@@ -344,11 +359,16 @@ class CellModel(QAbstractListModel):
                 self._data[index.row()] = value
                 self._data.recalculate_items()
                 self.dataChanged.emit(index, index, [role])
-                print("Data saved to the model")
+                StandardLogger.debug(
+                    "Data of name '{value.name}' saved to the model", extra={"sender": "CELLMODEL"}
+                )
                 return True
             return False
         else:
-            print("The data could not be saved into model.")
+            StandardLogger.error(
+                "The data of name '{value.name}' could not be saved into model.",
+                extra={"sender": "CELLMODEL"},
+            )
             return False
 
     def mimeData(
@@ -459,7 +479,7 @@ class CellModel(QAbstractListModel):
         destinationParent: QModelIndex,
         destinationChild: int,
     ) -> bool:
-        print("Begin moving rows from", sourceRow, "to", destinationChild)
+
         try:
             if (
                 sourceRow == self.rowCount() - 1
@@ -479,6 +499,10 @@ class CellModel(QAbstractListModel):
             self._work_data.insert(destinationChild, self._work_data.pop(sourceRow))
             self.endMoveRows()
             self.modelChanged.emit()
+            StandardLogger.debug(
+                "Moved successfully {count} row(s) from {sourceRow} to {destinationChild}",
+                extra={"sender": "CELLMODEL"},
+            )
             return True
 
         except IndexError:
@@ -519,11 +543,11 @@ class HeaderDataItem:
     text: str = field(default="")
 
     @classmethod
-    def horizontal(cls, idx: int) -> "HeaderDataItem":
+    def horizontal(cls, idx: int) -> HeaderDataItem:
         return cls(idx, Qt.Orientation.Horizontal, 100)
 
     @classmethod
-    def vertical(cls, idx: int) -> "HeaderDataItem":
+    def vertical(cls, idx: int) -> HeaderDataItem:
         return cls(idx, Qt.Orientation.Vertical, 30, False)
 
     def __deepcopy__(self, memo: dict | None = None) -> HeaderDataItem:
@@ -545,7 +569,7 @@ class TableModel(QAbstractTableModel):
             Qt.Orientation.Vertical: [],
         }
 
-        # print(f"Model has id: {self._model_id}")
+        StandardLogger.info(f"Model has id: {self._model_id}", extra={"sender": "TABLEMODEL"})
         self._rescont = ResourceContainer(self)
 
     @property
@@ -590,6 +614,7 @@ class TableModel(QAbstractTableModel):
 
     @classmethod
     def new_from_xml(cls: TableModel, xml: QXmlStreamAttributes) -> TableModel:
+        """Parses the attributes of <table> tag and creates an empty model with the row and column number in the xml."""
         return cls.new(int(xml.value("rows")), int(xml.value("columns")))
 
     # Indexing utilities
@@ -632,7 +657,6 @@ class TableModel(QAbstractTableModel):
     # Data access and manipulation
 
     def clear_cache(self) -> None:
-        print("Cache emptied")
         self._cached_model = None
 
     def data(
@@ -647,7 +671,6 @@ class TableModel(QAbstractTableModel):
             if role == Qt.ItemDataRole.EditRole:
                 pindex = QPersistentModelIndex(index)
                 model = CellModel(item, pindex)
-                print("Caching edited model")
                 self._cached_model = CachedModel(pindex, model)
                 return model
             elif role == Qt.ItemDataRole.SizeHintRole:
@@ -759,7 +782,6 @@ class TableModel(QAbstractTableModel):
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         if row < 0 or row >= len(self._data) or self.rowCount() == 1:
-            print("Invalid row number")
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
@@ -860,12 +882,14 @@ class TableModel(QAbstractTableModel):
                 if device:
                     model = definition.model_from_bytes(resobj, stream)
                     if model:
-                        print(f"Appended model: {model}")
                         models.append(model)
             else:
-                print(f"Pasting failed: No definition for {name}")
+                StandardLogger.error(
+                    f"Decoding element data failed: No definition for {name}",
+                    extra={"sender": "TABLEMODEL"},
+                )
                 break
-        print(f"Pasted models: {models}")
+        StandardLogger.debug(f"Decoded models: {models}", extra={"sender": "TABLEMODEL"})
         return models
 
     def dropMimeData(
@@ -877,18 +901,11 @@ class TableModel(QAbstractTableModel):
         parent: QModelIndex,
     ) -> bool:
         if self.canDropMimeData(data, action, row, column, parent):
-            print(
-                "Dropped at",
-                row,
-                column,
-                "with parent",
-                parent.row(),
-                parent.column(),
-                "and data format",
-                data.formats(),
+            StandardLogger.debug(
+                f"Dropped at {row} | {column} from parent {parent.row()}|{parent.column()}, action '{action}' and data format {data.formats()}",
+                extra={"sender": "TABLEMODEL"},
             )
             mime_data = decode_mime_data(data)
-            print(f"Element data: {mime_data.element_data}")
 
             if action == Qt.DropAction.MoveAction:
                 source_idx = self.index(mime_data.table_row, mime_data.table_column)
@@ -924,7 +941,6 @@ class TableModel(QAbstractTableModel):
 
                         if result == PasteConfirmation.DialogCode.Accepted:
                             if dialog.selected_paste_method() == 1:  # Replace cell
-                                print("Replacing cell")
                                 if (
                                     parent != loose_source_idx
                                     or mime_data.model_id != self.model_id
@@ -960,8 +976,6 @@ class TableModel(QAbstractTableModel):
                         return True
 
                     return False
-
-                #
 
                 if mime_data.level == 1:  # Model is copied
                     destination_item: CellItem = parent.data()
@@ -1084,7 +1098,6 @@ class IndexModel(QAbstractListModel):
 
     def add_inactive_index(self, idx: QPersistentModelIndex) -> None:
         if idx.isValid():
-            print(f"Setting idx {idx.row()}")
             self._inactive.append(idx)
             visual_row = self._vheader.visualIndex(idx.row())
             visual_idx = self.index(visual_row, 0)

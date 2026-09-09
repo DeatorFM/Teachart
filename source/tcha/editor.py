@@ -33,6 +33,7 @@ from tcha.consts import (
 from tcha.dbmanager import AddCourseDialog, RecordView
 from tcha.dbmodels import CourseModel, FilteredCourseModel, ScheduleModel
 from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
+from tcha.error import StandardLogger
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
 from tcha.resmanager import ResourceContainer
@@ -101,7 +102,6 @@ class Editor(BaseMainWindow):
         self.def_for_mime_type = None
         self.presenter_mode = False
         self.init_display_mode = WinApi.get_display_mode()
-        print(f"Initial display mode: {self.init_display_mode}")
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
@@ -111,7 +111,7 @@ class Editor(BaseMainWindow):
         self.setMouseTracking(True)
         self.table.check_clipboard()
 
-    def initialise_editor(self) -> tuple[LessonFile, ResourceContainer]:
+    def initialise_editor(self):
         debug_tag = "(Debug-Mode)" if debug_enabled() else ""
         if self.lessonfile.mode == "w":
             self.set_lesson(Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime()))
@@ -129,6 +129,9 @@ class Editor(BaseMainWindow):
             self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
 
         else:
+            StandardLogger.error(
+                "LessonFile's mode is invalid. Must be 'w' or 'r'.", extra={"sender": "EDITOR"}
+            )
             raise ValueError("LessonFile's mode is invalid. Must be 'w' or 'r'.")
 
     def connect_signals(self) -> None:
@@ -214,6 +217,15 @@ class Editor(BaseMainWindow):
 
     # File Methods
 
+    def document_info(self) -> str:
+        return f"""
+Tch document info for id {self.lessonfile.file_id}
+File path:         {self.lessonfile.path}
+Lesson data:       {self.lesson}
+Schedule:          {self.schedules.get_schedule(self.lessonfile.file_id)}
+Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()}
+"""
+
     def set_recent_files(self, menu: QMenu) -> None:
         self.ui_recent = self.ui.menu_file.insertMenu(self.ui.sep1, menu)
         menu.triggered.connect(self.on_file_opened)
@@ -285,6 +297,10 @@ class Editor(BaseMainWindow):
         self.ui.tb_save.setEnabled(False)
         self.lesson.source_id = self.courses.source_id()
         if self.lessonfile.path and not save_copy:
+            StandardLogger.info(
+                f"Save operation started for file: {self.lessonfile.path} with document properties:\n{self.document_info()}",
+                extra={"sender": "EDITOR"},
+            )
             save(None)
             return True
         else:
@@ -292,6 +308,10 @@ class Editor(BaseMainWindow):
                 self, tr("Save lesson chart"), "", tr("Teachart document (*.tch)")
             )
             if path:
+                StandardLogger.info(
+                    f"Save operation started for file: {path} with document properties:\n{self.document_info()}",
+                    extra={"sender": "EDITOR"},
+                )
                 self.save_state = SaveState.Saving
                 save(path)
                 return True
@@ -301,6 +321,7 @@ class Editor(BaseMainWindow):
     def _on_saving_finished(self, result: bool = True) -> None:
         debug_tag = "(Debug-Mode)" if debug_enabled() else ""
         if result:
+            StandardLogger.info("Save operation succeeded.", extra={"sender": "EDITOR"})
             self.ui.ac_save.setEnabled(True)
             self.ui.tb_save.setEnabled(True)
             self.setWindowTitle(f"{os.path.basename(self.lessonfile.path)} - Teachart {debug_tag}")
@@ -317,10 +338,14 @@ class Editor(BaseMainWindow):
                 self.ui.ac_xml_insp.setEnabled(True)
                 self.fileSaved.emit(Path(self.lessonfile.path))
         else:
+            StandardLogger.info(
+                f"Save operation failed. Check log file for file id: {self.lessonfile.file_id}",
+                extra={"sender": "EDITOR"},
+            )
             self.statusBar().showMessage(self.tr("Saving failed. Check log for details."), 3000)
 
     def schedule(self) -> None:
-        """Creates a new schedule if not existing."""
+        """Creates a new schedule if not existing. If the button state is off the schedule will be deleted"""
         if self.ui.ac_schedule.state() == 2 and not self.schedules.has_file(
             self.lessonfile.file_id
         ):
@@ -332,12 +357,18 @@ class Editor(BaseMainWindow):
                 self.lessonfile.path,
             )
             self.lesson.source_id = self.courses.source_id()
-            print("New schedule created for file_id: ", self.lessonfile.file_id)
+            StandardLogger.debug(
+                f"New schedule on {self.ui.dt_DateTime.dateTime().toString('dd/MM/yyyy-HH:mm')} created for file_id: {self.lessonfile.file_id}",
+                extra={"sender": "EDITOR"},
+            )
 
         elif self.ui.ac_schedule.state() == 2 and self.schedules.has_file(self.lessonfile.file_id):
-            print("File exists. Updating schedule")
             idx = self.schedules.index_for_file_id(self.lessonfile.file_id)
             if idx.isValid():
+                StandardLogger.debug(
+                    f"File with id '{self.lessonfile.file_id}' exists. Updating schedule to {self.lesson.datetime.toString('dd/MM/yyyy-HH:mm')}",
+                    extra={"sender": "EDITOR"},
+                )
                 schedule_id = self.schedules.data(idx)
                 self.schedules.update_schedule(
                     schedule_id,
@@ -348,11 +379,13 @@ class Editor(BaseMainWindow):
 
         elif self.ui.ac_schedule.state() == 1 and self.schedules.has_file(self.lessonfile.file_id):
             idx = self.schedules.index_for_file_id(self.lessonfile.file_id)
-            print("Index is valid ", idx.isValid())
             if idx.isValid():
                 self.schedules.removeRow(idx.row())
                 self.schedules.select()
-                print("Deleted scheule with file id: ", self.lessonfile.file_id())
+                StandardLogger.debug(
+                    f"Deleted schedule with file id '{self.lessonfile.file_id()}'.",
+                    extra={"sender": "EDITOR"},
+                )
 
     def check_for_schedule(self, file_id: int) -> None:
         """Checks the button if schedule found."""
@@ -364,6 +397,8 @@ class Editor(BaseMainWindow):
     # Course related methods
 
     def add_course(self) -> None:
+        """Opens input dialog. If input is valid a new course is added."""
+
         def isvalid() -> bool:
             return bool(name and duration > 0)
 
@@ -377,6 +412,7 @@ class Editor(BaseMainWindow):
             return
 
     def set_course(self) -> None:
+        """Sets the new course to lesson model to the current selection of the course list combo box."""
         if self.lesson.source_id != self.courses.source_id():
             self.lesson.source_id = self.courses.source_id()
         item = self.courses.getRow(self.ui.cb_course.currentIndex())
@@ -387,10 +423,12 @@ class Editor(BaseMainWindow):
         self.set_unsaved()
 
     def filter_courses(self) -> None:
+        """Activates on inputting text to the course list combo box"""
         self.ui.cb_course.showPopup()
         self.courses.set_search_filter(self.ui.cb_course.lineEdit().text())
 
     def on_course_data_changed(self) -> None:
+        """Slot on 'activated' in course list combo box"""
         if self.courses.has_id(self.lesson.course_id) and self.lesson.course_id != 0:
             idx = self.courses.index_for_id(self.lesson.course_id)
             if idx.isValid():
@@ -434,7 +472,7 @@ class Editor(BaseMainWindow):
 
     # table.editingLevelChanged
     def editing_level_changed(self, level: EditingLevel) -> None:
-        print("Editing level: ", level.name)
+        StandardLogger.debug(f"Editing level changed to: {level.name}", extra={"sender": "EDITOR"})
         if level & EditingLevel.CellEditing:
             self.ui.table_group.setEnabled(True)
             self.ui.ac_clear_cell.setEnabled(True)
@@ -504,14 +542,16 @@ class Editor(BaseMainWindow):
     def check_clipboard(self) -> None:
         """Checks whether the mime type of the clipboard data is supported by one of the elements"""
         clipboard = QApplication.clipboard()
-        print(f"Mime Types: {clipboard.mimeData().formats()}")
         if clipboard:
             mime = clipboard.mimeData()
             for definition in self.element_definitions.values():
                 if definition.supports_mime_data(mime):
                     self.def_for_mime_type = definition
                     self.ui.ac_from_clipboard.setEnabled(True)
-                    print(f"Supported definition for current mime types: {self.def_for_mime_type}")
+                    StandardLogger.debug(
+                        f"Supported definition for current mime types: {self.def_for_mime_type}",
+                        extra={"sender": "EDITOR"},
+                    )
                     return
 
             if self.has_index_copied() and self.ui.table.editor:
@@ -521,7 +561,10 @@ class Editor(BaseMainWindow):
 
         self.def_for_mime_type = None
         self.ui.ac_from_clipboard.setEnabled(False)
-        print(f"Supported definition of mime type: {self.def_for_mime_type}")
+        StandardLogger.debug(
+            f"Supported definition for current mime types: {self.def_for_mime_type}",
+            extra={"sender": "EDITOR"},
+        )
 
     def has_index_copied(self) -> bool:
         clipboard = QApplication.clipboard()

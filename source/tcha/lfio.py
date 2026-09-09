@@ -24,7 +24,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from tcha.elements import get_definitions
-from tcha.error import IOLogger
+from tcha.error import IOLogger, StandardLogger
 from tcha.lesson import Lesson
 from tcha.resmanager import (
     ResourceTransferObject,
@@ -131,7 +131,10 @@ class LessonFile(QObject):
                 self._last_saved = QDateTime.currentDateTime()
                 self._logger = IOLogger()
                 self._tempdir = tempfile.TemporaryDirectory(".tmp", "TCHA", delete=False)
-                print("Temporary", self._tempdir)
+                StandardLogger.debug(
+                    f"Created temporary directory at {self._tempdir.name}",
+                    extra={"sender", "LESSONFILE"},
+                )
                 self._f = ZipFile(path, mode)
                 self._f.extractall(self.temppath)
                 self._logger.log(
@@ -209,7 +212,6 @@ class LessonFile(QObject):
             self._logger.log(logging.DEBUG, "Meta data written.")
 
             if written_bytes != self._save_buffer.size():
-                print(written_bytes, self._save_buffer.size())
                 self._logger.log(
                     logging.CRITICAL,
                     "Error during writing of xml-data. Writing operation has been terminated.",
@@ -254,16 +256,17 @@ class LessonFile(QObject):
             self.generate_file_id() if not self._metadata["file_id"] else self._metadata["file_id"]
         )
 
-        print("Writing buffer to LessonFile object")
+        StandardLogger.info(
+            "Prepare save operation: Writing buffer to LessonFile object",
+            extra={"sender", "LESSONFILE"},
+        )
         struct_buffer = XmlWriter.write_struct_xml(tablemodel)
-        print("Finished struct buffer")
         lesson_buffer = XmlWriter.write_lesson_xml(lesson)
-        print("Finished lesson data buffer")
         meta_data_buffer = XmlWriter.write_metadata_xml(self._metadata)
-        print("Finished meta data buffer")
         self._save_buffer = SaveBuffer(
             struct_buffer, lesson_buffer, meta_data_buffer, tablemodel.rescont.to_transfer_objects()
         )
+        StandardLogger.info("Prepare save operation: Finished writing buffer successfully.")
         self._state = WriteState.SerialisedBuffer
 
     def _copy(self, resobj: ResourceTransferObject) -> None:
@@ -361,7 +364,6 @@ class LessonFile(QObject):
             self._f.close()
 
     def __del__(self) -> None:
-        print("LessonFile object deleted")
         if self._f:
             self._f.close()
             self._tempdir.cleanup()
@@ -497,7 +499,6 @@ class XmlReader(QObject):
 
     def raise_progress(self, by: int) -> None:
         self._reading_progess += int(by)
-        print(f"Progress= {self._reading_progess}")
         self.readingProgessChanged.emit(self._reading_progess)
 
     def read_all(self) -> bool:

@@ -492,7 +492,6 @@ class FontSizeModel(QAbstractListModel):
             72.0,
         )
         self._locale: QLocale = Settings.value("User/language").to_qlocale()
-        print("Locale is ", self._locale)
 
     def rowCount(self, parent=None):
         return len(self._sizes)
@@ -538,12 +537,10 @@ class FontSizeBox(QComboBox):
 
     def _on_index_changed(self, index: int) -> None:
         if index > -1:
-            print("Emit value of index ", index)
             self.sizeChanged.emit(self.itemData(index))
 
     def checkEnteredSize(self) -> None:
         fontsize = self.currentText().replace(",", ".")
-        print(f"Current font size {fontsize}")
         self.sizeChanged.emit(float(fontsize))
 
 
@@ -563,7 +560,6 @@ class TableMenu(QMenu):
 
     @pyqtSlot(int, int)
     def emitTableSize(self, line: int, column: int) -> None:
-        print(line, column)
         self.tableSize.emit(line, column)
 
 
@@ -600,7 +596,6 @@ class TableGrid(QWidget):
         for i in range(self.button_layout.count() - 1):
             button = self.button_layout.itemAt(i).widget()
             if button.column <= column and button.line <= line:
-                # print(button, button.line, button.column)
                 button.setProperty("hovered", True)
                 self.showTableSize(line, column)
 

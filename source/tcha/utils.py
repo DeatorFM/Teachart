@@ -11,6 +11,7 @@ from typing import NotRequired, TypedDict
 
 from PyQt6.QtWidgets import QApplication
 from tcha.consts import DisplayMode
+from tcha.error import StandardLogger
 
 # AppCore values convenience access
 
@@ -58,7 +59,6 @@ class TestParameters(TypedDict):
 
 @cache
 def _test_parser(exit_on_error=True) -> ArgumentParser:
-
     parser = ArgumentParser(
         prog="--test", add_help=False, argument_default=SUPPRESS, exit_on_error=exit_on_error
     )
@@ -177,7 +177,6 @@ class WinApi:
         # num_paths.value tells you how many active display paths exist
         display_count = num_paths.value
 
-        print(f"Active display paths: {display_count}")
         virtual_width = user32.GetSystemMetrics(78)
         primary_width = user32.GetSystemMetrics(0)
 
@@ -190,9 +189,9 @@ class WinApi:
 
     @staticmethod
     def set_display_mode(mode: DisplayMode) -> None:
+        StandardLogger.info(f"Set display mode to {mode.name}", extra={"sender": "WINAPI"})
         user32 = ctypes.windll.LoadLibrary("user32")
         if mode == DisplayMode.Single:
-            print("Single mode cannot be forced.")
             return
         elif mode == DisplayMode.Extended:
             user32.SetDisplayConfig(0, None, 0, None, WinApi.SDC_APPLY | WinApi.SDC_TOPOLOGY_EXTEND)
