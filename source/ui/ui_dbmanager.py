@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QCoreApplication, QModelIndex, QSize, Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlRelationalDelegate
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QSpacerItem,
     QSpinBox,
     QSplitter,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -100,7 +102,7 @@ class ProxyScheduleDelegate(QSqlRelationalDelegate):
 
 
 class DbManagerView:
-    def setupUi(self, dbmanager):
+    def setupUi(self, dbmanager: QDialog):
         dbmanager.setObjectName("dbmanager")
         dbmanager.resize(900, 600)
         dbmanager.setMinimumSize(QSize(700, 400))
@@ -123,12 +125,14 @@ class DbManagerView:
         hl3.setContentsMargins(-1, 0, -1, -1)
         hl3.setObjectName("hl3")
 
-        self.pb_new_course = IconButton(SvgIcon("icons:ic_new.svg"), dbmanager)
+        self.pb_new_course = IconButton(SvgIcon(":/common/new"), dbmanager)
         self.pb_new_course.setText("")
         self.pb_new_course.setObjectName("pb_new_course")
         hl3.addWidget(self.pb_new_course)
 
-        self.pb_remove_course = IconButton(SvgIcon("icons:ic_trash.svg"), dbmanager)
+        self.pb_remove_course = IconButton(
+            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)), dbmanager
+        )
         self.pb_remove_course.setText("")
         self.pb_remove_course.setObjectName("pb_remove_course")
         hl3.addWidget(self.pb_remove_course)
@@ -167,19 +171,21 @@ class DbManagerView:
         hl2.setContentsMargins(-1, 0, -1, -1)
         hl2.setObjectName("hl2")
 
-        self.pb_assign_students = IconButton(SvgIcon("icons:ic_assign.svg"), self.student_tab)
+        self.pb_assign_students = IconButton(SvgIcon(":/common/assign"), self.student_tab)
         self.pb_assign_students.setText("")
         self.pb_assign_students.setObjectName("pb_assign_students")
         hl2.addWidget(self.pb_assign_students)
 
-        self.pb_unassign_student = IconButton(SvgIcon("icons:ic_unassign.svg"), self.student_tab)
+        self.pb_unassign_student = IconButton(SvgIcon(":/common/unassign"), self.student_tab)
         self.pb_unassign_student.setText("")
         self.pb_unassign_student.setObjectName("pb_unassign_student")
         self.pb_unassign_student.setEnabled(False)
         hl2.addWidget(self.pb_unassign_student)
 
-        self.pb_remove_student = IconButton(SvgIcon("icons:ic_trash.svg"), self.student_tab)
-        self.pb_remove_student.setText("")
+        self.pb_remove_student = IconButton(
+            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)),
+            self.student_tab,
+        )
         self.pb_remove_student.setObjectName("pb_remove_student")
         self.pb_remove_student.setEnabled(False)
         hl2.addWidget(self.pb_remove_student)
@@ -232,12 +238,10 @@ class DbManagerView:
         hl4.setContentsMargins(-1, 0, -1, -1)
         hl4.setObjectName("hl4")
 
-        # self.pb_new_schedule = IconButton("icons:ic_new.svg", self.schedules_tab)
-        # self.pb_new_schedule.setText("")
-        # self.pb_new_schedule.setObjectName("pb_new_schedule")
-        # hl4.addWidget(self.pb_new_schedule)
-
-        self.pb_remove_schedule = IconButton(SvgIcon("icons:ic_trash.svg"), self.schedules_tab)
+        self.pb_remove_schedule = IconButton(
+            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)),
+            self.schedules_tab,
+        )
         self.pb_remove_schedule.setText("")
         self.pb_remove_schedule.setObjectName("pb_remove_schedule")
         self.pb_remove_schedule.setEnabled(False)

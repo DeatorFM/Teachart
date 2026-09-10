@@ -298,7 +298,7 @@ class StandardLogger:
                 if debug_enabled():
                     stream_handler = logging.StreamHandler(sys.stdout)
                     formatter = logging.Formatter(
-                        "%(levelname)s %(sender)s - %(message)s",
+                        "[%(levelname)s] %(sender)s - %(message)s",
                         defaults={"sender": "APP"},
                     )
                     stream_handler.setFormatter(formatter)
@@ -312,7 +312,7 @@ class StandardLogger:
                 if level > 0:
                     file_handler = logging.FileHandler(str(logpath))
                     formatter = logging.Formatter(
-                        "%(asctime)s - %(levelname)s - %(sender)s - %(message)s",
+                        "%(asctime)s - [%(levelname)s] - %(sender)s - %(message)s",
                         defaults={"sender": "APP"},
                     )
                     file_handler.setFormatter(formatter)

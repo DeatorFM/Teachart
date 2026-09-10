@@ -25,12 +25,10 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QLabel,
-    QLineEdit,
     QMenu,
     QSlider,
     QSpinBox,
     QStyle,
-    QStyledItemDelegate,
     QTimeEdit,
     QToolBar,
     QToolButton,
@@ -63,22 +61,22 @@ class TextToolsetView:
 
         agent.addSeparator()
 
-        icon1 = SvgIcon("icons:ic_bold.svg")
+        icon1 = SvgIcon(":/common/bold")
         self.ac_bold = agent.addAction(icon1, None)
         self.ac_bold.setCheckable(True)
         self.ac_bold.setShortcut(QKeySequence.StandardKey.Bold)
 
-        icon2 = SvgIcon("icons:ic_italic.svg")
+        icon2 = SvgIcon(":/common/italic")
         self.ac_italic = agent.addAction(icon2, None)
         self.ac_italic.setCheckable(True)
         self.ac_italic.setShortcut(QKeySequence.StandardKey.Italic)
 
-        icon3 = SvgIcon("icons:ic_underline.svg")
+        icon3 = SvgIcon(":/common/underline")
         self.ac_underline = agent.addAction(icon3, None)
         self.ac_underline.setCheckable(True)
         self.ac_underline.setShortcut(QKeySequence.StandardKey.Underline)
 
-        icon4 = SvgIcon("icons:ic_textColor.svg")
+        icon4 = SvgIcon(":/common/text_color")
         self.ac_textcolor = agent.addAction(icon4, None)
         self.ac_textcolor.setObjectName("TextColor")
         self.ac_textcolor.setProperty("color", QColor())
@@ -175,12 +173,12 @@ class TextToolsetView:
         self.veralign_group = QActionGroup(agent)
         self.veralign_group.setExclusive(False)
 
-        icon7 = SvgIcon("icons:ic_subscript.svg")
+        icon7 = SvgIcon(":/common/subscript")
         self.ac_subscript = agent.addAction(icon7, None)
         self.ac_subscript.setCheckable(True)
         self.veralign_group.addAction(self.ac_subscript)
 
-        icon8 = SvgIcon("icons:ic_superscript.svg")
+        icon8 = SvgIcon(":/common/superscript")
         self.ac_superscript = agent.addAction(icon8, None)
         self.ac_superscript.setCheckable(True)
         self.veralign_group.addAction(self.ac_superscript)
@@ -190,44 +188,44 @@ class TextToolsetView:
         self.align_group = QActionGroup(agent)
         self.align_group.setExclusive(True)
 
-        icon9 = SvgIcon("icons:ic_alignleft.svg")
+        icon9 = SvgIcon(":/common/align_left")
         self.ac_align_left = agent.addAction(icon9, None)
         self.ac_align_left.setCheckable(True)
         self.ac_align_left.setChecked(True)
         self.align_group.addAction(self.ac_align_left)
 
-        icon10 = SvgIcon("icons:ic_aligncenter.svg")
+        icon10 = SvgIcon(":/common/align_center")
         self.ac_align_center = agent.addAction(icon10, None)
         self.ac_align_center.setCheckable(True)
         self.align_group.addAction(self.ac_align_center)
 
-        icon11 = SvgIcon("icons:ic_alignright.svg")
+        icon11 = SvgIcon(":/common/align_right")
         self.ac_align_right = agent.addAction(icon11, None)
         self.ac_align_right.setCheckable(True)
         self.align_group.addAction(self.ac_align_right)
 
-        icon12 = SvgIcon("icons:ic_alignjustify.svg")
+        icon12 = SvgIcon(":/common/align_justify")
         self.ac_align_justify = agent.addAction(icon12, None)
         self.ac_align_justify.setCheckable(True)
         self.align_group.addAction(self.ac_align_justify)
 
         agent.addSeparator()
 
-        icon13 = SvgIcon("icons:ic_list.svg")
+        icon13 = SvgIcon(":/common/bullet_list")
         self.ac_list = agent.addAction(icon13, None)
 
-        icon14 = SvgIcon("icons:ic_numlist.svg")
+        icon14 = SvgIcon(":/common/num_list")
         self.ac_numlist = agent.addAction(icon14, None)
 
-        icon15 = SvgIcon("icons:ic_dedent.svg")
+        icon15 = SvgIcon(":/common/dedent")
         self.ac_dedent = agent.addAction(icon15, None)
 
-        icon16 = SvgIcon("icons:ic_indent.svg")
+        icon16 = SvgIcon(":/common/indent")
         self.ac_indent = agent.addAction(icon16, None)
 
         agent.addSeparator()
 
-        icon17 = SvgIcon("icons:ic_table.svg")
+        icon17 = SvgIcon(":/common/table")
         self.ac_table = agent.addAction(icon17, None)
         self.menu_table = TableMenu(agent)
         agent.widgetForAction(self.ac_table).setMenu(self.menu_table)
@@ -235,10 +233,10 @@ class TextToolsetView:
             QToolButton.ToolButtonPopupMode.InstantPopup
         )
 
-        icon18 = SvgIcon("icons:ic_symbol.svg")
+        icon18 = SvgIcon(":/common/symbol")
         self.ac_symbol = agent.addAction(icon18, None)
 
-        icon19 = SvgIcon("icons:ic_hyperlink.svg")
+        icon19 = SvgIcon(":/common/hyperlink")
         self.ac_hyperlink = agent.addAction(icon19, None)
 
         self.tabletools_group = QActionGroup(agent)
@@ -246,34 +244,34 @@ class TextToolsetView:
         seperator1 = agent.addSeparator()
         self.tabletools_group.addAction(seperator1)
 
-        icon20 = SvgIcon("icons:ic_insertRowBottom.svg")
+        icon20 = SvgIcon(":/common/insert_txt_row_bottom")
         self.ac_row_bottom = agent.addAction(icon20, None)
         self.tabletools_group.addAction(self.ac_row_bottom)
 
-        icon21 = SvgIcon("icons:ic_insertRowTop.svg")
+        icon21 = SvgIcon(":/common/insert_txt_row_top")
         self.ac_row_top = agent.addAction(icon21, None)
         self.tabletools_group.addAction(self.ac_row_top)
 
-        icon22 = SvgIcon("icons:ic_insertColumnRight.svg")
+        icon22 = SvgIcon(":/common/insert_txt_column_right")
         self.ac_column_right = agent.addAction(icon22, None)
         self.tabletools_group.addAction(self.ac_column_right)
 
-        icon23 = SvgIcon("icons:ic_insertColumnLeft.svg")
+        icon23 = SvgIcon(":/common/insert_txt_column_left")
         self.ac_column_left = agent.addAction(icon23, None)
         self.tabletools_group.addAction(self.ac_column_left)
 
         seperator2 = agent.addSeparator()
         self.tabletools_group.addAction(seperator2)
 
-        icon24 = SvgIcon("icons:ic_deleteRow.svg")
+        icon24 = SvgIcon(":/common/remove_txt_row")
         self.ac_delete_row = agent.addAction(icon24, None)
         self.tabletools_group.addAction(self.ac_delete_row)
 
-        icon25 = SvgIcon("icons:ic_deleteColumn.svg")
+        icon25 = SvgIcon(":/common/remove_txt_column")
         self.ac_delete_column = agent.addAction(icon25, None)
         self.tabletools_group.addAction(self.ac_delete_column)
 
-        icon26 = SvgIcon("icons:ic_deleteTable.svg")
+        icon26 = SvgIcon(":/common/remove_table")
         self.ac_delete_table = agent.addAction(icon26, None)
         self.tabletools_group.addAction(self.ac_delete_table)
 
@@ -332,20 +330,20 @@ class PictureToolsetView:
 
         agent.addSeparator()
 
-        icon1 = SvgIcon("icons:ic_link.svg")
+        icon1 = SvgIcon(":/common/link")
         self.ac_keep_aspect_ratio = agent.addAction(icon1, None)
         self.ac_keep_aspect_ratio.setCheckable(True)
         self.ac_keep_aspect_ratio.setChecked(True)
 
-        icon2 = SvgIcon("icons:ic_rotateRight.svg")
+        icon2 = SvgIcon(":/common/rotate_right")
         self.ac_rotate_right = agent.addAction(icon2, None)
 
-        icon3 = SvgIcon("icons:ic_rotateLeft.svg")
+        icon3 = SvgIcon(":/common/rotate_left")
         self.ac_rotate_left = agent.addAction(icon3, None)
 
         agent.addSeparator()
 
-        icon4 = SvgIcon("icons:ic_reset.svg")
+        icon4 = SvgIcon(":/common/reset")
         self.ac_reset_image = agent.addAction(icon4, None)
 
         self.retranslateUi()
@@ -401,15 +399,15 @@ class AudioToolsetView:
 
         agent.addSeparator()
 
-        icon5 = SvgIcon("icons:ic_rew5.svg")
+        icon5 = SvgIcon(":/common/rew5")
         self.ac_rew5 = agent.addAction(icon5, None)
 
-        icon6 = SvgIcon("icons:ic_fwd5.svg")
+        icon6 = SvgIcon(":/common/fwd5")
         self.ac_fwd5 = agent.addAction(icon6, None)
 
         agent.addSeparator()
 
-        icon7 = SvgIcon("icons:ic_repeat.svg")
+        icon7 = SvgIcon(":/common/repeat")
         self.ac_repeat = agent.addAction(icon7, None)
         self.ac_repeat.setCheckable(True)
 

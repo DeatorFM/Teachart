@@ -8,19 +8,12 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QStyle,
-    QStyledItemDelegate,
     QWidget,
 )
 from tcha.dbmodels import *
 from tcha.error import StandardLogger
-from tcha.settings import Settings
 from tcha.utils import debug_enabled
 from ui.ui_dbmanager import AssignmentView, DbManagerView
-
-
-class ScheduleDelegate(QStyledItemDelegate):
-    def paint(self, painter, option, index):
-        return super().paint(painter, option, index)
 
 
 class DbManager(QDialog, DbManagerView):

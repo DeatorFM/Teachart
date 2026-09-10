@@ -143,17 +143,17 @@ class Ui_StartWindow(object):
 
         self.ac_new = QAction(parent=start_window)
         self.ac_new.setObjectName("ac_new")
-        icon2 = SvgIcon("icons:ic_newFile.svg")
+        icon2 = start_window.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
         self.ac_new.setIcon(icon2)
 
         self.ac_course_mng = QAction(parent=start_window)
         self.ac_course_mng.setObjectName("ac_course_mng")
-        icon4 = SvgIcon("icons:ic_edu.svg")
+        icon4 = SvgIcon(":/common/edu")
         self.ac_course_mng.setIcon(icon4)
 
         self.ac_settings = QAction(parent=start_window)
         self.ac_settings.setObjectName("ac_settings")
-        icon3 = SvgIcon("icons:ic_settings.svg")
+        icon3 = SvgIcon(":/common/settings")
         self.ac_settings.setIcon(icon3)
 
         self.tb_file_actions.addAction(self.ac_new)
@@ -178,7 +178,7 @@ class Ui_StartWindow(object):
 
         self.tb_about = QToolButton(self.status_bar)
         self.tb_about.setObjectName("tb_about")
-        icon5 = SvgIcon("icons:ic_about.svg")
+        icon5 = SvgIcon(":/common/about")
         self.tb_about.setIcon(icon5)
         self.tb_about.setIconSize(QSize(22, 22))
         self.status_bar.addPermanentWidget(self.tb_about)
@@ -320,9 +320,9 @@ class OpenFileDelegate(QStyledItemDelegate):
         self.ABSPATH_PATH = QFont()
         self.ABSPATH_PATH.setPixelSize(11)
 
-        self.ICON_ON = SvgIcon("icons:ic_pinned.svg")
+        self.ICON_ON = SvgIcon(":/common/pinned")
 
-        self.ICON_OFF = SvgIcon("icons:ic_notPinned.svg")
+        self.ICON_OFF = SvgIcon(":/common/not_pinned")
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.save()

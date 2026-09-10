@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import unicodedata
 import webbrowser
 
@@ -71,7 +70,7 @@ from tcha.consts import ResourceFlag
 from tcha.error import StandardLogger
 from tcha.resmanager import FileResourceObject, ResourceContainer
 from tcha.settings import Locale, Settings
-from ui.element_toolsets import TextToolsetView
+from ui.ui_etoolsets import TextToolsetView
 
 # fmt: off
 UNICODECHART = {
@@ -763,7 +762,7 @@ class TextEditorMenu(QMenu):
 
     def set_button_color(self, old: QColor, color: QColor) -> None:
         self.ui.tb_TextColor.setProperty("color", color)
-        ic_engine = SvgIconEngine(Svg.from_file("icons:ic_textColor.svg"))
+        ic_engine = SvgIconEngine(Svg.from_file(":/common/text_color"))
         ic_engine.set_path_color("lineBottom", color)
         self.ui.tb_TextColor.setIcon(QIcon(ic_engine))
 
@@ -1088,7 +1087,7 @@ class TextToolset(BaseElementToolset):
 
     def set_button_color(self, color: QColor) -> None:
         if color:
-            svg = Svg.from_file("icons:ic_textColor.svg")
+            svg = Svg.from_file(":/common/text_color")
             if color.isValid():
                 ic_engine = SvgIconEngine(svg)
                 ic_engine.set_path_color("lineBottom", color)
@@ -1280,7 +1279,7 @@ class TextElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(QIcon("icons:ic_text.svg"), tr("Text"), parent)
+        action = QAction(QIcon(":/common/text"), tr("Text"), parent)
         action.setData(TextElementDefinitions)
         action.setProperty("is_element_action", True)
         return action

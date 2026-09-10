@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from tcha.base import BaseMainWindow
 from tcha.consts import CloseState
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
-from ui.start_view import Ui_StartWindow
+from ui.ui_start import Ui_StartWindow
 
 
 @dataclass

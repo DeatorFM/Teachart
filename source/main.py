@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication, QDir, QProcess
+from styling.resources import common
 from tcha.core import AppCore
 
 

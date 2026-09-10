@@ -41,7 +41,7 @@ from tcha.settings import Settings
 from tcha.table import Table
 from tcha.tablemodel import TableModel
 from tcha.utils import WinApi, debug_enabled
-from ui.editor_view import Ui_Editor
+from ui.ui_editor import Ui_Editor
 
 
 class SaveWorkerSignals(QObject):

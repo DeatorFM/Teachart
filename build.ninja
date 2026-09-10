@@ -38,25 +38,29 @@ build setup: uv
   desc = Buildung teachart and tpack
 
 # Compile resources
-build source/themes/stylesheets-light: compress_qss resources/themes/light/light.qss
+build source/styling/resources/stylesheets-light: compress_qss resources/themes/light/light.qss
   name = light
 
-build source/themes/stylesheets-dark: compress_qss resources/themes/dark/dark.qss
+build source/styling/resources/stylesheets-dark: compress_qss resources/themes/dark/dark.qss
   name = dark
 
-build source/themes/light.py: pyside_rcc resources/themes/light/light.qrc
+build source/styling/resources/light.py: pyside_rcc resources/themes/light/light.qrc
 
-build source/themes/dark.py: pyside_rcc resources/themes/dark/dark.qrc
+build source/styling/resources/dark.py: pyside_rcc resources/themes/dark/dark.qrc
 
-build compile-light: phony source/themes/resources/light.py source/themes/stylesheets-light
+build source/styling/resources/common.py: pyside_rcc resources/resources.qrc
 
-build compile-dark: phony source/themes/resources/dark.py source/themes/stylesheets-dark
+build compile-common: phony source/styling/resources/common.py
 
-build compile-all: phony compile-light compile-dark
+build compile-light: phony source/styling/resources/light.py source/styling/resources/stylesheets-light
+
+build compile-dark: phony source/styling/resources/dark.py source/styling/resources/stylesheets-dark
+
+build compile-all: phony compile-common compile-light compile-dark
 
 # Pack themes - light
-build resources/themes/light/resources.bin: pack_theme source/themes/resources/light.py
-  args = bin resources/themes/light/resources.bin source/themes/resources/light.py
+build resources/themes/light/resources.bin: pack_theme source/styling/resources/light.py
+  args = bin resources/themes/light/resources.bin source/styling/resources/light.py
   desc = Packing light theme resources
 
 build resources/themes/packed/light.taste: pack_theme resources/themes/light/resources.bin resources/themes/light/properties.json resources/themes/light/light.qss
@@ -66,8 +70,8 @@ build resources/themes/packed/light.taste: pack_theme resources/themes/light/res
 build pack-light: phony resources/themes/packed/light.taste
 
 # Pack themes - dark
-build resources/themes/dark/resources.bin: pack_theme source/themes/resources/dark.py
-  args = bin resources/themes/dark/resources.bin source/themes/resources/dark.py
+build resources/themes/dark/resources.bin: pack_theme source/styling/resources/dark.py
+  args = bin resources/themes/dark/resources.bin source/styling/resources/dark.py
   desc = Packing dark theme resources
 
 build resources/themes/packed/dark.taste: pack_theme resources/themes/dark/resources.bin resources/themes/dark/properties.json resources/themes/dark/dark.qss

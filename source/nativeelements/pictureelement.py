@@ -53,7 +53,7 @@ from tcha.resmanager import (
     ResourceType,
 )
 from tcha.settings import Settings
-from ui.element_toolsets import PictureToolsetView
+from ui.ui_etoolsets import PictureToolsetView
 
 
 class PictureModel(BaseElementModel):
@@ -613,7 +613,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(SvgIcon("icons:ic_fileImage.svg"), tr("Picture"), parent)
+        action = QAction(SvgIcon(":/common/file_image"), tr("Picture"), parent)
         action.setData(PictureElementDefinitions)
         action.setProperty("is_element_action", True)
         return action

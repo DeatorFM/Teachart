@@ -145,7 +145,6 @@ class Ui_Editor(object):
                 min-height: 1.1em; 
                 border: 1px;
                 border-radius: 4px;
-                background-color: white;
                 }
                 
                 QComboBox::down-arrow {image: none}"""
@@ -154,7 +153,7 @@ class Ui_Editor(object):
         self.row_list.view().setFixedWidth(50)
         self.statusbar.addWidget(self.row_list)
 
-        icon20 = SvgIcon("icons:ic_down.svg")
+        icon20 = SvgIcon(":/common/arrow_down_small")
         self.ac_row_down = MainWindow.addAction(None)
         self.ac_row_down.setIcon(icon20)
         self.ac_row_down.setShortcut(QKeySequence(Qt.Key.Key_Control, Qt.Key.Key_Down))
@@ -165,7 +164,7 @@ class Ui_Editor(object):
         self.tb_row_down.setObjectName("tb_row_down")
         self.statusbar.addWidget(self.tb_row_down)
 
-        icon21 = SvgIcon("icons:ic_up.svg")
+        icon21 = SvgIcon(":/common/up")
         self.ac_row_up = MainWindow.addAction(None)
         self.ac_row_up.setIcon(icon21)
         self.ac_row_up.setShortcut(QKeySequence(Qt.Key.Key_Control, Qt.Key.Key_Up))
@@ -216,7 +215,7 @@ class Ui_Editor(object):
         # self.tb_pointer.setCheckable(True)
         # self.tb_pointer.setChecked(True)
         # self.tb_pointer.setProperty("tool", CanvasTool.Pointer)
-        # icon19 = SvgIcon("icons:ic_pointer.svg")
+        # icon19 = SvgIcon(":/common/ic_pointer.svg")
         # self.tb_pointer.setIcon(icon19)
         # self.dw_lo3.addWidget(self.tb_pointer)
         # self.bg_tools.addButton(self.tb_pointer)
@@ -226,7 +225,7 @@ class Ui_Editor(object):
         self.tb_pen.setCheckable(True)
         self.tb_pen.setChecked(True)
         self.tb_pen.setProperty("tool", CanvasTool.Pen)
-        icon16 = SvgIcon("icons:ic_pen.svg")
+        icon16 = SvgIcon(":/common/pen")
         self.tb_pen.setIcon(icon16)
         self.dw_lo3.addWidget(self.tb_pen)
         self.bg_tools.addButton(self.tb_pen)
@@ -235,7 +234,7 @@ class Ui_Editor(object):
         self.tb_arrow.setObjectName("tb_arrow")
         self.tb_arrow.setCheckable(True)
         self.tb_arrow.setProperty("tool", CanvasTool.Arrow)
-        icon18 = SvgIcon("icons:ic_arrowTool.svg")
+        icon18 = SvgIcon(":/common/arrow_tool")
         self.tb_arrow.setIcon(icon18)
         self.dw_lo3.addWidget(self.tb_arrow)
         self.bg_tools.addButton(self.tb_arrow)
@@ -244,7 +243,7 @@ class Ui_Editor(object):
         self.tb_rubber.setObjectName("tb_rubber")
         self.tb_rubber.setCheckable(True)
         self.tb_rubber.setProperty("tool", CanvasTool.Rubber)
-        icon17 = SvgIcon("icons:ic_rubber.svg")
+        icon17 = SvgIcon(":/common/rubber")
         self.tb_rubber.setIcon(icon17)
         self.dw_lo3.addWidget(self.tb_rubber)
         self.bg_tools.addButton(self.tb_rubber)
@@ -412,7 +411,7 @@ class Ui_Editor(object):
         # Course Actions
 
         self.ac_add_course = QAction(parent=MainWindow)
-        icon3 = SvgIcon("icons:ic_new.svg")
+        icon3 = SvgIcon(":/common/new")
         self.ac_add_course.setIcon(icon3)
         self.ac_add_course.setObjectName("ac_add_course")
 
@@ -420,11 +419,11 @@ class Ui_Editor(object):
         self.ac_course_exp.setObjectName("ac_course_exp")
         self.ac_course_rec = QAction(parent=MainWindow)
         self.ac_course_rec.setObjectName("ac_course_rec")
-        icon11 = SvgIcon("icons:ic_info.svg")
+        icon11 = SvgIcon(":/common/info")
         self.ac_course_rec.setIcon(icon11)
 
-        icon12 = SvgIcon("icons:ic_schedule.svg")
-        icon13 = SvgIcon("icons:ic_scheduled.svg")
+        icon12 = SvgIcon(":/common/schedule")
+        icon13 = SvgIcon(":/common/scheduled")
 
         self.ac_schedule = SwitchAction(icon12, icon13, MainWindow)
         self.ac_schedule.setObjectName("ac_schedule")
@@ -435,7 +434,7 @@ class Ui_Editor(object):
         self.ac_show_notes.setCheckable(True)
         self.ac_show_notes.setChecked(True)
         self.ac_show_notes.setObjectName("ac_show_notes")
-        icon14 = SvgIcon("icons:ic_notes.svg")
+        icon14 = SvgIcon(":/common/notes")
         self.ac_show_notes.setIcon(icon14)
 
         self.ac_pres_mode = QAction(parent=MainWindow)
@@ -443,7 +442,7 @@ class Ui_Editor(object):
         self.ac_pres_mode.setCheckable(True)
         self.ac_pres_mode.setChecked(False)
         self.ac_pres_mode.setShortcut(Qt.Key.Key_F11)
-        icon15 = SvgIcon("icons:ic_present_mode.svg")
+        icon15 = SvgIcon(":/common/presenter_mode")
         self.ac_pres_mode.setIcon(icon15)
 
         self.ac_show_ttbar = QAction(parent=MainWindow)
@@ -457,14 +456,14 @@ class Ui_Editor(object):
         self.ac_vmode_table.setCheckable(True)
         self.ac_vmode_table.setChecked(True)
         self.ac_vmode_table.setObjectName("ac_vmode_table")
-        icon22 = SvgIcon("icons:ic_table.svg")
+        icon22 = SvgIcon(":/common/table")
         self.ac_vmode_table.setIcon(icon22)
         self.ac_vmode_table.setIconVisibleInMenu(False)
 
         self.ac_vmode_row = QAction(parent=MainWindow)
         self.ac_vmode_row.setCheckable(True)
         self.ac_vmode_row.setObjectName("ac_vmode_row")
-        icon23 = SvgIcon("icons:ic_row.svg")
+        icon23 = SvgIcon(":/common/row_view")
         self.ac_vmode_row.setIcon(icon23)
         self.ac_vmode_row.setIconVisibleInMenu(False)
 
@@ -497,7 +496,7 @@ class Ui_Editor(object):
         self.ac_copy.setDisabled(True)
         self.ac_copy.setShortcut(QKeySequence.StandardKey.Copy)
         self.ac_copy.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
-        icon27 = SvgIcon("icons:ic_copy.svg")
+        icon27 = SvgIcon(":/common/copy")
         self.ac_copy.setIcon(icon27)
 
         self.ac_paste = QAction(parent=MainWindow)
@@ -505,27 +504,27 @@ class Ui_Editor(object):
         self.ac_paste.setDisabled(True)
         self.ac_paste.setShortcut(QKeySequence.StandardKey.Paste)
         self.ac_paste.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
-        icon28 = SvgIcon("icons:ic_paste.svg")
+        icon28 = SvgIcon(":/common/paste")
         self.ac_paste.setIcon(icon28)
 
         self.ac_append_row = QAction(parent=MainWindow)
         self.ac_append_row.setObjectName("ac_append_row")
         self.ac_append_row.setShortcut("Ctrl+R")
         self.ac_append_row.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
-        icon29 = SvgIcon("icons:ic_append_row.svg")
+        icon29 = SvgIcon(":/common/append_row")
         self.ac_append_row.setIcon(icon29)
 
         self.ac_append_column = QAction(parent=MainWindow)
         self.ac_append_column.setObjectName("ac_append_column")
         self.ac_append_column.setShortcut("Ctrl+T")
         self.ac_append_column.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
-        icon30 = SvgIcon("icons:ic_append_column.svg")
+        icon30 = SvgIcon(":/common/append_column")
         self.ac_append_column.setIcon(icon30)
 
         self.table_group = QActionGroup(MainWindow)
 
         self.ac_add_to_cell = QAction(parent=MainWindow)
-        icon = SvgIcon("icons:ic_addblock.svg")
+        icon = SvgIcon(":/common/add_block")
         self.ac_add_to_cell.setIcon(icon)
         self.ac_add_to_cell.setObjectName("ac_add_to_cell")
         self.table_group.addAction(self.ac_add_to_cell)
@@ -546,25 +545,25 @@ class Ui_Editor(object):
         self.table_group.addAction(self.ac_cell_finish_editing)
 
         self.ac_add_row = QAction(parent=MainWindow)
-        icon1 = SvgIcon("icons:ic_addrow.svg")
+        icon1 = SvgIcon(":/common/add_row")
         self.ac_add_row.setIcon(icon1)
         self.ac_add_row.setObjectName("ac_add_row")
         self.table_group.addAction(self.ac_add_row)
 
         self.ac_add_column = QAction(parent=MainWindow)
-        icon2 = SvgIcon("icons:ic_addcolumn.svg")
+        icon2 = SvgIcon(":/common/add_column")
         self.ac_add_column.setObjectName("ac_add_column")
         self.ac_add_column.setIcon(icon2)
         self.table_group.addAction(self.ac_add_column)
 
         self.ac_rmv_row = QAction(parent=MainWindow)
-        icon4 = SvgIcon("icons:ic_remove_row.svg")
+        icon4 = SvgIcon(":/common/remove_row")
         self.ac_rmv_row.setIcon(icon4)
         self.ac_rmv_row.setObjectName("ac_rmv_row")
         self.table_group.addAction(self.ac_rmv_row)
 
         self.ac_rmv_column = QAction(parent=MainWindow)
-        icon5 = SvgIcon("icons:ic_remove_column.svg")
+        icon5 = SvgIcon(":/common/remove_column")
         self.ac_rmv_column.setIcon(icon5)
         self.ac_rmv_column.setObjectName("ac_rmv_column")
         self.table_group.addAction(self.ac_rmv_column)
@@ -591,21 +590,21 @@ class Ui_Editor(object):
         self.cell_group.addAction(self.ac_elem_discard_changes)
 
         self.ac_mov_up = QAction(parent=MainWindow)
-        icon6 = SvgIcon("icons:ic_move_up.svg")
+        icon6 = SvgIcon(":/common/move_up")
         self.ac_mov_up.setIcon(icon6)
         self.ac_mov_up.setObjectName("ac_mov_up")
         self.ac_mov_up.setData(CellAction.MoveUp)
         self.cell_group.addAction(self.ac_mov_up)
 
         self.ac_mov_dwn = QAction(parent=MainWindow)
-        icon7 = SvgIcon("icons:ic_move_down.svg")
+        icon7 = SvgIcon(":/common/move_down")
         self.ac_mov_dwn.setIcon(icon7)
         self.ac_mov_dwn.setObjectName("ac_mov_dwn")
         self.ac_mov_dwn.setData(CellAction.MoveDown)
         self.cell_group.addAction(self.ac_mov_dwn)
 
         self.ac_del_element = QAction(parent=MainWindow)
-        icon8 = SvgIcon("icons:ic_trash.svg")
+        icon8 = MainWindow.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)
         self.ac_del_element.setIcon(icon8)
         self.ac_del_element.setObjectName("ac_del_element")
         self.ac_del_element.setData(CellAction.RemoveElement)
@@ -613,7 +612,7 @@ class Ui_Editor(object):
 
         self.ac_clear_cell = QAction(parent=MainWindow)
         self.ac_clear_cell.setObjectName("ac_clear_cell")
-        icon26 = SvgIcon("icons:ic_clear.svg")
+        icon26 = SvgIcon(":/common/clear")
         self.ac_clear_cell.setIcon(icon26)
         self.ac_clear_cell.setData(CellAction.Clear)
         self.ac_clear_cell.setEnabled(False)
@@ -626,7 +625,7 @@ class Ui_Editor(object):
 
         self.ac_about = QAction(parent=MainWindow)
         self.ac_about.setObjectName("ac_about")
-        icon19 = SvgIcon("icons:ic_about.svg")
+        icon19 = SvgIcon(":/common/about")
         self.ac_about.setIcon(icon19)
 
         # Menu Definitions

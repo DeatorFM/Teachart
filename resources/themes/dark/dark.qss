@@ -146,20 +146,20 @@ QToolBar {
     
 QToolBar::handle:horizontal {
     width:20px;
-    image: url(:/drag_indicator_#e4e7ebff_0.svg)
+    image: url(:/theme/drag_indicator_#e4e7ebff_0.svg)
     }
     
 QToolBar::handle:vertical {
     height:20px;
-    image: url(:/drag_indicator_#e4e7ebff_90.svg)
+    image: url(:/theme/drag_indicator_#e4e7ebff_90.svg)
     }
     
 QToolBar::handle:horizontal:disabled {
-    image: url(:/drag_indicator_#e4e7eb66_0.svg)
+    image: url(:/theme/drag_indicator_#e4e7eb66_0.svg)
     }
     
 QToolBar::handle:vertical:disabled {
-    image: url(:/drag_indicator_#e4e7eb66_90.svg)
+    image: url(:/theme/drag_indicator_#e4e7eb66_90.svg)
     }
     
 QToolBar::separator {
@@ -229,11 +229,11 @@ QMenu::right-arrow {
     padding-left:12px;
     height:20px;
     width:20px;
-    image: url(:/chevron_right_#e4e7ebff_0.svg)
+    image: url(:/theme/chevron_right_#e4e7ebff_0.svg)
     }
     
 QMenu::right-arrow:disabled {
-    image: url(:/chevron_right_#e4e7eb66_0.svg)
+    image: url(:/theme/chevron_right_#e4e7eb66_0.svg)
     }
     
 QScrollBar {
@@ -295,35 +295,35 @@ QScrollBar::sub-line,QScrollBar::add-line {
     }
     
 QScrollBar::up-arrow:enabled {
-    image: url(:/arrow_drop_up_#00000030_0.svg)
+    image: url(:/theme/arrow_drop_up_#00000030_0.svg)
     }
     
 QScrollBar::right-arrow:enabled {
-    image: url(:/arrow_drop_up_#00000030_90.svg)
+    image: url(:/theme/arrow_drop_up_#00000030_90.svg)
     }
     
 QScrollBar::down-arrow:enabled {
-    image: url(:/arrow_drop_up_#00000030_180.svg)
+    image: url(:/theme/arrow_drop_up_#00000030_180.svg)
     }
     
 QScrollBar::left-arrow:enabled {
-    image:url(:/arrow_drop_up_#00000030_270.svg)
+    image:url(:/theme/arrow_drop_up_#00000030_270.svg)
     }
     
 QScrollBar::up-arrow:hover {
-    image: url(:/arrow_drop_up_#00000060_0.svg)
+    image: url(:/theme/arrow_drop_up_#00000060_0.svg)
     }
     
 QScrollBar::right-arrow:hover {
-    image: url(:/arrow_drop_up_#00000060_90.svg)
+    image: url(:/theme/arrow_drop_up_#00000060_90.svg)
     }
     
 QScrollBar::down-arrow:hover {
-    image: url(:/arrow_drop_up_#00000060_180.svg)
+    image: url(:/theme/arrow_drop_up_#00000060_180.svg)
     }
     
 QScrollBar::left-arrow:hover {
-    image: url(:/arrow_drop_up_#00000060_270.svg)
+    image: url(:/theme/arrow_drop_up_#00000060_270.svg)
     }
     
 QProgressBar {
@@ -414,11 +414,11 @@ QToolButton::menu-indicator {
     width:18px;
     top:6px;
     left:3px;
-    image: url(:/expand_less_#e4e7ebff_180.svg)
+    image: url(:/theme/expand_less_#e4e7ebff_180.svg)
     }
     
 QToolButton::menu-indicator:disabled {
-    image: url(:/expand_less_#e4e7eb66_180.svg)
+    image: url(:/theme/expand_less_#e4e7eb66_180.svg)
     }
     
 QToolButton::menu-arrow {
@@ -430,11 +430,11 @@ QToolButton::menu-button {
     width:17px;
     border-top-right-radius:2px;
     border-bottom-right-radius:2px;
-    image: url(:/expand_less_#e4e7ebff_180.svg)
+    image: url(:/theme/expand_less_#e4e7ebff_180.svg)
     }
     
 QToolButton::menu-button:disabled {
-    image: url(:/expand_less_#e4e7eb66_180.svg)
+    image: url(:/theme/expand_less_#e4e7eb66_180.svg)
     }
     
 QToolButton[popupMode=MenuButtonPopup] {
@@ -466,19 +466,19 @@ QComboBox::drop-down:editable:hover {
     }
     
 QComboBox::down-arrow {
-    image: url(:/expand_less_#e4e7ebff_180.svg)
+    image: url(:/theme/expand_less_#e4e7ebff_180.svg)
     }
     
 QComboBox::down-arrow:disabled {
-    image: url(:/expand_less_#e4e7eb66_180.svg)
+    image: url(:/theme/expand_less_#e4e7eb66_180.svg)
     }
     
 QComboBox::down-arrow:editable:open {
-    image: url(:/expand_less_#e4e7ebff_0.svg)
+    image: url(:/theme/expand_less_#e4e7ebff_0.svg)
     }
     
 QComboBox::down-arrow:editable:open:disabled {
-    image: url(:/expand_less_#e4e7eb66_0.svg)
+    image: url(:/theme/expand_less_#e4e7eb66_0.svg)
     }
     
 QComboBox::item:selected {
@@ -554,7 +554,7 @@ QTabBar {
     }
     
 QTabBar::close-button {
-    image:url(:/close_#e4e7ebff_0.svg)
+    image:url(:/theme/close_#e4e7ebff_0.svg)
     }
     
 QTabBar::close-button:hover {
@@ -563,11 +563,11 @@ QTabBar::close-button:hover {
     }
     
 QTabBar::close-button:!selected {
-    image:url(:/close_#e4e7eb99_0.svg)
+    image:url(:/theme/close_#e4e7eb99_0.svg)
     }
     
 QTabBar::close-button:disabled {
-    image:url(:/close_#e4e7eb66_0.svg)
+    image:url(:/theme/close_#e4e7eb66_0.svg)
     }
     
 QTabBar::tab {
@@ -720,20 +720,20 @@ QSplitter::handle:hover {
 
 QSplitter::handle:horizontal {
     width:5px;
-    image:url(:/horizontal_rule_#e4e7ebff_90.svg)
+    image:url(:/theme/horizontal_rule_#e4e7ebff_90.svg)
     }
 
 QSplitter::handle:horizontal:disabled {
-    image:url(:/horizontal_rule_#e4e7eb66_90.svg)
+    image:url(:/theme/horizontal_rule_#e4e7eb66_90.svg)
     }
 
 QSplitter::handle:vertical {
     height:5px;
-    image:url(:/horizontal_rule_#e4e7ebff_0.svg)
+    image:url(:/theme/horizontal_rule_#e4e7ebff_0.svg)
     }
 
 QSplitter::handle:vertical:disabled {
-    image:url(:/horizontal_rule_#e4e7eb66_0.svg)
+    image:url(:/theme/horizontal_rule_#e4e7eb66_0.svg)
     }
 
 QSplitterHandle::item:hover {
@@ -828,11 +828,11 @@ QTreeView::branch:!selected:hover,QTreeView::branch:alternate,QTreeView::branch:
     }
 
 QTreeView::branch {
-    border-image:url(:/vertical_line_#00000035_0.svg) 0
+    border-image:url(:/theme/vertical_line_#00000035_0.svg) 0
     }
 
 QTreeView::branch:active {
-    border-image:url(:/vertical_line_#00000060_0.svg) 0
+    border-image:url(:/theme/vertical_line_#00000060_0.svg) 0
     }
 
 QTreeView::branch:has-siblings:adjoins-item,QTreeView::branch:!has-children:!has-siblings:adjoins-item {
@@ -841,20 +841,20 @@ QTreeView::branch:has-siblings:adjoins-item,QTreeView::branch:!has-children:!has
 
 QTreeView::branch:has-children:!has-siblings:closed,QTreeView::branch:closed:has-children:has-siblings {
     border-image:unset;
-    image:url(:/chevron_right_#e4e7ebff_0.svg)
+    image:url(:/theme/chevron_right_#e4e7ebff_0.svg)
     }
 
 QTreeView::branch:has-children:!has-siblings:closed:disabled,QTreeView::branch:closed:has-children:has-siblings:disabled {
-    image:url(:/chevron_right_#e4e7eb66_0.svg)
+    image:url(:/theme/chevron_right_#e4e7eb66_0.svg)
     }
 
 QTreeView::branch:open:has-children:!has-siblings,QTreeView::branch:open:has-children:has-siblings {
     border-image:unset;
-    image:url(:/expand_less_#e4e7ebff_180.svg)
+    image:url(:/theme/expand_less_#e4e7ebff_180.svg)
     }
 
 QTreeView::branch:open:has-children:!has-siblings:disabled,QTreeView::branch:open:has-children:has-siblings:disabled {
-    image:url(:/expand_less_#e4e7eb66_180.svg)
+    image:url(:/theme/expand_less_#e4e7eb66_180.svg)
     }
 
 QTreeView > QHeaderView {
@@ -867,28 +867,28 @@ QTreeView > QHeaderView::section {
 
 QListView::left-arrow {
     margin:-2px;
-    image:url(:/chevron_right_#e4e7eb99_180.svg)
+    image:url(:/theme/chevron_right_#e4e7eb99_180.svg)
     }
 
 QListView::right-arrow {
     margin:-2px;
-    image:url(:/chevron_right_#e4e7eb99_180.svg)
+    image:url(:/theme/chevron_right_#e4e7eb99_180.svg)
     }
 
 QListView::left-arrow:selected:enabled {
-    image:url(:/chevron_right_#e4e7ebff_180.svg)
+    image:url(:/theme/chevron_right_#e4e7ebff_180.svg)
     }
 
 QListView::right-arrow:selected:enabled {
-    image:url(:/chevron_right_#e4e7ebff_0.svg)
+    image:url(:/theme/chevron_right_#e4e7ebff_0.svg)
     }
 
 QListView::left-arrow:disabled {
-    image:url(:/chevron_right_#e4e7eb66_180.svg)
+    image:url(:/theme/chevron_right_#e4e7eb66_180.svg)
     }
 
 QListView::right-arrow:disabled {
-    image:url(:/chevron_right_#e4e7eb66_0.svg)
+    image:url(:/theme/chevron_right_#e4e7eb66_0.svg)
     }
 
 QColumnView {
@@ -898,11 +898,11 @@ QColumnView {
 QColumnViewGrip {
     margin:-4px;
     background:rgba(32, 33, 36, 255);
-    image:url(:/drag_handle_#e4e7ebff_90.svg)
+    image:url(:/theme/drag_handle_#e4e7ebff_90.svg)
     }
 
 QColumnViewGrip:disabled {
-    image:url(:/drag_handle_#e4e7eb66_90.svg)
+    image:url(:/theme/drag_handle_#e4e7eb66_90.svg)
     }
 
 QTableView {
@@ -961,21 +961,21 @@ QHeaderView::section:last,QHeaderView::section:only-one {
 QHeaderView::down-arrow:horizontal {
     margin-left:-19px;
     subcontrol-position:center right;
-    image:url(:/expand_less_#e4e7ebff_180.svg)
+    image:url(:/theme/expand_less_#e4e7ebff_180.svg)
     }
 
 QHeaderView::down-arrow:horizontal:disabled {
-    image:url(:/expand_less_#e4e7eb66_180.svg)
+    image:url(:/theme/expand_less_#e4e7eb66_180.svg)
     }
 
 QHeaderView::up-arrow:horizontal {
     margin-left:-19px;
     subcontrol-position:center right;
-    image:url(:/expand_less_#e4e7ebff_0.svg)
+    image:url(:/theme/expand_less_#e4e7ebff_0.svg)
     }
 
 QHeaderView::up-arrow:horizontal:disabled {
-    image:url(:/expand_less_#e4e7eb66_0.svg)
+    image:url(:/theme/expand_less_#e4e7eb66_0.svg)
     }
 
 QHeaderView::down-arrow:vertical,QHeaderView::up-arrow:vertical {
@@ -1034,11 +1034,11 @@ QAbstractSpinBox::up-button {
     }
 
 QAbstractSpinBox::up-arrow:on {
-    image:url(:/arrow_drop_up_#e4e7ebff_0.svg)
+    image:url(:/theme/arrow_drop_up_#e4e7ebff_0.svg)
     }
 
 QAbstractSpinBox::up-arrow:disabled,QAbstractSpinBox::up-arrow:off {
-    image:url(:/arrow_drop_up_#e4e7eb66_0.svg)
+    image:url(:/theme/arrow_drop_up_#e4e7eb66_0.svg)
     }
 
 QAbstractSpinBox::down-button {
@@ -1047,21 +1047,21 @@ QAbstractSpinBox::down-button {
     }
 
 QAbstractSpinBox::down-arrow:on {
-    image:url(:/arrow_drop_up_#e4e7ebff_180.svg)
+    image:url(:/theme/arrow_drop_up_#e4e7ebff_180.svg)
     }
 
 QAbstractSpinBox::down-arrow:disabled,QAbstractSpinBox::down-arrow:off {
-    image:url(:/arrow_drop_up_#e4e7eb66_180.svg)
+    image:url(:/theme/arrow_drop_up_#e4e7eb66_180.svg)
     }
 
 QDateTimeEdit::drop-down {
     padding-right:4px;
     width:16px;
-    image:url(:/calendar_today_#e4e7ebff_0.svg)
+    image:url(:/theme/calendar_today_#e4e7ebff_0.svg)
     }
 
 QDateTimeEdit::drop-down:disabled {
-    image:url(:/calendar_today_#e4e7eb66_0.svg)
+    image:url(:/theme/calendar_today_#e4e7eb66_0.svg)
     }
 
 QDateTimeEdit::down-arrow[calendarPopup=true] {
@@ -1088,7 +1088,7 @@ QMenu::indicator {
     }
 
 QComboBox::indicator:checked,QMenu::indicator:checked {
-    image:url(:/check_#e4e7ebff_0.svg)
+    image:url(:/theme/check_#e4e7ebff_0.svg)
     }
 
 QCheckBox,QRadioButton {
@@ -1105,43 +1105,43 @@ QCheckBox::indicator,QGroupBox::indicator,QAbstractItemView::indicator,QRadioBut
     }
 
 QCheckBox::indicator,QGroupBox::indicator,QAbstractItemView::indicator {
-    image:url(:/check_box_outline_blank_#e4e7ebff_0.svg)
+    image:url(:/theme/check_box_outline_blank_#e4e7ebff_0.svg)
     }
 
 QCheckBox::indicator:unchecked:disabled,QGroupBox::indicator:unchecked:disabled,QAbstractItemView::indicator:unchecked:disabled {
-    image:url(:/check_box_outline_blank_#e4e7eb66_0.svg)
+    image:url(:/theme/check_box_outline_blank_#e4e7eb66_0.svg)
     }
 
 QCheckBox::indicator:checked,QGroupBox::indicator:checked,QAbstractItemView::indicator:checked {
-    image:url(:/check_box_#8ab4f7ff_0.svg)
+    image:url(:/theme/check_box_#8ab4f7ff_0.svg)
     }
 
 QCheckBox::indicator:checked:disabled,QGroupBox::indicator:checked:disabled,QAbstractItemView::indicator:checked:disabled {
-    image:url(:/check_box_#e4e7eb66_0.svg)
+    image:url(:/theme/check_box_#e4e7eb66_0.svg)
     }
 
 QCheckBox::indicator:indeterminate,QAbstractItemView::indicator:indeterminate {
-    image:url(:/indeterminate_check_box_#8ab4f7ff_0.svg)
+    image:url(:/theme/indeterminate_check_box_#8ab4f7ff_0.svg)
     }
 
 QCheckBox::indicator:indeterminate:disabled,QAbstractItemView::indicator:indeterminate:disabled {
-    image:url(:/indeterminate_check_box_#e4e7eb66_0.svg)
+    image:url(:/theme/indeterminate_check_box_#e4e7eb66_0.svg)
     }
 
 QRadioButton::indicator:unchecked {
-    image:url(:/radio_button_unchecked_#e4e7ebff_0.svg)
+    image:url(:/theme/radio_button_unchecked_#e4e7ebff_0.svg)
     }
 
 QRadioButton::indicator:unchecked:disabled {
-    image:url(:/radio_button_unchecked_#e4e7eb66_0.svg)
+    image:url(:/theme/radio_button_unchecked_#e4e7eb66_0.svg)
     }
 
 QRadioButton::indicator:checked {
-    image:url(:/radio_button_checked_#8ab4f7ff_0.svg)
+    image:url(:/theme/radio_button_checked_#8ab4f7ff_0.svg)
     }
 
 QRadioButton::indicator:checked:disabled {
-    image:url(:/radio_button_checked_#e4e7eb66_0.svg)
+    image:url(:/theme/radio_button_checked_#e4e7eb66_0.svg)
     }
     
 PlotWidget {
@@ -1158,38 +1158,38 @@ ParameterTree::item,ParameterTree > .QWidget {
     
 
 QCalendarWidget{
-    leftarrow-icon:url(:/arrow_upward_#e4e7ebff_270.svg);
-    rightarrow-icon:url(:/arrow_upward_#e4e7ebff_90.svg)
+    leftarrow-icon:url(:/theme/arrow_upward_#e4e7ebff_270.svg);
+    rightarrow-icon:url(:/theme/arrow_upward_#e4e7ebff_90.svg)
     }
 
 QCommandLinkButton{
-    qproperty-icon:url(:/east_#e4e7ebff_0.svg)
+    qproperty-icon:url(:/theme/east_#e4e7ebff_0.svg)
     }
 
 QDockWidget,QMdiSubWindow{
-    titlebar-close-icon:url(:/close_#e4e7ebff_0.svg);
-    titlebar-normal-icon:url(:/flip_to_front_#e4e7ebff_0.svg)
+    titlebar-close-icon:url(:/theme/close_#e4e7ebff_0.svg);
+    titlebar-normal-icon:url(:/theme/flip_to_front_#e4e7ebff_0.svg)
     }
 
 QFileDialog{
-    backward-icon:url(:/arrow_upward_#e4e7ebff_270.svg);
-    filedialog-detailedview-icon:url(:/list_#e4e7ebff_0.svg);
-    filedialog-listview-icon:url(:/grid_view_#e4e7ebff_0.svg);
-    filedialog-new-directory-icon:url(:/create_new_folder_#e4e7ebff_0.svg);
-    filedialog-parent-directory-icon:url(:/arrow_upward_#e4e7ebff_0.svg);
-    forward-icon:url(:/arrow_upward_#e4e7ebff_90.svg)
+    backward-icon:url(:/theme/arrow_upward_#e4e7ebff_270.svg);
+    filedialog-detailedview-icon:url(:/theme/list_#e4e7ebff_0.svg);
+    filedialog-listview-icon:url(:/theme/grid_view_#e4e7ebff_0.svg);
+    filedialog-new-directory-icon:url(:/theme/create_new_folder_#e4e7ebff_0.svg);
+    filedialog-parent-directory-icon:url(:/theme/arrow_upward_#e4e7ebff_0.svg);
+    forward-icon:url(:/theme/arrow_upward_#e4e7ebff_90.svg)
     }
 
 QLineEdit{
-    lineedit-clear-button-icon:url(:/close_#e4e7ebff_0.svg)
+    lineedit-clear-button-icon:url(:/theme/close_#e4e7ebff_0.svg)
     }
 
 QMdiSubWindow{
-    titlebar-maximize-icon:url(:/fullscreen_#e4e7ebff_0.svg);
-    titlebar-minimize-icon:url(:/minimize_#e4e7ebff_0.svg)
+    titlebar-maximize-icon:url(:/theme/fullscreen_#e4e7ebff_0.svg);
+    titlebar-minimize-icon:url(:/theme/minimize_#e4e7ebff_0.svg)
     }
 
 QToolBarExtension{
-    qproperty-icon:url(:/double_arrow_#e4e7ebff_0.svg)
+    qproperty-icon:url(:/theme/double_arrow_#e4e7ebff_0.svg)
     }
     

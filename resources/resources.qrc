@@ -1,80 +1,72 @@
 <RCC>
-    <qresource prefix="/">
-        <file>svg/ic_addcolumn.svg</file>
-        <file>svg/ic_addblock.svg</file>
-        <file>svg/ic_about.svg</file>
-        <file>svg/ic_addrow.svg</file>
-        <file>svg/ic_aligncenter.svg</file>
-        <file>svg/ic_alignright.svg</file>
-        <file>svg/ic_alignleft.svg</file>
-        <file>svg/ic_alignjustify.svg</file>
-        <file>svg/ic_append_column.svg</file>
-        <file>svg/ic_append_row.svg</file>
-        <file>svg/ic_clear.svg</file>
-        <file>svg/ic_arrowTool.svg</file>
-        <file>svg/ic_bold.svg</file>
-        <file>svg/ic_copy.svg</file>
-        <file>svg/ic_dedent.svg</file>
-        <file>svg/ic_deleteColumn.svg</file>
-        <file>svg/ic_assign.svg</file>
-        <file>svg/ic_course_manager.svg</file>
-        <file>svg/ic_deleteRow.svg</file>
-        <file>svg/ic_deleteTable.svg</file>
-        <file>svg/ic_fileAudio.svg</file>
-        <file>svg/ic_edu.svg</file>
-        <file>svg/ic_down.svg</file>
-        <file>svg/ic_fileImage.svg</file>
-        <file>svg/ic_done.svg</file>
-        <file>svg/ic_filteroff.svg</file>
-        <file>svg/ic_fwd5.svg</file>
-        <file>svg/ic_hyperlink.svg</file>
-        <file>svg/ic_filteron.svg</file>
-        <file>svg/ic_indent.svg</file>
-        <file>svg/ic_info.svg</file>
-        <file>svg/ic_grid.svg</file>
-        <file>svg/ic_insertColumnLeft.svg</file>
-        <file>svg/ic_insertColumnRight.svg</file>
-        <file>svg/ic_insertRowTop.svg</file>
-        <file>svg/ic_insertRowBottom.svg</file>
-        <file>svg/ic_italic.svg</file>
-        <file>svg/ic_link.svg</file>
-        <file>svg/ic_list.svg</file>
-        <file>svg/ic_move_up.svg</file>
-        <file>svg/ic_new.svg</file>
-        <file>svg/ic_move_down.svg</file>
-        <file>svg/ic_notes.svg</file>
-        <file>svg/ic_newFile.svg</file>
-        <file>svg/ic_notPinned.svg</file>
-        <file>svg/ic_paste.svg</file>
-        <file>svg/ic_numlist.svg</file>
-        <file>svg/ic_open.svg</file>
-        <file>svg/ic_pen.svg</file>
-        <file>svg/ic_pinned.svg</file>
-        <file>svg/ic_present.svg</file>
-        <file>svg/ic_present_mode.svg</file>
-        <file>svg/ic_pointer.svg</file>
-        <file>svg/ic_remove_column.svg</file>
-        <file>svg/ic_remove_row.svg</file>
-        <file>svg/ic_repeat.svg</file>
-        <file>svg/ic_rew5.svg</file>
-        <file>svg/ic_reset.svg</file>
-        <file>svg/ic_rotateLeft.svg</file>
-        <file>svg/ic_rotateRight.svg</file>
-        <file>svg/ic_row.svg</file>
-        <file>svg/ic_schedule.svg</file>
-        <file>svg/ic_scheduled.svg</file>
-        <file>svg/ic_rubber.svg</file>
-        <file>svg/ic_settings.svg</file>
-        <file>svg/ic_superscript.svg</file>
-        <file>svg/ic_symbol.svg</file>
-        <file>svg/ic_subscript.svg</file>
-        <file>svg/ic_text.svg</file>
-        <file>svg/ic_table.svg</file>
-        <file>svg/ic_underline.svg</file>
-        <file>svg/ic_textColor.svg</file>
-        <file>svg/ic_unassign.svg</file>
-        <file>svg/ic_trash.svg</file>
-        <file>svg/ic_up.svg</file>
-        <file>images/logo.svg</file>
+    <qresource prefix="/logo">
+        <file alias="logo_main">images/logo.svg</file>
+    </qresource>
+    <qresource prefix="/common">
+        <file alias="add_column">svg/add_column.svg</file>
+        <file alias="add_row">svg/add_row.svg</file>
+        <file alias="add_block">svg/add_block.svg</file>
+        <file alias="about">svg/about.svg</file>
+        <file alias="align_justify">svg/align_justify.svg</file>
+        <file alias="align_left">svg/align_left.svg</file>
+        <file alias="align_center">svg/align_center.svg</file>
+        <file alias="align_right">svg/align_right.svg</file>
+        <file alias="append_column">svg/append_column.svg</file>
+        <file alias="append_row">svg/append_row.svg</file>
+        <file alias="assign">svg/assign.svg</file>
+        <file alias="arrow_tool">svg/arrow_tool.svg</file>
+        <file alias="copy">svg/copy.svg</file>
+        <file alias="bold">svg/bold.svg</file>
+        <file alias="dedent">svg/dedent.svg</file>
+        <file alias="clear">svg/clear.svg</file>
+        <file alias="file_audio">svg/file_audio.svg</file>
+        <file alias="arrow_down_small">svg/down.svg</file>
+        <file alias="file_image">svg/file_image.svg</file>
+        <file alias="fwd5">svg/fwd5.svg</file>
+        <file alias="edu">svg/edu.svg</file>
+        <file alias="hyperlink">svg/hyperlink.svg</file>
+        <file alias="info">svg/info.svg</file>
+        <file alias="indent">svg/indent.svg</file>
+        <file alias="insert_txt_column_left">svg/insert_txt_column_left.svg</file>
+        <file alias="insert_txt_column_right">svg/insert_txt_column_right.svg</file>
+        <file alias="insert_txt_row_bottom">svg/insert_txt_row_bottom.svg</file>
+        <file alias="link">svg/link.svg</file>
+        <file alias="bullet_list">svg/list.svg</file>
+        <file alias="insert_txt_row_top">svg/insert_txt_row_top.svg</file>
+        <file alias="italic">svg/italic.svg</file>
+        <file alias="move_up">svg/move_up.svg</file>
+        <file alias="move_down">svg/move_down.svg</file>
+        <file alias="new">svg/new.svg</file>
+        <file alias="not_pinned">svg/not_pinned.svg</file>
+        <file alias="notes">svg/notes.svg</file>
+        <file alias="num_list">svg/numlist.svg</file>
+        <file alias="paste">svg/paste.svg</file>
+        <file alias="pinned">svg/pinned.svg</file>
+        <file alias="presenter_mode">svg/present_mode.svg</file>
+        <file alias="pen">svg/pen.svg</file>
+        <file alias="remove_column">svg/remove_column.svg</file>
+        <file alias="remove_txt_row">svg/remove_txt_row.svg</file>
+        <file alias="repeat">svg/repeat.svg</file>
+        <file alias="remove_row">svg/remove_row.svg</file>
+        <file alias="reset">svg/reset.svg</file>
+        <file alias="remove_txt_column">svg/remove_txt_column.svg</file>
+        <file alias="rew5">svg/rew5.svg</file>
+        <file alias="rotate_left">svg/rotate_left.svg</file>
+        <file alias="rotate_right">svg/rotate_right.svg</file>
+        <file alias="schedule">svg/schedule.svg</file>
+        <file alias="row_view">svg/row_view.svg</file>
+        <file alias="rubber">svg/rubber.svg</file>
+        <file alias="scheduled">svg/scheduled.svg</file>
+        <file alias="settings">svg/settings.svg</file>
+        <file alias="superscript">svg/superscript.svg</file>
+        <file alias="symbol">svg/symbol.svg</file>
+        <file alias="subscript">svg/subscript.svg</file>
+        <file alias="text">svg/text.svg</file>
+        <file alias="table">svg/table.svg</file>
+        <file alias="unassign">svg/unassign.svg</file>
+        <file alias="text_color">svg/text_color.svg</file>
+        <file alias="underline">svg/underline.svg</file>
+        <file alias="up">svg/up.svg</file>
+        <file alias="remove_table">svg/remove_table.svg</file>
     </qresource>
 </RCC>

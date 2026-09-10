@@ -23,7 +23,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyleOption, QWidget
-from styling.resources.common import STANDARD_ICON_MAP, SVG_RESOURCES
+from styling.resources.standard import STANDARD_ICON_MAP, SVG_RESOURCES
 
 ET.register_namespace("", "http://www.w3.org/2000/svg")
 

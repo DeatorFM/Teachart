@@ -49,7 +49,7 @@ from tcha.resmanager import (
     ResourceObject,
     ResourceType,
 )
-from ui.element_toolsets import AudioToolsetView
+from ui.ui_etoolsets import AudioToolsetView
 
 FILE_EXTENSIONS = {
     QMediaFormat.FileFormat.WMA: ".wma",
@@ -745,7 +745,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
 
     @staticmethod
     def action(parent) -> QAction:
-        action = QAction(SvgIcon("icons:ic_fileAudio.svg"), tr("Audio File"), parent)
+        action = QAction(SvgIcon(":/common/file_audio"), tr("Audio File"), parent)
         action.setData(AudioElementDefinitions)
         action.setProperty("is_element_action", True)
         return action

@@ -1,136 +1,2615 @@
-"""SVG resources"""
+# Resource object code (Python 3)
+# Created by: object code
+# Created by: The Resource Compiler for Qt version 6.11.1
+# WARNING! All changes made in this file will be lost!
 
-from PyQt6.QtWidgets import QStyle
+from PyQt6 import QtCore
 
-SVG_RESOURCES = {
-    "arrow_drop_up": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8.71 12.29 11.3 9.7a.996.996 0 0 1 1.41 0l2.59 2.59c.63.63.18 1.71-.71 1.71H9.41c-.89 0-1.33-1.08-.7-1.71z"/></svg>',
-    "arrow_upward": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M13 19V7.83l4.88 4.88c.39.39 1.03.39 1.42 0a.996.996 0 0 0 0-1.41l-6.59-6.59a.996.996 0 0 0-1.41 0l-6.6 6.58a.996.996 0 1 0 1.41 1.41L11 7.83V19c0 .55.45 1 1 1s1-.45 1-1z"/></svg>',
-    "calendar_today": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 3h-1V2c0-.55-.45-1-1-1s-1 .45-1 1v1H7V2c0-.55-.45-1-1-1s-1 .45-1 1v1H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 18H5c-.55 0-1-.45-1-1V8h16v12c0 .55-.45 1-1 1z"/></svg>',
-    "cancel": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm4.3 14.3a.996.996 0 0 1-1.41 0L12 13.41 9.11 16.3a.996.996 0 1 1-1.41-1.41L10.59 12 7.7 9.11A.996.996 0 1 1 9.11 7.7L12 10.59l2.89-2.89a.996.996 0 1 1 1.41 1.41L13.41 12l2.89 2.89c.38.38.38 1.02 0 1.41z"/></svg>',
-    "check": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7a.996.996 0 1 0-1.41 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71a.996.996 0 1 0-1.41-1.41L9 16.17z"/></svg>',
-    "check_box": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8.29 13.29a.996.996 0 0 1-1.41 0L5.71 12.7a.996.996 0 1 1 1.41-1.41L10 14.17l6.88-6.88a.996.996 0 1 1 1.41 1.41l-7.58 7.59z"/></svg>',
-    "check_box_outline_blank": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M18 19H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h12c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1zm1-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>',
-    "check_circle": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.29 16.29 5.7 12.7a.996.996 0 1 1 1.41-1.41L10 14.17l6.88-6.88a.996.996 0 1 1 1.41 1.41l-7.59 7.59a.996.996 0 0 1-1.41 0z"/></svg>',
-    "chevron_right": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M9.29 6.71a.996.996 0 0 0 0 1.41L13.17 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.7 6.7c-.38-.38-1.02-.38-1.41.01z"/></svg>',
-    "circle": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>',
-    "cleaning_services": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M16 11h-1V4c0-1.66-1.34-3-3-3S9 2.34 9 4v7H8c-2.76 0-5 2.24-5 5v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-5c0-2.76-2.24-5-5-5zm3 10h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H9v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H5v-5c0-1.65 1.35-3 3-3h8c1.65 0 3 1.35 3 3v5z"/></svg>',
-    "close": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M18.3 5.71a.996.996 0 0 0-1.41 0L12 10.59 7.11 5.7A.996.996 0 1 0 5.7 7.11L10.59 12 5.7 16.89a.996.996 0 1 0 1.41 1.41L12 13.41l4.89 4.89a.996.996 0 1 0 1.41-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/></svg>',
-    "create_new_folder": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 6h-8l-1.41-1.41C10.21 4.21 9.7 4 9.17 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2 8h-2v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-2c-.55 0-1-.45-1-1s.45-1 1-1h2v-2c0-.55.45-1 1-1s1 .45 1 1v2h2c.55 0 1 .45 1 1s-.45 1-1 1z"/></svg>',
-    "delete": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v10zM18 4h-2.5l-.71-.71c-.18-.18-.44-.29-.7-.29H9.91c-.26 0-.52.11-.7.29L8.5 4H6c-.55 0-1 .45-1 1s.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>',
-    "done_all": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M17.3 6.3a.996.996 0 0 0-1.41 0l-5.64 5.64 1.41 1.41L17.3 7.7c.38-.38.38-1.02 0-1.4zm4.24-.01-9.88 9.88-3.48-3.47a.996.996 0 1 0-1.41 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L22.95 7.71a.996.996 0 0 0 0-1.41h-.01a.975.975 0 0 0-1.4-.01zM1.12 14.12 5.3 18.3c.39.39 1.02.39 1.41 0l.7-.7-4.88-4.9a.996.996 0 0 0-1.41 0c-.39.39-.39 1.03 0 1.42z"/></svg>',
-    "double_arrow": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="m20.08 11.42-4.04-5.65c-.34-.48-.89-.77-1.48-.77-1.49 0-2.35 1.68-1.49 2.89L16 12l-2.93 4.11c-.87 1.21 0 2.89 1.49 2.89.59 0 1.15-.29 1.49-.77l4.04-5.65c.24-.35.24-.81-.01-1.16z"/><path d="M13.08 11.42 9.05 5.77C8.7 5.29 8.15 5 7.56 5 6.07 5 5.2 6.68 6.07 7.89L9 12l-2.93 4.11C5.2 17.32 6.07 19 7.56 19c.59 0 1.15-.29 1.49-.77l4.04-5.65c.24-.35.24-.81-.01-1.16z"/></svg>',
-    "drag_handle": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 9H5c-.55 0-1 .45-1 1s.45 1 1 1h14c.55 0 1-.45 1-1s-.45-1-1-1zM5 15h14c.55 0 1-.45 1-1s-.45-1-1-1H5c-.55 0-1 .45-1 1s.45 1 1 1z"/></svg>',
-    "drag_indicator": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>',
-    "drive_file_move": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 6h-8l-1.41-1.41C10.21 4.21 9.7 4 9.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8 9.79V14H9c-.55 0-1-.45-1-1s.45-1 1-1h3v-1.79c0-.45.54-.67.85-.35l2.79 2.79c.2.2.2.51 0 .71l-2.79 2.79a.5.5 0 0 1-.85-.36z"/></svg>',
-    "drive_file_move_rtl": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 6h-8l-1.41-1.41C10.21 4.21 9.7 4 9.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8.85 10.15-2.79-2.79c-.2-.2-.2-.51 0-.71l2.79-2.79c.31-.32.85-.1.85.35V12h3c.55 0 1 .45 1 1s-.45 1-1 1h-3v1.79a.5.5 0 0 1-.85.36z"/></svg>',
-    "east": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14.29 5.71a.996.996 0 0 0 0 1.41L18.17 11H3c-.55 0-1 .45-1 1s.45 1 1 1h15.18l-3.88 3.88a.996.996 0 1 0 1.41 1.41l5.59-5.59a.996.996 0 0 0 0-1.41l-5.6-5.58a.996.996 0 0 0-1.41 0z"/></svg>',
-    "expand_less": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M11.29 8.71 6.7 13.3a.996.996 0 1 0 1.41 1.41L12 10.83l3.88 3.88a.996.996 0 1 0 1.41-1.41L12.7 8.71a.996.996 0 0 0-1.41 0z"/></svg>',
-    "fast_forward": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="m5.58 16.89 5.77-4.07c.56-.4.56-1.24 0-1.63L5.58 7.11C4.91 6.65 4 7.12 4 7.93v8.14c0 .81.91 1.28 1.58.82zM13 7.93v8.14c0 .81.91 1.28 1.58.82l5.77-4.07c.56-.4.56-1.24 0-1.63l-5.77-4.07c-.67-.47-1.58 0-1.58.81z"/></svg>',
-    "fast_rewind": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M11 16.07V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.56.4-.56 1.24 0 1.63l5.77 4.07c.67.47 1.58 0 1.58-.81zm1.66-3.25 5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07a1 1 0 0 0 0 1.64z"/></svg>',
-    "flip_to_front": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm2 4v-2H3a2 2 0 0 0 2 2zM3 9h2V7H3v2zm12 12h2v-2h-2v2zm4-18H9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 12h-8c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h8c.55 0 1 .45 1 1v8c0 .55-.45 1-1 1zm-7 6h2v-2h-2v2zm-4 0h2v-2H7v2z"/></svg>',
-    "fullscreen": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 14c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h3c.55 0 1-.45 1-1s-.45-1-1-1H7v-2c0-.55-.45-1-1-1zm0-4c.55 0 1-.45 1-1V7h2c.55 0 1-.45 1-1s-.45-1-1-1H6c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1zm11 7h-2c-.55 0-1 .45-1 1s.45 1 1 1h3c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1s-1 .45-1 1v2zM14 6c0 .55.45 1 1 1h2v2c0 .55.45 1 1 1s1-.45 1-1V6c0-.55-.45-1-1-1h-3c-.55 0-1 .45-1 1z"/></svg>',
-    "grid_view": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 11h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2zm0 10h4c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2zm8-16v4c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2zm2 16h4c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2z"/></svg>',
-    "help": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92c-.5.51-.86.97-1.04 1.69-.08.32-.13.68-.13 1.14h-2v-.5a3.997 3.997 0 0 1 1.17-2.83l1.24-1.26c.46-.44.68-1.1.55-1.8a1.99 1.99 0 0 0-1.39-1.53c-1.11-.31-2.14.32-2.47 1.27-.12.37-.43.65-.82.65h-.3C8.4 9 8 8.44 8.16 7.88a4.008 4.008 0 0 1 3.23-2.83c1.52-.24 2.97.55 3.87 1.8 1.18 1.63.83 3.38-.19 4.4z"/></svg>',
-    "home": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z"/></svg>',
-    "horizontal_rule": '<svg width="24" height="24" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M19 13H5c-.55 0-1-.45-1-1s.45-1 1-1h14c.55 0 1 .45 1 1s-.45 1-1 1z"/></svg>',
-    "indeterminate_check_box": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 10H8c-.55 0-1-.45-1-1s.45-1 1-1h8c.55 0 1 .45 1 1s-.45 1-1 1z"/></svg>',
-    "info": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1-8h-2V7h2v2z"/></svg>',
-    "launch": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M18 19H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h5c.55 0 1-.45 1-1s-.45-1-1-1H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-.55-.45-1-1-1s-1 .45-1 1v5c0 .55-.45 1-1 1zM14 4c0 .55.45 1 1 1h2.59l-9.13 9.13a.996.996 0 1 0 1.41 1.41L19 6.41V9c0 .55.45 1 1 1s1-.45 1-1V3h-6c-.55 0-1 .45-1 1z"/></svg>',
-    "list": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 13c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0 4c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm4 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zm0 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zM7 8c0 .55.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1zm-3 5c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0 4c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm4 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zm0 4h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1s.45 1 1 1zM7 8c0 .55.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1H8c-.55 0-1 .45-1 1z"/></svg>',
-    "minimize": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 19h10c.55 0 1 .45 1 1s-.45 1-1 1H7c-.55 0-1-.45-1-1s.45-1 1-1z"/></svg>',
-    "not_interested": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.902 7.902 0 0 1 12 20zm6.31-3.1L7.1 5.69A7.902 7.902 0 0 1 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>',
-    "open": '<svg height="24px" viewBox="0 0 24 24" width="24px" fill="#e3e3e3"><path d="M0 0h24v24H0z" fill="none"/><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>',
-    "pause": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>',
-    "play_arrow": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A.998.998 0 0 0 8 6.82z"/></svg>',
-    "question_mark": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7.92 7.54c-.8-.34-1.14-1.33-.66-2.05C8.23 4.05 9.85 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.15.27-.24.49-.3.94-.09.73-.69 1.3-1.43 1.3-.87 0-1.58-.75-1.48-1.62.06-.51.18-1.04.46-1.54.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.17 0-1.93.61-2.4 1.34-.35.57-1.08.75-1.69.5zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z"/></svg>',
-    "radio_button_checked": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><circle cx="12" cy="12" r="5"/></svg>',
-    "radio_button_unchecked": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>',
-    "refresh": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M17.65 6.35a7.95 7.95 0 0 0-6.48-2.31c-3.67.37-6.69 3.35-7.1 7.02C3.52 15.91 7.27 20 12 20a7.98 7.98 0 0 0 7.21-4.56c.32-.67-.16-1.44-.9-1.44-.37 0-.72.2-.88.53a5.994 5.994 0 0 1-6.8 3.31c-2.22-.49-4.01-2.3-4.48-4.52A6.002 6.002 0 0 1 12 6c1.66 0 3.14.69 4.22 1.78l-1.51 1.51c-.63.63-.19 1.71.7 1.71H19c.55 0 1-.45 1-1V6.41c0-.89-1.08-1.34-1.71-.71l-.64.65z"/></svg>',
-    "restart_alt": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 5V3.21c0-.45-.54-.67-.85-.35l-2.8 2.79c-.2.2-.2.51 0 .71l2.79 2.79c.32.31.86.09.86-.36V7c3.31 0 6 2.69 6 6 0 2.72-1.83 5.02-4.31 5.75-.42.12-.69.52-.69.95 0 .65.62 1.16 1.25.97A7.991 7.991 0 0 0 20 13c0-4.42-3.58-8-8-8zm-6 8c0-1.34.44-2.58 1.19-3.59.3-.4.26-.95-.09-1.31-.42-.42-1.14-.38-1.5.1a7.991 7.991 0 0 0 4.15 12.47c.63.19 1.25-.32 1.25-.97 0-.43-.27-.83-.69-.95C7.83 18.02 6 15.72 6 13z"/></svg>',
-    "save": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M17.59 3.59c-.38-.38-.89-.59-1.42-.59H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7.83c0-.53-.21-1.04-.59-1.41l-2.82-2.83zM12 19c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm1-10H7c-1.1 0-2-.9-2-2s.9-2 2-2h6c1.1 0 2 .9 2 2s-.9 2-2 2z"/></svg>',
-    "search": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
-    "security": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="m11.19 1.36-7 3.11C3.47 4.79 3 5.51 3 6.3V11c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6.3c0-.79-.47-1.51-1.19-1.83l-7-3.11c-.51-.23-1.11-.23-1.62 0zM12 11.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>',
-    "skip_next": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="m7.58 16.89 5.77-4.07c.56-.4.56-1.24 0-1.63L7.58 7.11C6.91 6.65 6 7.12 6 7.93v8.14c0 .81.91 1.28 1.58.82zM16 7v10c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1s-1 .45-1 1z"/></svg>',
-    "skip_previous": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zm3.66 6.82 5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07a1 1 0 0 0 0 1.64z"/></svg>',
-    "stop": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 6h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z"/></svg>',
-    "vertical_line": '<svg enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px"><g><rect fill-rule="evenodd" height="24" width="1" x="11" y="0"/></g></svg>',
-    "visibility_off": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 6.5c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l3.06 3.06c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l2.17 2.17c.47-.14.96-.24 1.47-.24zM2.71 3.16a.996.996 0 0 0 0 1.41l1.97 1.97A11.892 11.892 0 0 0 1 11.5C2.73 15.89 7 19 12 19c1.52 0 2.97-.3 4.31-.82l2.72 2.72a.996.996 0 1 0 1.41-1.41L4.13 3.16c-.39-.39-1.03-.39-1.42 0zM12 16.5c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16c-.65.32-1.37.5-2.14.5zm2.97-5.33a2.97 2.97 0 0 0-2.64-2.64l2.64 2.64z"/></svg>',
-    "volume_mute": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L11 9H8c-.55 0-1 .45-1 1z"/></svg>',
-    "volume_up": '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L7 9H4c-.55 0-1 .45-1 1zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 4.45v.2c0 .38.25.71.6.85C17.18 6.53 19 9.06 19 12s-1.82 5.47-4.4 6.5c-.36.14-.6.47-.6.85v.2c0 .63.63 1.07 1.21.85C18.6 19.11 21 15.84 21 12s-2.4-7.11-5.79-8.4c-.58-.23-1.21.22-1.21.85z"/></svg>',
-}
+qt_resource_data = b"\
+\x00\x00\x10J\
+\x00\
+\x00P\xd5x\xda\xed\x5cYs\x1bIr~\xd7\xafh\
+c^v\xc2@\xa32\xeb\xa6(m\x84\xe9X\xaf\x1f\
+\xf4\xe2c\xfd\x8c\x01!\x8a1$\xc1\x00\xa0c\xf6\xd7\
+\xfb\xcb\xccn\x1c\x14H@\x5cJv(\xa0\x89\x11\xba\
+\xee\xac/\xcf\xaaN\xf5\xf9\x9f\xbf\xdc\xde4\x9ff\x8b\
+\xe5\xf5\xfc\xee\xcd\x80Z7hfw\xd3\xf9\xe5\xf5\xdd\
+\xd5\x9b\xc1\x7f\xff\xd7_Fe\xd0,W\x93\xbb\xcb\xc9\
+\xcd\xfcn\xf6fp7\x1f\xfc\xf9\xed\xab\xf3\xe5\xa7\xab\
+WM\xd3`\xf0\xdd\xf2l\xbe\xfc\xed\xcd\xe0\xc3ju\
+\x7f6\x1e\x7f\xfe\xfc\xb9\x9d\xdf\xcf\xee\x96\x9f'\xab\xe9\
+\x87\xdf\xe6\xf3\xdf\xdb\xf9\xe2j\xfcqq=f\xe7\xea\
+\x18}\x07\x9b\x91\x97\xd3\xf5\xc0\xfb\x8f\x8b\x1b\xedz9\
+\x1d\xcfnf\xb7\xb3\xbb\xd5rL-\x8d\xb7\xbaO7\
+\xdd\xa7\x8b\xd9du\xfdi6\x9d\xdf\xde\xce\xef\x96:\
+\xf2n\xf9\xcbV\xe7\xc5\xe5\xfb\x1d\xaa>{\xedD\xb5\
+\xd6\xb1\xe31\xf3\x08=F\xcb?\xeeV\x93/\xa3\xdd\
+\xa1\xd8\xdd\xbe\xa1\xd8\x80\x1b\xa3m\xd3\xf3`\xaf\xeb\xcb\
+7\x03<SJZ\xfc0\xbb\xbe\xfa\xb0z3\xf09\
+\xb4\xde\xf9T\xa3\x0fT(\x06k\xfe|}\xb9\xfa\x80\
+\xd6R\xda\x5c#g\x17C\xf5\x8e\xaa6~\xba\x9e}\
+\xfe\x97\xf9\x977\x03\xd7\xb8\x86\xb8\xb6\xb1\x96\xc0>R\
+\x0a\xde\xd7\x8c\xaa\xd0\xe6\x94\x0bjC\xe6L\x85m\xd8\
+\x86\xb74x\x8b\x9a\xf3\x7f\x1a\x8d\x1a\xd04Z\xce?\
+.\xa6\xb3\xb3\xd9\x97\xe9\xe4\xe6\xfar1\xf9\xdc\x8cF\
+\xda\xe1v\xb6\x9a\x5cNV\x13\x19n[\xe8kXg\
+@\x17@w\xf6\x1f\xff\xfa\x17+\xa1<\x9d\x9e\xfd\xcf\
+|\xf1{W\xc4\x1f\xe90\xf9m\xfe\x11\x9b\x1d\xbc]\
+W\x9f_N\xcf\xde\xcf\x17\xb7\x93\xd5\xdb\xeb\xdb\xc9\xd5\
+Lp\xfag y>\xde4\xect^\xfdq?\xdb\
+Lj\xd3.fF\xf9^\xd1\xb9\x9c\xde^\xcb\xa0\xf1\
+\x7f\xae\xaeon\xfe]\x16\x194\xe3\x07\x93^\xafn\
+fouM{\xecw1\xee\xb6\xd1mr\xbc\xb5\xcb\
+\xf3q\x8f\x81\x96.g\xef\x97\x1bx\xa4\x94zhn\
+\xae\xeff\x93\xc5\xbf-&\x97\xd7\x90\xe1~a\xc8\xfd\
+\xd9\xfd\xe4\xfa\x0ex,\xe7\x80{\xd07\xc8\xf8\xdd!\
+\xec\x8b[cv\xbe\x5c\xcd\xef7\x08\xa8<\xa1\x86}\
+.\x83M\xf5\xfc\xfd\xfb\xe5\x0cS\xbb\xad\xba\xe5\xea\x8f\
+\x9b\x99\xf5\x1eM\xe77\xf3\xc5\xd9/\xef\xf5\xcfk\xad\
+\x9a\xdfO\xa6@\xea\x8c^\xaf\xf19\x1f\xef\x12\xd2\xd5\
+\xeaD\xafv\x08@EX/5\xbd\x99,\x97]\xed\
+\xe8\xfd\x1cz\xdb\xcd\x08\x84\x01\x8c>]\xbd\xda\xa5i\
+1\xff}6Rq?sm\x95?T\xe3\xeb\xae^\
+\xa8\x98N\xee\xcf\x16\xf3\x8fw\x97\xaf\xdf\x83\x8fg\xbf\
+p\x0a5\x90\x166\xa4\x0f6,\xb8\x22\xeeJ\xab\xc5\
+\xe4n)\xb2\x04\xb1\x9d\xac\x16\xd7_\xfe\x04\xab\x16\x1c\
+\xd4\xac\x0c\x1d\xfeC\xa98\x0e4\xccP\xb2R\xa1)\
+\xc3\xd8f\xa8Rv\xf4k\xcf\xc4\xfb\xc9\xea\xc3\xab]\
+ w\xe80J\xcf\xee`\x13_\xef\xeef?\x89F\
+\xa4\xcc\xbaa\x9b\xe8U\xc3\xa9\xa5:t\xcd\xb4a\xd7\
+z<\x04\xd7&\xfc\xc4\xdc2\xe3\x97r\x1b\xa4l\xfd\
+`\x17|\xf7\xa8\x7f7n(\xc3\x02~e\x5c\xc6o\
+\xe4\xd6K\xbd\x0elF2\xa2\xeb;\xda\x1e8\xa2\xda\
+r\xc6\xc4#_\xda(\x0b\x8f\xfa%/\x1a\x1dD\x0e\
+\xf6Df\xac\x09\xf8\xe17\xa3c\xc1o\x8am\x8a\xb6\
+Rf\xa1\xa0\xa3D\x89\xd3\xa1=\xb9n#ZG\x02\
+\xfaK\x09\xc9\xc7\xb2\x8b)L]\xac1\x94\xcc}=\
+t|\xb6\xb8\xb9\xc6\xcfY\xe8\xeb.'\xcb\x0f\x93\xc5\
+b\xf2\x87q\xe5\x00\x1b\xc8m\xf3\xe1\xdd\x9a\x0f\x7fm\
+\x8ao\x035\x9b\x9a\x0f\xc6\x8b\xe6\x16[\x14>\x1d\xe0\
+\xc8\xbb\xa6\x84\x96\xb8\xe4B\xc3\x91\x03r\x9ec.\x05\
+\xa8\x92#\x00\x88\x86\x9dzr\x15\x0c\xd7i\xec\xd1\xa6\
+\xb1\xd5>5\xc6N)\x8d\xecq\xbbJ\xc89\xc8\xe9\
+w\xdd\xbc\xc6\xbe#\x06\xd8\xcc\x7fm\xfaR/\x17\x9b\
+\x1awPJnw09\xd4W\xe6\xfb[\xd3\x93\xdb\
+\xd7\xff\xed\xc1z{%L\xfb\xf7\xab<%\x83\xe7\xe3\
++sn\x93\xe5\xef[\x8e\x0d%^w\xd9\xd3V\xfa\
+\xb6\xab-[\xe3\xc3\xd7\xb6F\x1fo&\xab\xd9\x9f\xb2\
+\xf0?\xb8\x1a\x8bKp\xc4\xbe4!\xb4\xce\x87\xec\xbd\
+'_\x98\x12\xff\xda,\xe6+\xe9\xeb@l\x94\xff\x7f\
+\x1d\xf4\x16r\xdb\x04\xbe\x19\xa8\x0d\xdcg\x95zA\xf6\
+\x1bA\x16\x91\x7f3\xe8\xac\xfc`\xa3m\x1bU\xda\xf6\
+\x10V/\x11\xdd\xddlG\x17B\xcbP\xef\xe6\x22\xb5\
+\xa2\xdd \x8e\x84W\x88/\xda\xac\xf5\x14\xcd\x0e@\x13\
+\x1aj\x03\xeb\x83\x0e\xba\xc0Cj\xbd\xd7\x9a\x025\xb2\
+>:P\xdat\xe4\xd0~\xd0\xd2\xcf\x89\x96\x0brb\
+L\xa4\xae\xb4\xa9\xea\x83N\xa9mXDk\x5c?\x83\
+\xeb'uMms\x90\x8a$L\xc7\xaf\x11\xe2z\xca\
+d\xa8\xeb\xe6z\xc4\x1c\xad\x91\xe4\x07H\xee \xb3\x0b\
+c\xf8\x0aF\xe5\xff\xfdd\x01\xbf\xf9\x08\x9a1\x18\x9c\
+e\x07\xceu\x87\x0c+\xa7\x0d\xae-i\xa7\xc7\x11\xc8\
+\x1f\xd7g\x87M\xa1vl\xca~\x8bM\x0f:q\xcf\
+K~\xd0\xe7\x18\xa6\x1e\xdfo-\x06\xb5\xadA\x1bs\
+K~G\x0a\xde\xed\xc8J\xeae%\xec\xca\xca\xbb#\
+\x84\xe6\xa8>[\x12&\xa2)-\x10\xcc\xb4\x96\xb0\x07\
+\x1d\x1cKKn\xfdv\x87\xa7D\xf1P\xfb\x03\xab\xb5\
+m}\x82;d}b\xf5!R\x86\xb5\x09%6\x01\
+\xe6\xbe\xb2\x98\x9e\x84cC\xa1\xb4c}B\x96?\xae\
+\xd6\xe40\x8a\xa0O\xff\x80-J/m\x8b(\xb55\
+\x09M`\x96>\x0a\xd6\x11`\xa1@RH\xa4\x85\x02\
+a\xc1\x01\xc7\xba\xe5 \x85T\xb5%\x910J\xe5\x18\
+2\x1f\xd6\x02\x09\xd9\x86\x18z\x09\x82\xa4\xc5e)\xe4\
+\xac\x02Z \x15\x9d\x12@,\xb2\x14TIb\xcbU\
+\xfe&\x99:\xb4U\x85\x1a\x0b\x5c\xa0\x90\x92N\xe3\xb5\
+\xc5\xebb\xc2T\xdfV-dD\x00(D\x11<\x88\
+\xb6\xb6P\xd0`\x22\x9a*\x88$\x8a\xf7\xba\x10r\xb1\
+\x8c\xe8\x0a\x89\xb1 h_\xd0\x02\x5c\x09\x0a\xc1\xab\x0a\
+T\x96Bb\xb5\x18\xa8C!C>\xa1AQ\x9ea\
+C\xa0M!\xcbs\x8d\xa2*BnU\x9d\xc14U\
+\x0cN\xadZ\x93U\x8b\xac[n\x1d\xf5\xc3a\xb2\xb8\
+\x9fV=v\xb7\x9ei\xb0\x11\x020\xb8\xa7\xd0@(\
+*\xc2\xa1\xdf\x8do\x0b\xf5\xdbDd\xd5o\xdf\x03\xaa\
+\x1e\x17\x96x\xb2\x03\x8c\x0d;\xc5\xb1\xade\x0d\xb0\x04\
+\xb7=\xf2\x8aC\xc7\x12\x05\xb1S\xa4\xb6\xd4\x9e\x89\x10\
+\x8c5w]\x1bi\xad\xac\x12,w\xf2\xe0Z\xa6^\
+P\x9c\x9a\x1b\x93 \xa7[5\xd1r\xbd\xc09\x13B\
+\xd1\x18\x81I\xfb\x14\xc4a\xdd\xd0\xdc\x16\x1d\x89\x19a\
+\x04d\xa0,\x94:Z\xb0~\xeaH\x04Y\xd1<\x95\
+P\x1bM0e\x13\xc1\xc4R\xf6\x16L(e\xcb\x82\
+^\x87\x84\x97\xa8\xefB\xf0a\xb0R\x90\x02j\xacV\
+K\xc1d\x09R/\x14\xe2\xb6\xe4ac\xc0C\xe2z\
+~`\xd6\xe6\xc2x$<\x04\xdf\x9c\xb2\xd6\x1c\x86\xc8\
+\xf9\x85\xc5e\xa0A\x18\x1e\xa5\x83\xf0Ue\xc2\x09\x91\
+\x17**\x86\x88\x8a\x8f\xeb\xe4\x09\x8eG\x05\xcc\x89\x00\
+B\xe8\xac\x8b\xca\xa2\x0d4\x19\xb5\xf9Lxm\x19\x93\
+j[\xdd\xc4\xdd\x88\xea\x94`\xad\x1aJ|\xa73\xba\
+\xa7N\x99t\xab\xa6e\x06\x80j\x9f\xc1bZih\
+\x99\xba\x1a\x86\xa6\xc7\x1d\xb4\xaa\xe0\x1d\xe2\xaa\xf9\xa1\xb7\
+\x0f0\x09\xb17\x1c\xdc\xb3\xcd\x8c\x88q\xd3\xac\x8b1\
+\xd9\xcc\x8e\xf1\xde\xec\x91\x89\x84\x19*\x93\x14y\xf6\x00\
+\xa5\x9bs\xdb\xb0\x15\x89cl\x1a}\xde\xe9r l\
+)\xdf#l9\x19\xde\x93\xe1=\x19\xde\x93\xe1=\x19\
+\xdeG\x82\xf0tL\x90|\xb5m\xac\xaf\xc2\xc6\xfc\xee\
+\x0f\xdd\xc1\x99T\xd9\xa5\xea\x12\x07\x86\x94\xf9\x0c%\xc9\
+\xb5$\xe6\x5c\x5c\xa9a+t\x07{)\xc7\x18\x0a\xc5\
+\xe8r\xca\xaa:\xc5'\x9f+S\xcd>\xa7\x14\x7f\xdd\
+\xdc#o\xbb\x8e\x8d\xf3\x08\xbcuc\xbc\xc7}<\xee\
+@6.\xe4a\x90o\x0eD\xdeR\x98F{S\xe8\
+V\xcd\x95K\xfa\x18\x1aV5;\xae\xdb\xd6\x0d\xf5\xd5\
+\xd3w9a\xef}M\x0c\xdf\xce\xac\xc8O3\xab\xe2\
+\x9cU\xa3\xab!\x90\xe7\x10\xa2Wf\xe5\xe8b-.\
+\xba\x14\xb2K/\xcd\xad\xe8~.n\xc5\xb4\x8f[\xe9\
+\xe9\xf3-Ly\xa88\xde\x02tJ.\xe0|[\x80\
+m`\xc71\xb3\x0f\x99\xb7\x95\x04\x96\x0d\xf8\xfa\x0a\xa4\
+\x0b\xc0\x17\xf7\x09\x1b\x08V\xa0&2Q\x0c5?\xfb\
+\xb8\x1b\xff\xa1\xc8\xeb!#\x84\x0d\xec5\xee\x10\x12\xe1\
+q\xac\x00\xab\x0b\xd3\x8d\x02<6l\xb2\xb8y\x14\xc4\
+\x99\xb08\x1a\xe9\x16\x83X\xe2\xe0\xb5\xc5'\xb1\xb9\xe2\
+\x05P \x0d\xa8\x12\xfc\x00\xb3z\xe9\xa8\x8e\x00\x85X\
+\xcd\xecj\x815\x0c\xf0\xb0\xf4\xe0`\xb5 o(\xdc\
+\xd4\xa8)\x04}vZ\x80!\xbd`\xa7\xd1\x9d\xdd\xf0\
+\xb1\x88\xb6E.0\x9dUC\x94j^\xa3B2\xa4\
+\x90\xc4'\xa8\xbb\xe2.\x8a\x84\x8d\xd6\x02\x88\xbd@\x81\
+\xb5\xa0\xdd\x92zW\xa7\xce\x9e\x92\xac\xab75\xb1\xf5\
+Q\x0a\xbes/Y\xa93w\x04w(\x82\x97\xd4O\
+y\x92B\xb6\xfb\xa5\xa4\x05\xd9\xa4\x0a\x82\x15\xd4\xdf\xb1\
+_\xb7\xc0\x07\xfa~L\x15\xdf\xd1MVe\xe5n\x15\
+\xbdh\xea\x96\xcf\xc2\x96\x8e.\x90\xde\x13\x0b\xbf\x9d\xfa\
+]Dq \xdd\xf6\xa2\xfc\xdd\xed\x1b.\xae\xf6\x80\xc0\
+\xf5\xa5\x1e)\xaf\xd7\xff\x06\xa1\x17\xdazl\xb5\x7f\x07\
+\xba \xd0q\x83\xf4\x9a\xcc\xb8\x04b{\xe6\x912\xd2\
+\xb8\xea4\x1c5v\xdb\xdd\xaa\xc9\x81\xd3(\xd4\x04\xc4\
+I\xccg\x82\x03&\x96^\xa2\x9c\xb2\xcdD\xcd\xf5\x02\
+\xe8z\xb1\xd4\x07.\x1a\x8a\x89\x97L\xa1\x1b\x0dn\xb3\
+\x06z\xeb\xf8\x0c+\xe5.\x12\x03\x01Y:](]\
+\xc0J\xe3I\x90\x9bl\x07Q^I\x5c\xe8\xbe\x82\x09\
+\x9fl7(\xe0\x8a\x02\xd8,8\x01\x1b\xaf\xd0(d\
+\x081R\x87$KTr\xa1\x00\x83\xf2(<\x10M\
+\x80\xd6t\xec ]A\xb9D\xdaAx\xe74\x8c\xc9\
+\x16\xfe\x08\xd3\x8b\xc5Y\x02\xb2\xf2\xdf\xb6\xaab\xe1\xda\
+\xee\xf21z\xdd\xbb\x0a\x15\xe8q\xbdt9=B@\
+\xe6\x9c\x8a\xa5\xa7\xbe\x9b\x8ah7\x5ce\xd7f5\xa1\
+\xb6\xc5 \xeaF\x80)\x80\xd1e\x9aa\xd4\x9a\xca\xd8\
+&L\x97lo\xa6d\xb6e\xd3>C\xc2\xd4\xd2\x00\
+2}5\xdcL\x91\x15M\xd5\xef\x0ebQ\xfb\x0ex\
+5\x07\xc6\x0f\xb3\x13I+a=\x8cmfV\x8c\x9b\
+fo\x8c\xc9f\x88\x8c\xf7f\xa1L\x22\xcct\x99\xa0\
+\xb0\x05\xc7\xf2\x8e\xb3\xf9\xca\xd8e\x03\xd4Z\xf2\xd7\xbd\
+\x9e\x08\xc7\xd23\xc2\xb1t(\x1c\xc3\x9e\xbd+\x11\x7f\
+\x5c)\x08>=\xf6O\x5c)\xa7\xc8%I\xd6\xc6\xae\
+\x83\xcf\x9c\x9c\xbc\xbf\xf4\x88\xddH\x94\x1b\xdc\xaa\x81r\
+`TV\x84v\xe5\xa0\x87O\xdf\x18\x8f\xd1>\x0fo\
+\xafT\x1f\xf1\xf0I\xe2o;\x84\xa9)\x22\xf5\xddb\
+\x5cY\xa4\xf4\xc8~\xc7\xfb\xf8\xb47\x22\xcb\xcf\x88\xc8\
+\xf2\x81\x88,KL\x92\x02B\xa9\xca\x08\x0d A\x01\
+gX&\xc4W)z\x8e)\xf0\x0e\xbf\x9c\x0b\xcc5\
+\xc6\x9a\x10\xacU\xcf$\xc7\x8b\x9a9\x12\xa5\xea]\x0c\
+1\xe6\x83\x0c\xcb\xee\xfb2L\xec\xa0ZsgG\xe6\
+\xf5\xb3\x17;zL\xa7\xe3Y\x95\xf7\x86c\x85\xbf\x9d\
+U\xc5\x1d\x08\x9e\xc5\xa7$\xf2\xc1U\x8f \x0eF.\
+\xc8\x09\x8ej\x0d\xa5\xd4X\xd2\x03\xd5B@]9\xe3\
+?v.\x22\xc8.\x09\xac\x82\x8a\xa5\x22A54+\
+;>\xcc\xaa\xf2\xbdu\x0b\xb1\x00bc\x05_\x03M\
+\xd6\x10\xd9\xee\xc1bs\x5c\xb7\xe3\xd9U\xc2>vU\
+\xf7\x0cv\x95\x83\xec\xc2\xa6\xa1\x148\xda\xb0\x87\xdc\xc1\
+\x12:\xc7\x94\xbd\x8f1\xa1f\xf7\x5c\xea<g\x0a\xce\
+\xc3\x16\x16r\x8e\xd4\xae\xa7\x98\xb3d?\xc4J\xf2t\
+\x90[%}on\x89G,\x1a\xa7Hd[\xbb0\
+\xc8e\x0d\xa2\xb99\xb2\xdf\xf1\xfc\xaa\xfcx\x9e\x01`\
+z\xc0\xcc\x9d$\x99.qk7\xa7\xe5\xf5V\x0a\xd7\
+v\x22\x94KO\x9d\x9f\xb8@\xf5p\xe2\x0c\xd06\xa8\
+SD\xf8\x19B\x1b\xb8\x96\x0ae\xaa\xe0Nx\x81\xec\
+\x84\xc3\xd4\xef\xc9\xc8\xe1\xef\x97\xc9\x10\x92\xdd\x98\xa5\xf2\
+M\xa9\x0c5h\x0db\x17\x7f|*C\xd5\xdb\xee,\
+'\x82\x07\xef\xb0\x0fe2\x94h\x99\x0cz\xd1\xf9\x8c\
+L\x86g\xa1\x1e\xbeg\xd6C\x06r\x16 ?\x96\xf3\
+\xd0\xa5<\xe4\xf8\x03R\x1e\x1e\xcdf\xd8\xea\x93\xb8\xeb\
+S\xeb\x8fIy\xb0|\x0f\xcbf\x907\x05\xfbs\x1e\
+\xaa\xbe\xce\xb0\xc4\x08\xfe\x11)\x0f\x1a\xefa\xb5\x98\xf7\
+\xe6<T\x1c8\xa5!*N\xdf=\xe7\x81\xf6\xa5w\
+\xee\x1a\xb5\x8c\xe8@\xf2\x1d\x12\xe7\x9c%\x9e\x80\xb3\x09\
+\xb9H\x06V\xa5\x1a^<\xe9\xe19\x06z[\xef\xca\
+)W\xe2\xf4\xca\xee\xf4\xca\xee\xf4\xca\xee\xf4\xca\xee\x87\
+\xe5J\x10\xb9S\xb2\xc4\xc9\xf2\x9e,\xef\xc9\xf2\x9e,\
+\xef\x8fK\x96 *\xdf~)E\x94\x9e\xbe\x95\x92\x7f\
+\xefX\xb2+\x91\xa9d\x1f\xb3 WZ\xb9Q\x8c\x84\
+\xbf\xab\xe3\xcc/\xfd\x06\x9e(\xfc\x5c\xaf\xe0\x89\xdd\xbe\
+[D\xe2g\xbcP!>\xf0F%\xc02\x13W\xb9\
+\xc8\x8d\x02xQ\x86e\xc7\x1cR&\x8a%\xc4\x17\xcf\
+\x99 \xe6\x9f\x8dc{\xdf\xa8\x90\x7f\xfa\x84\x1c\xb1`\
+\xf6\xf2\xbe\x03\xa8\xf9X%m\x22BM\x00\xab/!\
+\xe0,\xfc\xa3\xd2&\xc8\xbbS\xde\xc4)o\xe2\x947\
+q\xca\x9b8\xe5M\xfc\x1f\xe7M\x90\x7fNd\xe6\x0f\
+Ef\xc0? &\xf3%y\x9f%\xffA\xde\x18V\
+W\x5c\xe1H\x05>\xc8\xbfx\xe6\x04\xf9\xf0\xb3\xa5N\
+P\xd8\x1f\x9b='\xf7\x98\x0e%\x1fs\x91\x7f\xa3,\
+o\xe3]\xa8\xaef\x9c\x0d\x02N\x17\x94\x10\x1dD\xaa\
+>\x22J\x8b/\x9f?A\x81\x7f\x9e\x04\x0a\xda\x9f~\
+L\xcf\xc9?\xa6C\x09\xc8A\xacsp\xf2O\xcd#\
+\x22:X\xcd\x00{\xe22\xc5\x8a\xa09\xc97.^\
+>\x87\x82\xa2\xfb\xb9\x92(h\x7f\x0e2\xa5gd\xbd\
+P:\x90\xf6\x02\x85B\xe4\x1d\xc1\x02p\xc2k\x82?\
+j\xaa\x18Jf\xca\x94\x1f\x1cX_$\x91\x82b\xf9\
+\xd92)(\xadS_6{\xde\x8b\xf8\x08\x22\xc1\x5c\
+$K\x7f\x08W\xe8Kq\x9e\xd6\xef\xfa\xd6\xff\x0a\x22\
+\xad\x8f\xbb\xfaQ\x96\x12\xdbT)!L(\xbeu5\
+\x01l\xf9\xf0\x07\x82\x0a\x1c\xa1\xe2PB\xd8\x18\x10y\
+\x8c$(\x93\xd6\xa1\xa4\x0a\x94\x0aW?B(\xe1\x82\
+Ku\xa8wCp^,\xdd\x5c\x86\x11\x1d\xca!0\
+\xe90\x0a\x1dI8\x819\xad\xc1\x198\xd7\xa1\x5c\xd3\
+!\x94\x1b\xc9\xfd`\x81\x0f\x11\xbb\x04}\xd6\xafu\xc0\
+\xa0\x06D%\x01\x01D\x0aA>\xe1\x02\xeb\xe4<\xa4\
+\x09uI\xbe7\xe1\x9b\x11\xe2\x0f\xf8\xcc\x82\x89pz\
+C\xe03\x92h\x00\x8a_\xa2|u\xa48\x18jB\
+\xa5\x84,5q\x1e\x8e\xe0\x92\xb0\x80\xabB\x03\xce\x81\
+>\x07\xe9\x88IHG#\xfa\x88\xce\xb1\x0e\xc6I\x11\
+|\xc3\x08X\x1dx\xf1!Z}\xa0\x0a\xb1\x1c\x81\xa8\
+\xec\x226\x80V\xfc\xa0\xbd\x19\xc9\xc5\x10l\x0a\xd6\x00\
+\x9c\xb0G\xf0\x0f\xd8E\x90D\xbc\xe1\x08\xb1\xb9\xbc\xaa\
+\x0d\xb2\x84\xa4\xf3\x03\x0c\x0c\xc5\xea\x09!'\xea\xb2\xa4\
+\xf3\x0f1\xaf\x0b8\x83*\xd2X\x8a\xb5JT\x07\xe8\
+\xcb\x9a\xb0c<\x14\xb00W\xd4o\x19\xe4\xe4\xc30\
+\xc3\x09\xc3\x22\xea\xe5*\x14%D?\x94p/\xe1\x11\
+\x22(}k\x00\x1b\x03\xf4+K\x18\xe6\xab\x0b\x88&\
+\xc11\xe8T\xd0\xf8\x83\x0a\x5cSF\x15\xf42\x90\x86\
+\x9b\xd1sP$\x1c\xe9\x05d\x85\x1d\xadY+@\x91\
+\x5c\xffyH\x83\xb7\xef\xbb\xa4\xa4\xef\x01f#\xf9\xc8\
+N\xff\xcb\xb3\x91|:F?\x10\x83s\xb8t\xe4\x02\
+\xff*\xe1\x1fs*R\x85\xe02G\x0az\x92p\xa5\
+T\x02Z\x08A\xe5\xebi\xb0n6\xc1\xeeO\x10\xe1\
+I1\x09\x82\x8e=N\xf7\xf2\xd1\x8e$\xdc\x00X!\
+\xfb\xa4\xc7\xe1\x0a\xf7\xceU\xa0GH\xe6 u\x7f\x1f\
+<\x9ej\xf4\xe0\x13M\xde\xfe\xecQ;U\x98\x1a\xdb\
+\xc8\x1e\x92;\x0c\x00\x1c\x22\xc3\xcdD\x82\x01H.\xa4\
+\x12\xec\x00r\x19b\xd8\xe8\xb7\xcb\xc4\xef\xc0C\x81`\
+D\xbbpS\xbe>\xd1W\xc0\x85\xce\xa1\xbaP\x85\x84\
+?\xdes$\xee\x0c|(2\xad|E(~\xa5\xe6\
+>\x0d\x8e\xcc\xaer\xeb/\x12\xed\x03\xc4w\x80\x84\xfa\
+\x0d_$\xeaj7\xb98_a\xf9\xff\x82\xaa\x87\x98\
+\xad?7\xa1\x9c\x8ez)\x07\xc1\x17N\x17\x22h\xdd\
+\x11\x9c\xe6\xe39\xfdM\xacN\x1bV\x0b\x98\xe7\xf2=\
+\xb9\xb7\xaf\xfe\x17U\xdcM{\
+\x00\x00\x00\xfb\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M3 21h18v-2\
+H3v2zM3 8v8l4-4-\
+4-4zm8 9h10v-2H1\
+1v2zM3 3v2h18V3H\
+3zm8 6h10V7H11v2\
+zm0 4h10v-2H11v2\
+z\x22/></svg>\
+\x00\x00\x01\xa5\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22 x=\x220\x22 y=\x220\x22/>\
+<path d=\x22M22,7h-\
+2v1h3v1h-4V7c0-0\
+.55,0.45-1,1-1h2\
+V5h-3V4h3c0.55,0\
+,1,0.45,1,1v1C23\
+,6.55,22.55,7,22\
+,7z M5.88,20h2.6\
+6l3.4-5.42h0.12 \
+l3.4,5.42h2.66l-\
+4.65-7.27L17.81,\
+6h-2.68l-3.07,4.\
+99h-0.12L8.85,6H\
+6.19l4.32,6.73L5\
+.88,20z\x22/></g></\
+svg>\
+\x00\x00\x01\xa7\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0h24v24\
+H0z\x22/><path d=\x22M\
+13.828 1.686l8.4\
+86 8.486-1.415 1\
+.414-.707-.707-4\
+.242 4.242-.707 \
+3.536-1.415 1.41\
+4-4.242-4.243-4.\
+95 4.95-1.414-1.\
+414 4.95-4.95-4.\
+243-4.242 1.414-\
+1.415L8.88 8.05l\
+4.242-4.242-.707\
+-.707 1.414-1.41\
+5zm.708 3.536l-4\
+.671 4.67-2.822.\
+565 6.5 6.5.564-\
+2.822 4.671-4.67\
+-4.242-4.243z\x22/>\
+</svg>\
+\x00\x00\x00\xea\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M7 15v2h10v\
+-2H7zm-4 6h18v-2\
+H3v2zm0-8h18v-2H\
+3v2zm4-6v2h10V7H\
+7zM3 3v2h18V3H3z\
+\x22/></svg>\
+\x00\x00\x01\xec\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/><rect fill=\x22\
+none\x22 height=\x2224\
+\x22 width=\x2224\x22/></\
+g><g><path d=\x22M1\
+4,8c0-2.21-1.79-\
+4-4-4S6,5.79,6,8\
+s1.79,4,4,4S14,1\
+0.21,14,8z M2,18\
+v1c0,0.55,0.45,1\
+,1,1h14c0.55,0,1\
+-0.45,1-1v-1 c0-\
+2.66-5.33-4-8-4S\
+2,15.34,2,18z M1\
+8,10h4c0.55,0,1,\
+0.45,1,1v0c0,0.5\
+5-0.45,1-1,1h-4c\
+-0.55,0-1-0.45-1\
+-1v0 C17,10.45,1\
+7.45,10,18,10z\x22/\
+></g></svg>\
+\x00\x00\x01H\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22>\x0d\x0a  <p\
+ath id=\x22lineBott\
+om\x22 d=\x22M80 0v-16\
+0h800V0H80Z\x22 fil\
+l=\x22#e3e3e3\x22 opac\
+ity=\x221.0\x22 />\x0d\x0a  \
+<path id=\x22lineA\x22\
+ d=\x22M220-280l210\
+-560h100l210 560\
+h-96l-50-144H368\
+l-52 144h-96Zm17\
+6-224h168l-82-23\
+2h-4l-82 232Z\x22 o\
+pacity=\x221.0\x22 />\x0d\
+\x0a</svg>\
+\x00\x00\x01G\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#E3E3E3\x22><path \
+d=\x22M4,2H11A2,2 0\
+ 0,1 13,4V20A2,2\
+ 0 0,1 11,22H4A2\
+,2 0 0,1 2,20V4A\
+2,2 0 0,1 4,2M4,\
+10V14H11V10H4M4,\
+16V20H11V16H4M4,\
+4V8H11V4H4M17.59\
+,12L15,9.41L16.4\
+1,8L19,10.59L21.\
+59,8L23,9.41L20.\
+41,12L23,14.59L2\
+1.59,16L19,13.41\
+L16.41,16L15,14.\
+59L17.59,12Z\x22 />\
+</svg>\
+\x00\x00\x01\x84\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M15.6 10.79\
+c.97-.67 1.65-1.\
+77 1.65-2.79 0-2\
+.26-1.75-4-4-4H7\
+v14h7.04c2.09 0 \
+3.71-1.7 3.71-3.\
+79 0-1.52-.86-2.\
+82-2.15-3.42zM10\
+ 6.5h3c.83 0 1.5\
+.67 1.5 1.5s-.67\
+ 1.5-1.5 1.5h-3v\
+-3zm3.5 9H10v-3h\
+3.5c.83 0 1.5.67\
+ 1.5 1.5s-.67 1.\
+5-1.5 1.5z\x22/></s\
+vg>\
+\x00\x00\x00\xe9\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22rgba(227,227,22\
+7,1)\x22><path d=\x22M\
+4.22173 18.3642L\
+5.63574 19.7784L\
+15.2427 10.1716L\
+19.071 14L19.071\
+ 4.92892L9.99999\
+ 4.92893L13.8284\
+ 8.75738L4.22173\
+ 18.3642Z\x22></pat\
+h></svg>\
+\x00\x00\x01\xa0\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/><path d=\x22M22\
+,18h-2v1h3v1h-4v\
+-2c0-0.55,0.45-1\
+,1-1h2v-1h-3v-1h\
+3c0.55,0,1,0.45,\
+1,1v1C23,17.55,2\
+2.55,18,22,18z M\
+5.88,18h2.66 l3.\
+4-5.42h0.12l3.4,\
+5.42h2.66l-4.65-\
+7.27L17.81,4h-2.\
+68l-3.07,4.99h-0\
+.12L8.85,4H6.19l\
+4.32,6.73L5.88,1\
+8z\x22/></g></svg>\
+\x00\x00\x01 \
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M13,3A9,9 0 0\
+,0 4,12H1L4.89,1\
+5.89L4.96,16.03L\
+9,12H6A7,7 0 0,1\
+ 13,5A7,7 0 0,1 \
+20,12A7,7 0 0,1 \
+13,19C11.07,19 9\
+.32,18.21 8.06,1\
+6.94L6.64,18.36C\
+8.27,20 10.5,21 \
+13,21A9,9 0 0,0 \
+22,12A9,9 0 0,0 \
+13,3Z\x22 /></svg>\
+\x00\x00\x01\xcc\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><p\
+ath d=\x22M3,11c0,2\
+.45,1.76,4.47,4.\
+08,4.91l-1.49-1.\
+49L7,13l4,4.01L7\
+,21l-1.41-1.41l1\
+.58-1.58l0-0.06C\
+3.7,17.54,1,14.5\
+8,1,11 c0-3.87,3\
+.13-7,7-7h3v2H8C\
+5.24,6,3,8.24,3,\
+11z\x22/><path d=\x22M\
+22,11V4h-9v7H22z\
+ M20,9h-5V6h5V9z\
+\x22/><rect height=\
+\x227\x22 width=\x229\x22 x=\
+\x2213\x22 y=\x2213\x22/></g\
+></g></svg>\
+\x00\x00\x01)\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M2 17h2v.5H\
+3v1h1v.5H2v1h3v-\
+4H2v1zm1-9h1V4H2\
+v1h1v3zm-1 3h1.8\
+L2 13.1v.9h3v-1H\
+3.2L5 10.9V10H2v\
+1zm5-6v2h14V5H7z\
+m0 14h14v-2H7v2z\
+m0-6h14v-2H7v2z\x22\
+/></svg>\
+\x00\x00\x01U\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v25H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M19 3h-1V1h\
+-2v2H8V1H6v2H5c-\
+1.1 0-2 .9-2 2v1\
+4c0 1.1.9 2 2 2h\
+14c1.1 0 2-.9 2-\
+2V5c0-1.1-.9-2-2\
+-2zm0 16H5V9h14v\
+10zM5 7V5h14v2H5\
+zm6.25 4v2.25H9v\
+1.5h2.25v2.25h1.\
+5v-2.25h2.25v-1.\
+5h-2.25V11z\x22/></\
+svg>\
+\x00\x00\x022\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22rgba(227,227,22\
+7,1)\x22><path d=\x22M\
+8.58564 8.85449L\
+3.63589 13.8042L\
+8.83021 18.9985L\
+9.99985 18.9978V\
+18.9966H11.1714L\
+14.9496 15.2184L\
+8.58564 8.85449Z\
+M9.99985 7.44027\
+L16.3638 13.8042\
+L19.1922 10.9758\
+L12.8283 4.61185\
+L9.99985 7.44027\
+ZM13.9999 18.996\
+6H20.9999V20.996\
+6H11.9999L8.0022\
+9 20.9991L1.5145\
+7 14.5113C1.1240\
+5 14.1208 1.1240\
+5 13.4877 1.5145\
+7 13.0971L12.121\
+2 2.49053C12.511\
+7 2.1 13.1449 2.\
+1 13.5354 2.4905\
+3L21.3136 10.268\
+7C21.7041 10.659\
+2 21.7041 11.292\
+4 21.3136 11.682\
+9L13.9999 18.996\
+6Z\x22></path></svg\
+>\
+\x00\x00\x01Y\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M19 3h-1V1h\
+-2v2H8V1H6v2H5c-\
+1.1 0-2 .9-2 2v1\
+4c0 1.1.9 2 2 2h\
+14c1.1 0 2-.9 2-\
+2V5c0-1.1-.9-2-2\
+-2zm0 16H5V9h14v\
+10zM5 7V5h14v2H5\
+zm5.56 10.46l5.9\
+3-5.93-1.06-1.06\
+-4.87 4.87-2.11-\
+2.11-1.06 1.06z\x22\
+/></svg>\
+\x00\x00\x01[\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+20 5c.552 0 1 .4\
+48 1 1v6c0 .552-\
+.448 1-1 1 .628.\
+835 1 1.874 1 3 \
+0 2.761-2.239 5-\
+5 5s-5-2.239-5-5\
+c0-1.126.372-2.1\
+65 1-3H4c-.552 0\
+-1-.448-1-1V6c0-\
+.552.448-1 1-1h1\
+6zm-7 10v2h6v-2h\
+-6zm6-8H5v4h14V7\
+z\x22/></svg>\
+\x00\x00\x01\x12\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M12 17c3.31\
+ 0 6-2.69 6-6V3h\
+-2.5v8c0 1.93-1.\
+57 3.5-3.5 3.5S8\
+.5 12.93 8.5 11V\
+3H6v8c0 3.31 2.6\
+9 6 6 6zm-7 2v2h\
+14v-2H5z\x22/></svg\
+>\
+\x00\x00\x00\xd2\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M21 11.01L3\
+ 11v2h18zM3 16h1\
+2v2H3zM21 6H3v2.\
+01L21 8z\x22/></svg\
+>\
+\x00\x00\x01\x1e\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#E3E3E3\x22><path \
+d=\x22M11,13L13,13L\
+13,16L16,16L16,1\
+8L13,18L13,21L11\
+,21L11,18L8,18L8\
+,16L11,16L11,13M\
+22,9A2,2 0 0,1 2\
+0,11H4A2,2 0 0,1\
+ 2,9V6A2,2 0 0,1\
+ 4,4H20A2,2 0 0,\
+1 22,6V9M4,9H8V6\
+H4V9M10,9H14V6H1\
+0V9M16,9H20V6H16\
+V9Z\x22 /></svg>\
+\x00\x00\x01x\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+10 3c.552 0 1 .4\
+48 1 1v16c0 .552\
+-.448 1-1 1H4c-.\
+552 0-1-.448-1-1\
+V4c0-.552.448-1 \
+1-1h6zM9 5H5v14h\
+4V5zm9 2c2.761 0\
+ 5 2.239 5 5s-2.\
+239 5-5 5-5-2.23\
+9-5-5 2.239-5 5-\
+5zm1 2h-2v1.999L\
+15 11v2l2-.001V1\
+5h2v-2.001L21 13\
+v-2l-2-.001V9z\x22/\
+></svg>\
+\x00\x00\x01B\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#E3E3E3\x22><path \
+d=\x22M9.41,13L12,1\
+5.59L14.59,13L16\
+,14.41L13.41,17L\
+16,19.59L14.59,2\
+1L12,18.41L9.41,\
+21L8,19.59L10.59\
+,17L8,14.41L9.41\
+,13M22,9A2,2 0 0\
+,1 20,11H4A2,2 0\
+ 0,1 2,9V6A2,2 0\
+ 0,1 4,4H20A2,2 \
+0 0,1 22,6V9M4,9\
+H8V6H4V9M10,9H14\
+V6H10V9M16,9H20V\
+6H16V9Z\x22 /></svg\
+>\
+\x00\x00\x00\xfe\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M11 17h10v-\
+2H11v2zm-8-5l4 4\
+V8l-4 4zm0 9h18v\
+-2H3v2zM3 3v2h18\
+V3H3zm8 6h10V7H1\
+1v2zm0 4h10v-2H1\
+1v2z\x22/></svg>\
+\x00\x00\x01S\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M440-280h80v-\
+160h160v-80H520v\
+-160h-80v160H280\
+v80h160v160ZM200\
+-120q-33 0-56.5-\
+23.5T120-200v-56\
+0q0-33 23.5-56.5\
+T200-840h560q33 \
+0 56.5 23.5T840-\
+760v560q0 33-23.\
+5 56.5T760-120H2\
+00Zm0-80h560v-56\
+0H200v560Zm0-560\
+v560-560Z\x22/></sv\
+g>\
+\x00\x00\x01\xcc\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><p\
+ath d=\x22M3,13c0-2\
+.45,1.76-4.47,4.\
+08-4.91L5.59,9.5\
+9L7,11l4-4.01L7,\
+3L5.59,4.41l1.58\
+,1.58l0,0.06C3.7\
+,6.46,1,9.42,1,1\
+3 c0,3.87,3.13,7\
+,7,7h3v-2H8C5.24\
+,18,3,15.76,3,13\
+z\x22/><path d=\x22M13\
+,13v7h9v-7H13z M\
+20,18h-5v-3h5V18\
+z\x22/><rect height\
+=\x227\x22 width=\x229\x22 x\
+=\x2213\x22 y=\x224\x22/></g\
+></g></svg>\
+\x00\x00\x01\xfc\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M7.34 6.41L\
+.86 12.9l6.49 6.\
+48 6.49-6.48-6.5\
+-6.49zM3.69 12.9\
+l3.66-3.66L11 12\
+.9l-3.66 3.66-3.\
+65-3.66zm15.67-6\
+.26C17.61 4.88 1\
+5.3 4 13 4V.76L8\
+.76 5 13 9.24V6c\
+1.79 0 3.58.68 4\
+.95 2.05 2.73 2.\
+73 2.73 7.17 0 9\
+.9C16.58 19.32 1\
+4.79 20 13 20c-.\
+97 0-1.94-.21-2.\
+84-.61l-1.49 1.4\
+9C10.02 21.62 11\
+.51 22 13 22c2.3\
+ 0 4.61-.88 6.36\
+-2.64 3.52-3.51 \
+3.52-9.21 0-12.7\
+2z\x22/></svg>\
+\x00\x00\x00\xb3\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M480-528 296-\
+344l-56-56 240-2\
+40 240 240-56 56\
+-184-184Z\x22/></sv\
+g>\
+\x00\x00\x01\xae\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M4 10.5c-.8\
+3 0-1.5.67-1.5 1\
+.5s.67 1.5 1.5 1\
+.5 1.5-.67 1.5-1\
+.5-.67-1.5-1.5-1\
+.5zm0-6c-.83 0-1\
+.5.67-1.5 1.5S3.\
+17 7.5 4 7.5 5.5\
+ 6.83 5.5 6 4.83\
+ 4.5 4 4.5zm0 12\
+c-.83 0-1.5.68-1\
+.5 1.5s.68 1.5 1\
+.5 1.5 1.5-.68 1\
+.5-1.5-.67-1.5-1\
+.5-1.5zM7 19h14v\
+-2H7v2zm0-6h14v-\
+2H7v2zm0-8v2h14V\
+5H7z\x22/></svg>\
+\x00\x00\x01=\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M4,3H20A2,2 0\
+ 0,1 22,5V20A2,2\
+ 0 0,1 20,22H4A2\
+,2 0 0,1 2,20V5A\
+2,2 0 0,1 4,3M4,\
+7V10H8V7H4M10,7V\
+10H14V7H10M20,10\
+V7H16V10H20M4,12\
+V15H8V12H4M4,20H\
+8V17H4V20M10,12V\
+15H14V12H10M10,2\
+0H14V17H10V20M20\
+,20V17H16V20H20M\
+20,12H16V15H20V1\
+2Z\x22 /></svg>\
+\x00\x00\x00\xc3\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M120-280v-80h\
+560v80H120Zm80-1\
+60v-80h560v80H20\
+0Zm80-160v-80h56\
+0v80H280Z\x22/></sv\
+g>\
+\x00\x00\x01x\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+20 3c.552 0 1 .4\
+48 1 1v16c0 .552\
+-.448 1-1 1h-6c-\
+.552 0-1-.448-1-\
+1V4c0-.552.448-1\
+ 1-1h6zm-1 2h-4v\
+14h4V5zM6 7c2.76\
+1 0 5 2.239 5 5s\
+-2.239 5-5 5-5-2\
+.239-5-5 2.239-5\
+ 5-5zm1 2H5v1.99\
+9L3 11v2l2-.001V\
+15h2v-2.001L9 13\
+v-2l-2-.001V9z\x22/\
+></svg>\
+\x00\x00\x00\xe9\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M3 21h18v-2\
+H3v2zm0-4h18v-2H\
+3v2zm0-4h18v-2H3\
+v2zm0-4h18V7H3v2\
+zm0-6v2h18V3H3z\x22\
+/></svg>\
+\x00\x00\x01z\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+12 13c2.761 0 5 \
+2.239 5 5s-2.239\
+ 5-5 5-5-2.239-5\
+-5 2.239-5 5-5zm\
+1 2h-2v1.999L9 1\
+7v2l2-.001V21h2v\
+-2.001L15 19v-2l\
+-2-.001V15zm7-12\
+c.552 0 1 .448 1\
+ 1v6c0 .552-.448\
+ 1-1 1H4c-.552 0\
+-1-.448-1-1V4c0-\
+.552.448-1 1-1h1\
+6zM5 5v4h14V5H5z\
+\x22/></svg>\
+\x00\x00\x01\xde\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><p\
+ath d=\x22M2,13c0,4\
+.97,4.03,9,9,9c1\
+.76,0,3.4-0.51,4\
+.79-1.38l-1.46-1\
+.46C13.34,19.69,\
+12.2,20,11,20c-3\
+.86,0-7-3.14-7-7\
+s3.14-7,7-7 h0.1\
+7L9.59,7.59L11,9\
+l4-4l-4-4L9.58,2\
+.41L11.17,4H11C6\
+.03,4,2,8.03,2,1\
+3z M11,13l6,6l6-\
+6l-6-6L11,13z M1\
+7,16.17L13.83,13\
+L17,9.83 L20.17,\
+13L17,16.17z\x22/><\
+/g></g></svg>\
+\x00\x00\x02)\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M440-280h80v-\
+240h-80v240Zm68.\
+5-331.5Q520-623 \
+520-640t-11.5-28\
+.5Q497-680 480-6\
+80t-28.5 11.5Q44\
+0-657 440-640t11\
+.5 28.5Q463-600 \
+480-600t28.5-11.\
+5ZM480-80q-83 0-\
+156-31.5T197-197\
+q-54-54-85.5-127\
+T80-480q0-83 31.\
+5-156T197-763q54\
+-54 127-85.5T480\
+-880q83 0 156 31\
+.5T763-763q54 54\
+ 85.5 127T880-48\
+0q0 83-31.5 156T\
+763-197q-54 54-1\
+27 85.5T480-80Zm\
+0-80q134 0 227-9\
+3t93-227q0-134-9\
+3-227t-227-93q-1\
+34 0-227 93t-93 \
+227q0 134 93 227\
+t227 93Zm0-320Z\x22\
+/></svg>\
+\x00\x00\x00\xb2\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M480-344 240-\
+584l56-56 184 18\
+4 184-184 56 56-\
+240 240Z\x22/></svg\
+>\
+\x00\x00\x03\x10\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M18.3643 15.5\
+353L16.95 14.121\
+1L18.3643 12.706\
+9C20.3169 10.754\
+3 20.3169 7.5884\
+7 18.3643 5.6358\
+5C16.4116 3.6832\
+3 13.2458 3.6832\
+3 11.2932 5.6358\
+5L9.87898 7.0500\
+7L8.46477 5.6358\
+5L9.87898 4.2216\
+4C12.6127 1.4879\
+7 17.0448 1.4879\
+7 19.7785 4.2216\
+4C22.5121 6.9553\
+1 22.5121 11.387\
+5 19.7785 14.121\
+1L18.3643 15.535\
+3ZM15.5358 18.36\
+38L14.1216 19.77\
+8C11.388 22.5117\
+ 6.9558 22.5117 \
+4.22213 19.778C1\
+.48846 17.0443 1\
+.48846 12.6122 4\
+.22213 9.87849L5\
+.63634 8.46428L7\
+.05055 9.87849L5\
+.63634 11.2927C3\
+.68372 13.2453 3\
+.68372 16.4112 5\
+.63634 18.3638C7\
+.58896 20.3164 1\
+0.7548 20.3164 1\
+2.7074 18.3638L1\
+4.1216 16.9496L1\
+5.5358 18.3638ZM\
+14.8287 7.75717L\
+16.2429 9.17139L\
+9.17187 16.2425L\
+7.75766 14.8282L\
+14.8287 7.75717Z\
+\x22></path></svg>\
+\x00\x00\x01.\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M12 3 1 9l4\
+ 2.18v6L12 21l7-\
+3.82v-6l2-1.09V1\
+7h2V9L12 3zm6.82\
+ 6L12 12.72 5.18\
+ 9 12 5.28 18.82\
+ 9zM17 15.99l-5 \
+2.73-5-2.73v-3.7\
+2L12 15l5-2.73v3\
+.72z\x22/></svg>\
+\x00\x00\x00\xc0\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0z\x22 fil\
+l=\x22none\x22/><path \
+d=\x22M19 13h-6v6h-\
+2v-6H5v-2h6V5h2v\
+6h6v2z\x22/></svg>\
+\x00\x00\x02\x0a\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M19.15,19H13.\
+39V16.87C15.5,15\
+.25 16.59,13.24 \
+16.59,10.84C16.5\
+9,9.34 16.16,8.1\
+6 15.32,7.29C14.\
+47,6.42 13.37,6 \
+12.03,6C10.68,6 \
+9.57,6.42 8.71,7\
+.3C7.84,8.17 7.4\
+1,9.37 7.41,10.8\
+8C7.41,13.26 8.5\
+,15.26 10.61,16.\
+87V19H4.85V16.87\
+H8.41C6.04,15.32\
+ 4.85,13.23 4.85\
+,10.6C4.85,8.5 5\
+.5,6.86 6.81,5.6\
+6C8.12,4.45 9.84\
+,3.85 11.97,3.85\
+C14.15,3.85 15.8\
+9,4.45 17.19,5.6\
+4C18.5,6.83 19.1\
+5,8.5 19.15,10.5\
+8C19.15,13.21 17\
+.95,15.31 15.55,\
+16.87H19.15V19Z\x22\
+ /></svg>\
+\x00\x00\x01\x16\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0z\x22 fil\
+l=\x22none\x22/><path \
+d=\x22M19 3H5c-1.1 \
+0-2 .9-2 2v14c0 \
+1.1.9 2 2 2h14c1\
+.1 0 2-.9 2-2V5c\
+0-1.1-.9-2-2-2zm\
+-5 14H7v-2h7v2zm\
+3-4H7v-2h10v2zm0\
+-4H7V7h10v2z\x22/><\
+/svg>\
+\x00\x00\x01`\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M19 2h-4.18\
+C14.4.84 13.3 0 \
+12 0S9.6.84 9.18\
+ 2H5c-1.1 0-2 .9\
+-2 2v16c0 1.1.9 \
+2 2 2h14c1.1 0 2\
+-.9 2-2V4c0-1.1-\
+.9-2-2-2zm-7 0c.\
+55 0 1 .45 1 1s-\
+.45 1-1 1-1-.45-\
+1-1 .45-1 1-1zm7\
+ 18H5V4h2v3h10V4\
+h2v16z\x22/></svg>\
+\x00\x00\x04\x10\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><rect fil\
+l=\x22none\x22 height=\
+\x2224\x22 width=\x2224\x22/\
+><path d=\x22M19.5,\
+12c0-0.23-0.01-0\
+.45-0.03-0.68l1.\
+86-1.41c0.4-0.3,\
+0.51-0.86,0.26-1\
+.3l-1.87-3.23c-0\
+.25-0.44-0.79-0.\
+62-1.25-0.42 l-2\
+.15,0.91c-0.37-0\
+.26-0.76-0.49-1.\
+17-0.68l-0.29-2.\
+31C14.8,2.38,14.\
+37,2,13.87,2h-3.\
+73C9.63,2,9.2,2.\
+38,9.14,2.88L8.8\
+5,5.19 c-0.41,0.\
+19-0.8,0.42-1.17\
+,0.68L5.53,4.96c\
+-0.46-0.2-1-0.02\
+-1.25,0.42L2.41,\
+8.62c-0.25,0.44-\
+0.14,0.99,0.26,1\
+.3l1.86,1.41 C4.\
+51,11.55,4.5,11.\
+77,4.5,12s0.01,0\
+.45,0.03,0.68l-1\
+.86,1.41c-0.4,0.\
+3-0.51,0.86-0.26\
+,1.3l1.87,3.23c0\
+.25,0.44,0.79,0.\
+62,1.25,0.42 l2.\
+15-0.91c0.37,0.2\
+6,0.76,0.49,1.17\
+,0.68l0.29,2.31C\
+9.2,21.62,9.63,2\
+2,10.13,22h3.73c\
+0.5,0,0.93-0.38,\
+0.99-0.88l0.29-2\
+.31 c0.41-0.19,0\
+.8-0.42,1.17-0.6\
+8l2.15,0.91c0.46\
+,0.2,1,0.02,1.25\
+-0.42l1.87-3.23c\
+0.25-0.44,0.14-0\
+.99-0.26-1.3l-1.\
+86-1.41 C19.49,1\
+2.45,19.5,12.23,\
+19.5,12z M12.04,\
+15.5c-1.93,0-3.5\
+-1.57-3.5-3.5s1.\
+57-3.5,3.5-3.5s3\
+.5,1.57,3.5,3.5S\
+13.97,15.5,12.04\
+,15.5z\x22/></svg>\
+\x00\x00\x01\xac\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><path\
+ d=\x22M14,2H6C4.9,\
+2,4,2.9,4,4v16c0\
+,1.1,0.9,2,2,2h1\
+2c1.1,0,2-0.9,2-\
+2V8L14,2z M6,20V\
+4h7v5h5v11H6z M1\
+6,11h-4v3.88 c-0\
+.36-0.24-0.79-0.\
+38-1.25-0.38c-1.\
+24,0-2.25,1.01-2\
+.25,2.25c0,1.24,\
+1.01,2.25,2.25,2\
+.25S13,17.99,13,\
+16.75V13h3V11z\x22/\
+></g></svg>\
+\x00\x00\x01\xac\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M15 12c2.21\
+ 0 4-1.79 4-4s-1\
+.79-4-4-4-4 1.79\
+-4 4 1.79 4 4 4z\
+m-9-2V8c0-.55-.4\
+5-1-1-1s-1 .45-1\
+ 1v2H2c-.55 0-1 \
+.45-1 1s.45 1 1 \
+1h2v2c0 .55.45 1\
+ 1 1s1-.45 1-1v-\
+2h2c.55 0 1-.45 \
+1-1s-.45-1-1-1H6\
+zm9 4c-2.67 0-8 \
+1.34-8 4v1c0 .55\
+.45 1 1 1h14c.55\
+ 0 1-.45 1-1v-1c\
+0-2.66-5.33-4-8-\
+4z\x22/></svg>\
+\x00\x00\x02\xce\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><g\
+><path d=\x22M21,3H\
+3C1.9,3,1,3.9,1,\
+5v8h2V5h18v16c1.\
+1,0,2-0.9,2-2V5C\
+23,3.9,22.1,3,21\
+,3z\x22/></g><g><pa\
+th d=\x22M13,10c0-2\
+.21-1.79-4-4-4s-\
+4,1.79-4,4c0,2.2\
+1,1.79,4,4,4S13,\
+12.21,13,10z M7,\
+10c0-1.1,0.9-2,2\
+-2s2,0.9,2,2 c0,\
+1.1-0.9,2-2,2S7,\
+11.1,7,10z\x22/></g\
+><g><path d=\x22M15\
+.39,16.56C13.71,\
+15.7,11.53,15,9,\
+15c-2.53,0-4.71,\
+0.7-6.39,1.56C1.\
+61,17.07,1,18.1,\
+1,19.22V22h16v-2\
+.78 C17,18.1,16.\
+39,17.07,15.39,1\
+6.56z M15,20H3c0\
+-0.72-0.1-1.34,0\
+.52-1.66C4.71,17\
+.73,6.63,17,9,17\
+c2.37,0,4.29,0.7\
+3,5.48,1.34 C15.\
+11,18.66,15,19.2\
+9,15,20z\x22/></g><\
+/g></g></svg>\
+\x00\x00\x01(\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M19 5v14H5V\
+5h14m0-2H5c-1.1 \
+0-2 .9-2 2v14c0 \
+1.1.9 2 2 2h14c1\
+.1 0 2-.9 2-2V5c\
+0-1.1-.9-2-2-2zm\
+-4.86 8.86l-3 3.\
+87L9 13.14 6 17h\
+12l-3.86-5.14z\x22/\
+></svg>\
+\x00\x00\x02\x86\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><p\
+ath d=\x22M18,13c0,\
+3.31-2.69,6-6,6s\
+-6-2.69-6-6s2.69\
+-6,6-6v4l5-5l-5-\
+5v4c-4.42,0-8,3.\
+58-8,8c0,4.42,3.\
+58,8,8,8c4.42,0,\
+8-3.58,8-8 H18z\x22\
+/><path d=\x22M12.0\
+3,15.38c-0.44,0-\
+0.58-0.31-0.6-0.\
+56h-0.84c0.03,0.\
+85,0.79,1.25,1.4\
+4,1.25c0.93,0,1.\
+44-0.63,1.44-1.4\
+3 c0-1.33-0.97-1\
+.44-1.3-1.44c-0.\
+2,0-0.43,0.05-0.\
+64,0.16l0.11-0.9\
+2h1.7v-0.71h-2.3\
+9l-0.25,2.17l0.6\
+7,0.17 c0.13-0.1\
+3,0.28-0.23,0.57\
+-0.23c0.4,0,0.69\
+,0.23,0.69,0.75C\
+12.62,14.64,12.6\
+5,15.38,12.03,15\
+.38z\x22/></g></g><\
+/svg>\
+\x00\x00\x00\xf1\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0h24v24\
+H0z\x22/><path d=\x22M\
+18 3v2h-1v6l2 3v\
+2h-6v7h-2v-7H5v-\
+2l2-3V5H6V3h12zM\
+9 5v6.606L7.404 \
+14h9.192L15 11.6\
+06V5H9z\x22/></svg>\
+\
+\x00\x00\x00\xdc\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0z\x22 fil\
+l=\x22none\x22/><path \
+d=\x22M7 7h10v3l4-4\
+-4-4v3H5v6h2V7zm\
+10 10H7v-3l-4 4 \
+4 4v-3h12v-6h-2v\
+4z\x22/></svg>\
+\x00\x00\x03?\
+<\
+?xml version=\x221.\
+0\x22 encoding=\x22UTF\
+-8\x22 standalone=\x22\
+no\x22?>\x0a<svg\x0a   xm\
+lns:dc=\x22http://p\
+url.org/dc/eleme\
+nts/1.1/\x22\x0a   xml\
+ns:cc=\x22http://cr\
+eativecommons.or\
+g/ns#\x22\x0a   xmlns:\
+rdf=\x22http://www.\
+w3.org/1999/02/2\
+2-rdf-syntax-ns#\
+\x22\x0a   xmlns:svg=\x22\
+http://www.w3.or\
+g/2000/svg\x22\x0a   x\
+mlns=\x22http://www\
+.w3.org/2000/svg\
+\x22\x0a   xmlns:sodip\
+odi=\x22http://sodi\
+podi.sourceforge\
+.net/DTD/sodipod\
+i-0.dtd\x22\x0a   xmln\
+s:inkscape=\x22http\
+://www.inkscape.\
+org/namespaces/i\
+nkscape\x22\x0a   widt\
+h=\x2224\x22\x0a   height\
+=\x2224\x22\x0a   viewBox\
+=\x220 0 24 24\x22\x0a   \
+fill=\x22#e3e3e3\x22>\x0a\
+  <path\x0a     d=\x22\
+m 9.5,2.5 a 2,2 \
+0 0 1 2,2 l 0,16\
+ a 2,2 0 0 1 -2,\
+2 h -7 l 0,-2 h \
+2 l 0,-4 h -2 v \
+-2 h 2 v -4 h -2\
+ v -2 h 2 v -4 h\
+ -2 v -2 z m 0,1\
+8 v -4 h -3 l 0,\
+4 z m 0,-6 v -4 \
+h -3 v 4 z m 0,-\
+10 h -3 v 4 h 3 \
+z m 4,9 v -2 l 3\
+,0 v -3 h 2 v 3 \
+h 3 v 2 h -3 v 3\
+ h -2 v -3 z\x22\x0a  \
+   id=\x22path2\x22\x0a  \
+   inkscape:conn\
+ector-curvature=\
+\x220\x22 />\x0a</svg>\x0a\
+\x00\x00\x07k\
+<\
+?xml version=\x221.\
+0\x22 encoding=\x22UTF\
+-8\x22 standalone=\x22\
+no\x22?>\x0a<svg\x0a   xm\
+lns:dc=\x22http://p\
+url.org/dc/eleme\
+nts/1.1/\x22\x0a   xml\
+ns:cc=\x22http://cr\
+eativecommons.or\
+g/ns#\x22\x0a   xmlns:\
+rdf=\x22http://www.\
+w3.org/1999/02/2\
+2-rdf-syntax-ns#\
+\x22\x0a   xmlns:svg=\x22\
+http://www.w3.or\
+g/2000/svg\x22\x0a   x\
+mlns=\x22http://www\
+.w3.org/2000/svg\
+\x22\x0a   xmlns:sodip\
+odi=\x22http://sodi\
+podi.sourceforge\
+.net/DTD/sodipod\
+i-0.dtd\x22\x0a   xmln\
+s:inkscape=\x22http\
+://www.inkscape.\
+org/namespaces/i\
+nkscape\x22\x0a   heig\
+ht=\x2224px\x22\x0a   vie\
+wBox=\x220 0 24 24\x22\
+\x0a   width=\x2224px\x22\
+\x0a   fill=\x22#e3e3e\
+3\x22\x0a   version=\x221\
+.1\x22\x0a   id=\x22svg6\x22\
+\x0a   sodipodi:doc\
+name=\x22ic_row.svg\
+\x22\x0a   inkscape:ve\
+rsion=\x220.92.3 (2\
+405546, 2018-03-\
+11)\x22>\x0a  <metadat\
+a\x0a     id=\x22metad\
+ata12\x22>\x0a    <rdf\
+:RDF>\x0a      <cc:\
+Work\x0a         rd\
+f:about=\x22\x22>\x0a    \
+    <dc:format>i\
+mage/svg+xml</dc\
+:format>\x0a       \
+ <dc:type\x0a      \
+     rdf:resourc\
+e=\x22http://purl.o\
+rg/dc/dcmitype/S\
+tillImage\x22 />\x0a  \
+    </cc:Work>\x0a \
+   </rdf:RDF>\x0a  \
+</metadata>\x0a  <d\
+efs\x0a     id=\x22def\
+s10\x22 />\x0a  <sodip\
+odi:namedview\x0a  \
+   pagecolor=\x22#f\
+fffff\x22\x0a     bord\
+ercolor=\x22#666666\
+\x22\x0a     borderopa\
+city=\x221\x22\x0a     ob\
+jecttolerance=\x221\
+0\x22\x0a     gridtole\
+rance=\x2210\x22\x0a     \
+guidetolerance=\x22\
+10\x22\x0a     inkscap\
+e:pageopacity=\x220\
+\x22\x0a     inkscape:\
+pageshadow=\x222\x22\x0a \
+    inkscape:win\
+dow-width=\x222560\x22\
+\x0a     inkscape:w\
+indow-height=\x2214\
+94\x22\x0a     id=\x22nam\
+edview8\x22\x0a     sh\
+owgrid=\x22false\x22\x0a \
+    inkscape:zoo\
+m=\x2239.333333\x22\x0a  \
+   inkscape:cx=\x22\
+18.152306\x22\x0a     \
+inkscape:cy=\x2213.\
+591054\x22\x0a     ink\
+scape:window-x=\x22\
+-11\x22\x0a     inksca\
+pe:window-y=\x22-11\
+\x22\x0a     inkscape:\
+window-maximized\
+=\x221\x22\x0a     inksca\
+pe:current-layer\
+=\x22svg6\x22 />\x0a  <pa\
+th\x0a     d=\x22M0 0h\
+24v24H0V0z\x22\x0a    \
+ fill=\x22none\x22\x0a   \
+  id=\x22path2\x22 />\x0a\
+  <path\x0a     d=\x22\
+M 20,3 H 5 C 3.9\
+,3 3,3.9 3,5 v 1\
+4 c 0,1.1 0.9,2 \
+2,2 h 15 c 1.1,0\
+ 2,-0.9 2,-2 V 5\
+ C 22,3.9 21.1,3\
+ 20,3 Z M 19.949\
+153,8.279661 20,\
+8 H 5 L 5.483050\
+8,8.1525424 Z M \
+15,19 h -5 v -9 \
+h 5 z M 5,10 h 3\
+ v 9 H 5 Z m 12,\
+9 v -9 h 3 v 9 z\
+\x22\x0a     id=\x22path4\
+\x22\x0a     inkscape:\
+connector-curvat\
+ure=\x220\x22\x0a     sod\
+ipodi:nodetypes=\
+\x22ssssssssscccccc\
+cccccccccccccc\x22 \
+/>\x0a</svg>\x0a\
+\x00\x00\x00\xd2\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M10 4v3h2.2\
+1l-3.42 8H6v3h8v\
+-3h-2.21l3.42-8H\
+18V4h-8z\x22/></svg\
+>\
+\x00\x00\x01\xb6\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><path\
+ d=\x22M8,11h8v2H8V\
+11z M20.1,12H22c\
+0-2.76-2.24-5-5-\
+5h-4v1.9h4C18.71\
+,8.9,20.1,10.29,\
+20.1,12z M3.9,12\
+c0-1.71,1.39-3.1\
+,3.1-3.1h4 V7H7c\
+-2.76,0-5,2.24-5\
+,5s2.24,5,5,5h4v\
+-1.9H7C5.29,15.1\
+,3.9,13.71,3.9,1\
+2z M19,12h-2v3h-\
+3v2h3v3h2v-3h3v-\
+2h-3V12z\x22/></g><\
+/svg>\
+\x00\x00\x00\xcf\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0z\x22 fil\
+l=\x22none\x22/><path \
+d=\x22M2.5 4v3h5v12\
+h3V7h5V4h-13zm19\
+ 5h-9v3h3v7h3v-7\
+h3V9z\x22/></svg>\
+\x00\x00\x02(\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M12.35 20H10V\
+17H12.09C12.21 1\
+6.28 12.46 15.61\
+ 12.81 15H10V12H\
+14V13.54C14.58 1\
+3 15.25 12.61 16\
+ 12.35V12H20V12.\
+35C20.75 12.61 2\
+1.42 13 22 13.54\
+V5C22 3.9 21.1 3\
+ 20 3H4C2.9 3 2 \
+3.9 2 5V20C2 21.\
+1 2.9 22 4 22H13\
+.54C13 21.42 12.\
+61 20.75 12.35 2\
+0M16 7H20V10H16V\
+7M10 7H14V10H10V\
+7M8 20H4V17H8V20\
+M8 15H4V12H8V15M\
+8 10H4V7H8V10M14\
+.46 15.88L15.88 \
+14.46L18 16.59L2\
+0.12 14.46L21.54\
+ 15.88L19.41 18L\
+21.54 20.12L20.1\
+2 21.54L18 19.41\
+L15.88 21.54L14.\
+46 20.12L16.59 1\
+8L14.46 15.88\x22 /\
+></svg>\
+\x00\x00\x00\xeb\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M15 15H3v2h\
+12v-2zm0-8H3v2h1\
+2V7zM3 13h18v-2H\
+3v2zm0 8h18v-2H3\
+v2zM3 3v2h18V3H3\
+z\x22/></svg>\
+\x00\x00\x01i\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+12 3c.552 0 1 .4\
+48 1 1v8c.835-.6\
+28 1.874-1 3-1 2\
+.761 0 5 2.239 5\
+ 5s-2.239 5-5 5c\
+-1.032 0-1.99-.3\
+13-2.787-.848L13\
+ 20c0 .552-.448 \
+1-1 1H6c-.552 0-\
+1-.448-1-1V4c0-.\
+552.448-1 1-1h6z\
+m-1 2H7v14h4V5zm\
+8 10h-6v2h6v-2z\x22\
+/></svg>\
+\x00\x00\x00\xfa\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22#e3e3e3\x22\
+><path d=\x22M22 10\
+a2 2 0 0 1-2 2H4\
+a2 2 0 0 1-2-2V3\
+h2v2h4V3h2v2h4V3\
+h2v2h4V3h2zM4 10\
+h4V7H4zm6 0h4V7h\
+-4zm10 0V7h-4v3z\
+m-9 4h2v3h3v2h-3\
+v3h-2v-3H8v-2h3z\
+\x22/></svg>\
+\x00\x00\x01\x1e\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M16 1H4c-1.\
+1 0-2 .9-2 2v14h\
+2V3h12V1zm3 4H8c\
+-1.1 0-2 .9-2 2v\
+14c0 1.1.9 2 2 2\
+h11c1.1 0 2-.9 2\
+-2V7c0-1.1-.9-2-\
+2-2zm0 16H8V7h11\
+v14z\x22/></svg>\
+\x00\x00\x01w\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224\x22 height=\x2224\
+\x22 fill=\x22#e3e3e3\x22\
+><path fill=\x22non\
+e\x22 d=\x22M0 0H24V24\
+H0z\x22/><path d=\x22M\
+20 13c.552 0 1 .\
+448 1 1v6c0 .552\
+-.448 1-1 1H4c-.\
+552 0-1-.448-1-1\
+v-6c0-.552.448-1\
+ 1-1h16zm-1 2H5v\
+4h14v-4zM12 1c2.\
+761 0 5 2.239 5 \
+5s-2.239 5-5 5-5\
+-2.239-5-5 2.239\
+-5 5-5zm1 2h-2v1\
+.999L9 5v2l2-.00\
+1V9h2V6.999L15 7\
+V5l-2-.001V3z\x22/>\
+</svg>\
+\x00\x00\x00\xfb\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+-960 960 960\x22 wi\
+dth=\x2224px\x22 fill=\
+\x22#e3e3e3\x22><path \
+d=\x22M200-200h57l3\
+91-391-57-57-391\
+ 391v57Zm-80 80v\
+-170l585-583 167\
+ 171-582 582H120\
+Zm640-584-56-56 \
+56 56Zm-141 85-2\
+8-29 57 57-29-28\
+Z\x22/></svg>\
+\x00\x00\x07\xba\
+<\
+?xml version=\x221.\
+0\x22 encoding=\x22UTF\
+-8\x22 standalone=\x22\
+no\x22?>\x0a<svg\x0a   xm\
+lns:dc=\x22http://p\
+url.org/dc/eleme\
+nts/1.1/\x22\x0a   xml\
+ns:cc=\x22http://cr\
+eativecommons.or\
+g/ns#\x22\x0a   xmlns:\
+rdf=\x22http://www.\
+w3.org/1999/02/2\
+2-rdf-syntax-ns#\
+\x22\x0a   xmlns:svg=\x22\
+http://www.w3.or\
+g/2000/svg\x22\x0a   x\
+mlns=\x22http://www\
+.w3.org/2000/svg\
+\x22\x0a   xmlns:sodip\
+odi=\x22http://sodi\
+podi.sourceforge\
+.net/DTD/sodipod\
+i-0.dtd\x22\x0a   xmln\
+s:inkscape=\x22http\
+://www.inkscape.\
+org/namespaces/i\
+nkscape\x22\x0a   view\
+Box=\x220 0 24 24\x22\x0a\
+   fill=\x22#E3E3E3\
+\x22\x0a   version=\x221.\
+1\x22\x0a   id=\x22svg4\x22\x0a\
+   sodipodi:docn\
+ame=\x22ic_addcolum\
+n.svg\x22\x0a   inksca\
+pe:version=\x220.92\
+.3 (2405546, 201\
+8-03-11)\x22>\x0a  <me\
+tadata\x0a     id=\x22\
+metadata10\x22>\x0a   \
+ <rdf:RDF>\x0a     \
+ <cc:Work\x0a      \
+   rdf:about=\x22\x22>\
+\x0a        <dc:for\
+mat>image/svg+xm\
+l</dc:format>\x0a  \
+      <dc:type\x0a \
+          rdf:re\
+source=\x22http://p\
+url.org/dc/dcmit\
+ype/StillImage\x22 \
+/>\x0a      </cc:Wo\
+rk>\x0a    </rdf:RD\
+F>\x0a  </metadata>\
+\x0a  <defs\x0a     id\
+=\x22defs8\x22 />\x0a  <s\
+odipodi:namedvie\
+w\x0a     pagecolor\
+=\x22#ffffff\x22\x0a     \
+bordercolor=\x22#66\
+6666\x22\x0a     borde\
+ropacity=\x221\x22\x0a   \
+  objecttoleranc\
+e=\x2210\x22\x0a     grid\
+tolerance=\x2210\x22\x0a \
+    guidetoleran\
+ce=\x2210\x22\x0a     ink\
+scape:pageopacit\
+y=\x220\x22\x0a     inksc\
+ape:pageshadow=\x22\
+2\x22\x0a     inkscape\
+:window-width=\x223\
+840\x22\x0a     inksca\
+pe:window-height\
+=\x222054\x22\x0a     id=\
+\x22namedview6\x22\x0a   \
+  showgrid=\x22fals\
+e\x22\x0a     inkscape\
+:zoom=\x2239.333333\
+\x22\x0a     inkscape:\
+cx=\x2221.713077\x22\x0a \
+    inkscape:cy=\
+\x2223.336514\x22\x0a    \
+ inkscape:window\
+-x=\x223829\x22\x0a     i\
+nkscape:window-y\
+=\x22-11\x22\x0a     inks\
+cape:window-maxi\
+mized=\x221\x22\x0a     i\
+nkscape:current-\
+layer=\x22svg4\x22 />\x0a\
+  <path\x0a     d=\x22\
+m 4.5338983,2 h \
+5.9322037 c 0.93\
+6076,0 1.694915,\
+0.8954332 1.6949\
+15,2 v 16 c 0,1.\
+104569 -0.758839\
+,2 -1.694915,2 H\
+ 4.5338983 C 3.5\
+978225,22 2.8389\
+831,21.104569 2.\
+8389831,20 V 4 c\
+ 0,-1.1045668 0.\
+7588394,-2 1.694\
+9152,-2 m 0,8 v \
+4 H 10.466102 V \
+10 H 4.5338983 m\
+ 0,6 v 4 H 10.46\
+6102 V 16 H 4.53\
+38983 m 0,-12 V \
+8 H 10.466102 V \
+4 H 4.5338983 M \
+18,8 h 2 v 3 h 3\
+ v 2 h -3 v 3 h \
+-2 v -3 h -3 v -\
+2 h 3 z\x22\x0a     id\
+=\x22path2\x22\x0a     in\
+kscape:connector\
+-curvature=\x220\x22\x0a \
+    sodipodi:nod\
+etypes=\x22csssssss\
+cccccccccccccccc\
+ccccccccccccc\x22 /\
+>\x0a</svg>\x0a\
+\x00\x00\x00\xea\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 height=\x222\
+4px\x22 viewBox=\x220 \
+0 24 24\x22 width=\x22\
+24px\x22 fill=\x22#e3e\
+3e3\x22><path d=\x22M0\
+ 0h24v24H0V0z\x22 f\
+ill=\x22none\x22/><pat\
+h d=\x22M3 21h18v-2\
+H3v2zm6-4h12v-2H\
+9v2zm-6-4h18v-2H\
+3v2zm6-4h12V7H9v\
+2zM3 3v2h18V3H3z\
+\x22/></svg>\
+\x00\x00\x04-\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 enable-ba\
+ckground=\x22new 0 \
+0 24 24\x22 height=\
+\x2224px\x22 viewBox=\x22\
+0 0 24 24\x22 width\
+=\x2224px\x22 fill=\x22#e\
+3e3e3\x22><g><rect \
+fill=\x22none\x22 heig\
+ht=\x2224\x22 width=\x222\
+4\x22/></g><g><g><p\
+ath d=\x22M12,5V1L7\
+,6l5,5V7c3.31,0,\
+6,2.69,6,6s-2.69\
+,6-6,6s-6-2.69-6\
+-6H4c0,4.42,3.58\
+,8,8,8s8-3.58,8-\
+8S16.42,5,12,5z\x22\
+/><g><path d=\x22M1\
+0.69,13.9l0.25-2\
+.17h2.39v0.71h-1\
+.7l-0.11,0.92c0.\
+03-0.02,0.07-0.0\
+3,0.11-0.05s0.09\
+-0.04,0.15-0.05 \
+s0.12-0.03,0.18-\
+0.04s0.13-0.02,0\
+.2-0.02c0.21,0,0\
+.39,0.03,0.55,0.\
+1s0.3,0.16,0.41,\
+0.28s0.2,0.27,0.\
+25,0.45s0.09,0.3\
+8,0.09,0.6 c0,0.\
+19-0.03,0.37-0.0\
+9,0.54s-0.15,0.3\
+2-0.27,0.45s-0.2\
+7,0.24-0.45,0.31\
+s-0.39,0.12-0.64\
+,0.12c-0.18,0-0.\
+36-0.03-0.53-0.0\
+8 s-0.32-0.14-0.\
+46-0.24s-0.24-0.\
+24-0.32-0.39s-0.\
+13-0.33-0.13-0.5\
+3h0.84c0.02,0.18\
+,0.08,0.32,0.19,\
+0.41s0.25,0.15,0\
+.42,0.15 c0.11,0\
+,0.2-0.02,0.27-0\
+.06s0.14-0.1,0.1\
+8-0.17s0.08-0.15\
+,0.11-0.25s0.03-\
+0.2,0.03-0.31s-0\
+.01-0.21-0.04-0.\
+31 s-0.07-0.17-0\
+.13-0.24s-0.13-0\
+.12-0.21-0.15s-0\
+.19-0.05-0.3-0.0\
+5c-0.08,0-0.15,0\
+.01-0.2,0.02s-0.\
+11,0.03-0.15,0.0\
+5 s-0.08,0.05-0.\
+12,0.07s-0.07,0.\
+06-0.1,0.09L10.6\
+9,13.9z\x22/></g></\
+g></g></svg>\
+"
 
-STANDARD_ICON_MAP: dict[QStyle.StandardPixmap, dict] = {
-    QStyle.StandardPixmap.SP_ArrowBack: {"id": "arrow_upward", "rotate": 270},
-    QStyle.StandardPixmap.SP_ArrowDown: {"id": "arrow_upward", "rotate": 180},
-    QStyle.StandardPixmap.SP_ArrowForward: {"id": "arrow_upward", "rotate": 90},
-    QStyle.StandardPixmap.SP_ArrowLeft: {"id": "arrow_upward", "rotate": 270},
-    QStyle.StandardPixmap.SP_ArrowRight: {"id": "arrow_upward", "rotate": 90},
-    QStyle.StandardPixmap.SP_ArrowUp: {"id": "arrow_upward"},
-    QStyle.StandardPixmap.SP_BrowserReload: {"id": "refresh"},
-    QStyle.StandardPixmap.SP_BrowserStop: {"id": "close"},
-    QStyle.StandardPixmap.SP_CommandLink: {"id": "east"},
-    QStyle.StandardPixmap.SP_DialogApplyButton: {"id": "check_circle"},
-    QStyle.StandardPixmap.SP_DialogCancelButton: {"id": "cancel"},
-    QStyle.StandardPixmap.SP_DialogCloseButton: {"id": "close"},
-    QStyle.StandardPixmap.SP_DialogDiscardButton: {"id": "delete"},
-    QStyle.StandardPixmap.SP_DialogHelpButton: {"id": "help"},
-    QStyle.StandardPixmap.SP_DialogNoButton: {"id": "not_interested"},
-    QStyle.StandardPixmap.SP_DialogOkButton: {"id": "check"},
-    QStyle.StandardPixmap.SP_DialogOpenButton: {"id": "launch"},
-    QStyle.StandardPixmap.SP_DialogResetButton: {"id": "cleaning_services"},
-    QStyle.StandardPixmap.SP_DialogSaveButton: {"id": "save"},
-    QStyle.StandardPixmap.SP_DialogYesButton: {"id": "circle"},
-    QStyle.StandardPixmap.SP_DirHomeIcon: {"id": "home"},
-    QStyle.StandardPixmap.SP_DirIcon: {"id": "open"},
-    QStyle.StandardPixmap.SP_DockWidgetCloseButton: {"id": "close"},
-    QStyle.StandardPixmap.SP_FileDialogBack: {"id": "arrow_upward", "rotate": 270},
-    QStyle.StandardPixmap.SP_FileDialogContentsView: {"id": "search"},
-    QStyle.StandardPixmap.SP_FileDialogDetailedView: {"id": "list"},
-    QStyle.StandardPixmap.SP_FileDialogEnd: {"id": "drive_file_move_rtl"},
-    QStyle.StandardPixmap.SP_FileDialogInfoView: {"id": "info"},
-    QStyle.StandardPixmap.SP_FileDialogListView: {"id": "grid_view"},
-    QStyle.StandardPixmap.SP_FileDialogNewFolder: {"id": "create_new_folder"},
-    QStyle.StandardPixmap.SP_FileDialogStart: {"id": "drive_file_move"},
-    QStyle.StandardPixmap.SP_FileDialogToParent: {"id": "arrow_upward"},
-    QStyle.StandardPixmap.SP_MediaPause: {"id": "pause"},
-    QStyle.StandardPixmap.SP_MediaPlay: {"id": "play_arrow"},
-    QStyle.StandardPixmap.SP_MediaSeekBackward: {"id": "fast_rewind"},
-    QStyle.StandardPixmap.SP_MediaSeekForward: {"id": "fast_forward"},
-    QStyle.StandardPixmap.SP_MediaSkipBackward: {"id": "skip_previous"},
-    QStyle.StandardPixmap.SP_MediaSkipForward: {"id": "skip_next"},
-    QStyle.StandardPixmap.SP_MediaStop: {"id": "stop"},
-    QStyle.StandardPixmap.SP_MediaVolume: {"id": "volume_up"},
-    QStyle.StandardPixmap.SP_MediaVolumeMuted: {"id": "volume_mute"},
-    QStyle.StandardPixmap.SP_MessageBoxQuestion: {
-        "id": "help",
-        "os": ["Darwin", "Linux"],
-    },
-    QStyle.StandardPixmap.SP_TitleBarCloseButton: {"id": "close"},
-    QStyle.StandardPixmap.SP_TitleBarContextHelpButton: {"id": "question_mark"},
-    QStyle.StandardPixmap.SP_TitleBarMaxButton: {"id": "fullscreen"},
-    QStyle.StandardPixmap.SP_TitleBarMinButton: {"id": "minimize"},
-    QStyle.StandardPixmap.SP_TitleBarNormalButton: {"id": "flip_to_front"},
-    QStyle.StandardPixmap.SP_TitleBarShadeButton: {
-        "id": "chevron_right",
-        "rotate": "270",
-    },
-    QStyle.StandardPixmap.SP_TitleBarUnshadeButton: {
-        "id": "chevron_right",
-        "rotate": "90",
-    },
-    QStyle.StandardPixmap.SP_ToolBarHorizontalExtensionButton: {"id": "double_arrow"},
-    QStyle.StandardPixmap.SP_ToolBarVerticalExtensionButton: {
-        "id": "double_arrow",
-        "rotate": 90,
-    },
-    QStyle.StandardPixmap.SP_TrashIcon: {"id": "delete", "os": ["Windows"]},
-    QStyle.StandardPixmap.SP_VistaShield: {"id": "security", "os": ["Darwin", "Linux"]},
-    QStyle.StandardPixmap.SP_DialogAbortButton: {"id": "not_interested"},
-    QStyle.StandardPixmap.SP_DialogIgnoreButton: {"id": "visibility_off"},
-    QStyle.StandardPixmap.SP_DialogNoToAllButton: {"id": "close"},
-    QStyle.StandardPixmap.SP_DialogRetryButton: {"id": "refresh"},
-    QStyle.StandardPixmap.SP_DialogSaveAllButton: {"id": "save"},
-    QStyle.StandardPixmap.SP_DialogYesToAllButton: {"id": "done_all"},
-    QStyle.StandardPixmap.SP_LineEditClearButton: {"id": "close"},
-    QStyle.StandardPixmap.SP_TabCloseButton: {"id": "close"},
-}
+qt_resource_name = b"\
+\x00\x06\
+\x06\xa6D^\
+\x00c\
+\x00o\x00m\x00m\x00o\x00n\
+\x00\x04\
+\x00\x075\xdf\
+\x00l\
+\x00o\x00g\x00o\
+\x00\x09\
+\x0eV\xd1^\
+\x00l\
+\x00o\x00g\x00o\x00_\x00m\x00a\x00i\x00n\
+\x00\x06\
+\x07\x04\xacT\
+\x00i\
+\x00n\x00d\x00e\x00n\x00t\
+\x00\x0b\
+\x09o\x1d\xf4\
+\x00s\
+\x00u\x00p\x00e\x00r\x00s\x00c\x00r\x00i\x00p\x00t\
+\x00\x0a\
+\x06b\xf9\xf4\
+\x00n\
+\x00o\x00t\x00_\x00p\x00i\x00n\x00n\x00e\x00d\
+\x00\x0c\
+\x08\xa1\xa6B\
+\x00a\
+\x00l\x00i\x00g\x00n\x00_\x00c\x00e\x00n\x00t\x00e\x00r\
+\x00\x08\
+\x04\x8a\x90^\
+\x00u\
+\x00n\x00a\x00s\x00s\x00i\x00g\x00n\
+\x00\x0a\
+\x0aY:\x82\
+\x00t\
+\x00e\x00x\x00t\x00_\x00c\x00o\x00l\x00o\x00r\
+\x00\x0d\
+\x04.\xe4\xbe\
+\x00r\
+\x00e\x00m\x00o\x00v\x00e\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\x00\x04\
+\x00\x06\x96$\
+\x00b\
+\x00o\x00l\x00d\
+\x00\x0a\
+\x06\xdb\xa9|\
+\x00a\
+\x00r\x00r\x00o\x00w\x00_\x00t\x00o\x00o\x00l\
+\x00\x09\
+\x09\x9ae\x14\
+\x00s\
+\x00u\x00b\x00s\x00c\x00r\x00i\x00p\x00t\
+\x00\x05\
+\x00x\xc9\xc4\
+\x00r\
+\x00e\x00s\x00e\x00t\
+\x00\x09\
+\x0c\xb5^\x1e\
+\x00m\
+\x00o\x00v\x00e\x00_\x00d\x00o\x00w\x00n\
+\x00\x08\
+\x0c6>\x04\
+\x00n\
+\x00u\x00m\x00_\x00l\x00i\x00s\x00t\
+\x00\x08\
+\x09\xeb\xb7\x05\
+\x00s\
+\x00c\x00h\x00e\x00d\x00u\x00l\x00e\
+\x00\x06\
+\x07\x9b\x88\xc2\
+\x00r\
+\x00u\x00b\x00b\x00e\x00r\
+\x00\x09\
+\x0e\xbbq\x94\
+\x00s\
+\x00c\x00h\x00e\x00d\x00u\x00l\x00e\x00d\
+\x00\x0e\
+\x03w\xe1\x87\
+\x00r\
+\x00e\x00m\x00o\x00v\x00e\x00_\x00t\x00x\x00t\x00_\x00r\x00o\x00w\
+\x00\x09\
+\x0a\xc9\xd8\xc5\
+\x00u\
+\x00n\x00d\x00e\x00r\x00l\x00i\x00n\x00e\
+\x00\x05\
+\x00uj\xc3\
+\x00n\
+\x00o\x00t\x00e\x00s\
+\x00\x07\
+\x07\xaai\xa7\
+\x00a\
+\x00d\x00d\x00_\x00r\x00o\x00w\
+\x00\x17\
+\x01<\xb5\x14\
+\x00i\
+\x00n\x00s\x00e\x00r\x00t\x00_\x00t\x00x\x00t\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\x00_\x00r\x00i\x00g\x00h\x00t\
+\x00\x0a\
+\x06\xc4q\xe7\
+\x00r\
+\x00e\x00m\x00o\x00v\x00e\x00_\x00r\x00o\x00w\
+\x00\x06\
+\x06\xab\xacT\
+\x00d\
+\x00e\x00d\x00e\x00n\x00t\
+\x00\x09\
+\x0aY\xfa\xdb\
+\x00a\
+\x00d\x00d\x00_\x00b\x00l\x00o\x00c\x00k\
+\x00\x07\
+\x04l\xb6 \
+\x00m\
+\x00o\x00v\x00e\x00_\x00u\x00p\
+\x00\x0b\
+\x0aH\xfe\xd4\
+\x00r\
+\x00o\x00t\x00a\x00t\x00e\x00_\x00l\x00e\x00f\x00t\
+\x00\x02\
+\x00\x00\x07\xc0\
+\x00u\
+\x00p\
+\x00\x0b\
+\x0cy\xb6\xe4\
+\x00b\
+\x00u\x00l\x00l\x00e\x00t\x00_\x00l\x00i\x00s\x00t\
+\x00\x05\
+\x00zy%\
+\x00t\
+\x00a\x00b\x00l\x00e\
+\x00\x05\
+\x00j+\x82\
+\x00c\
+\x00l\x00e\x00a\x00r\
+\x00\x16\
+\x07\x13oT\
+\x00i\
+\x00n\x00s\x00e\x00r\x00t\x00_\x00t\x00x\x00t\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\x00_\x00l\x00e\x00f\x00t\
+\x00\x0d\
+\x01\x95f\xb9\
+\x00a\
+\x00l\x00i\x00g\x00n\x00_\x00j\x00u\x00s\x00t\x00i\x00f\x00y\
+\x00\x15\
+\x0d\xfd\x8e\xdd\
+\x00i\
+\x00n\x00s\x00e\x00r\x00t\x00_\x00t\x00x\x00t\x00_\x00r\x00o\x00w\x00_\x00b\x00o\
+\x00t\x00t\x00o\x00m\
+\x00\x0c\
+\x04E\xac\xb4\
+\x00r\
+\x00o\x00t\x00a\x00t\x00e\x00_\x00r\x00i\x00g\x00h\x00t\
+\x00\x05\
+\x00g\x96\xc4\
+\x00a\
+\x00b\x00o\x00u\x00t\
+\x00\x10\
+\x01\xdb|\x0c\
+\x00a\
+\x00r\x00r\x00o\x00w\x00_\x00d\x00o\x00w\x00n\x00_\x00s\x00m\x00a\x00l\x00l\
+\x00\x04\
+\x00\x070K\
+\x00l\
+\x00i\x00n\x00k\
+\x00\x03\
+\x00\x00k\xb5\
+\x00e\
+\x00d\x00u\
+\x00\x03\
+\x00\x00t\xc7\
+\x00n\
+\x00e\x00w\
+\x00\x06\
+\x07\xb09\x5c\
+\x00s\
+\x00y\x00m\x00b\x00o\x00l\
+\x00\x04\
+\x00\x07\x04\xcf\
+\x00i\
+\x00n\x00f\x00o\
+\x00\x05\
+\x00v\x8a\xa5\
+\x00p\
+\x00a\x00s\x00t\x00e\
+\x00\x08\
+\x0c\xbb\x0b\xc3\
+\x00s\
+\x00e\x00t\x00t\x00i\x00n\x00g\x00s\
+\x00\x0a\
+\x0bU\x1a\xbf\
+\x00f\
+\x00i\x00l\x00e\x00_\x00a\x00u\x00d\x00i\x00o\
+\x00\x06\
+\x06\x8a\x9f\xde\
+\x00a\
+\x00s\x00s\x00i\x00g\x00n\
+\x00\x0e\
+\x0e\x19\xd3\x05\
+\x00p\
+\x00r\x00e\x00s\x00e\x00n\x00t\x00e\x00r\x00_\x00m\x00o\x00d\x00e\
+\x00\x0a\
+\x0bU\x97\x95\
+\x00f\
+\x00i\x00l\x00e\x00_\x00i\x00m\x00a\x00g\x00e\
+\x00\x04\
+\x00\x06\xddu\
+\x00f\
+\x00w\x00d\x005\
+\x00\x06\
+\x07pT\xb4\
+\x00p\
+\x00i\x00n\x00n\x00e\x00d\
+\x00\x06\
+\x07\x8ck\x84\
+\x00r\
+\x00e\x00p\x00e\x00a\x00t\
+\x00\x0d\
+\x05\x8b\xb4\xde\
+\x00a\
+\x00p\x00p\x00e\x00n\x00d\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\x00\x08\
+\x06\xd6\xc0\xe7\
+\x00r\
+\x00o\x00w\x00_\x00v\x00i\x00e\x00w\
+\x00\x06\
+\x07\x0a\x82\xf3\
+\x00i\
+\x00t\x00a\x00l\x00i\x00c\
+\x00\x09\
+\x06\xc9\xd0K\
+\x00h\
+\x00y\x00p\x00e\x00r\x00l\x00i\x00n\x00k\
+\x00\x04\
+\x00\x07\xac\xf4\
+\x00t\
+\x00e\x00x\x00t\
+\x00\x0c\
+\x04r\xf4\xa5\
+\x00r\
+\x00e\x00m\x00o\x00v\x00e\x00_\x00t\x00a\x00b\x00l\x00e\
+\x00\x0a\
+\x0eK.4\
+\x00a\
+\x00l\x00i\x00g\x00n\x00_\x00l\x00e\x00f\x00t\
+\x00\x11\
+\x0d,V\xde\
+\x00r\
+\x00e\x00m\x00o\x00v\x00e\x00_\x00t\x00x\x00t\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\
+\x00\x0a\
+\x0cGg\xa7\
+\x00a\
+\x00p\x00p\x00e\x00n\x00d\x00_\x00r\x00o\x00w\
+\x00\x04\
+\x00\x06\xa6y\
+\x00c\
+\x00o\x00p\x00y\
+\x00\x12\
+\x09\xac\xed\xc0\
+\x00i\
+\x00n\x00s\x00e\x00r\x00t\x00_\x00t\x00x\x00t\x00_\x00r\x00o\x00w\x00_\x00t\x00o\
+\x00p\
+\x00\x03\
+\x00\x00v\xbe\
+\x00p\
+\x00e\x00n\
+\x00\x0a\
+\x05\xaa\xd1~\
+\x00a\
+\x00d\x00d\x00_\x00c\x00o\x00l\x00u\x00m\x00n\
+\x00\x0b\
+\x04\xb8\xa24\
+\x00a\
+\x00l\x00i\x00g\x00n\x00_\x00r\x00i\x00g\x00h\x00t\
+\x00\x04\
+\x00\x07\x8c\xa5\
+\x00r\
+\x00e\x00w\x005\
+"
+
+qt_resource_struct = b"\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x01\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00\x12\x00\x02\x00\x00\x00\x01\x00\x00\x00D\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00A\x00\x00\x00\x03\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x02\xb2\x00\x00\x00\x00\x00\x01\x00\x004\x94\
+\x00\x00\x01\x9dx\xae\x0f\xc6\
+\x00\x00\x03\xdc\x00\x00\x00\x00\x00\x01\x00\x00D\xc5\
+\x00\x00\x01\x9c\xe42\xeb\xac\
+\x00\x00\x03\xe8\x00\x00\x00\x00\x00\x01\x00\x00E\xf7\
+\x00\x00\x01\x9b\x9a\x15\x9dq\
+\x00\x00\x05\xf4\x00\x00\x00\x00\x00\x01\x00\x00qP\
+\x00\x00\x01\x9d7$\xed\x80\
+\x00\x00\x00\xee\x00\x00\x00\x00\x00\x01\x00\x00\x1a\x16\
+\x00\x00\x01\x9b\xad\xb6\x93\xcb\
+\x00\x00\x05\xbc\x00\x00\x00\x00\x00\x01\x00\x00n\xb3\
+\x00\x00\x01\x9b\xad\xe3Jb\
+\x00\x00\x04\xa2\x00\x00\x00\x00\x00\x01\x00\x00V\xb9\
+\x00\x00\x01\x9b\xad\xff]s\
+\x00\x00\x04\x06\x00\x00\x00\x00\x00\x01\x00\x00H\xc9\
+\x00\x00\x01\x9b\xae\x1c$f\
+\x00\x00\x03\xce\x00\x00\x00\x00\x00\x01\x00\x00A\xb1\
+\x00\x00\x01\x9b\xb8\xd3\x92\xb5\
+\x00\x00\x066\x00\x00\x00\x00\x00\x01\x00\x00z\xfb\
+\x00\x00\x01\x9b\xad\xfe\xeb\xa0\
+\x00\x00\x054\x00\x00\x00\x00\x00\x01\x00\x00hZ\
+\x00\x00\x01\x9b\xad\xe1Y\xf5\
+\x00\x00\x03\x98\x00\x00\x00\x00\x00\x01\x00\x00>\xce\
+\x00\x00\x01\x9dc\xb2\x00\xe3\
+\x00\x00\x02\xe8\x00\x00\x00\x00\x00\x01\x00\x008>\
+\x00\x00\x01\x9e\x89\xcd\x83<\
+\x00\x00\x01\xe6\x00\x00\x00\x00\x00\x01\x00\x00)\xb1\
+\x00\x00\x01\x9b\xb3\x87\xed\xf5\
+\x00\x00\x04\x14\x00\x00\x00\x00\x00\x01\x00\x00I\xe3\
+\x00\x00\x01\x9b\xad\xe3\xd8\x99\
+\x00\x00\x01.\x00\x00\x00\x00\x00\x01\x00\x00\x1e/\
+\x00\x00\x01\x9b\xb8\xdc\xf4\xdb\
+\x00\x00\x02\xd8\x00\x00\x00\x00\x00\x01\x00\x006\xfd\
+\x00\x00\x01\x9b\xad\xc6\xeb\x12\
+\x00\x00\x02\x0a\x00\x00\x00\x00\x00\x01\x00\x00+\xa9\
+\x00\x00\x01\x9b\xad\xe4\xfb\xbe\
+\x00\x00\x03*\x00\x00\x00\x00\x00\x01\x00\x00:\x81\
+\x00\x00\x01\x9b\xad\xb9-\x97\
+\x00\x00\x03\xa8\x00\x00\x00\x00\x00\x01\x00\x00@\xfb\
+\x00\x00\x01\x9dx\xad\x9c7\
+\x00\x00\x01\xac\x00\x00\x00\x00\x00\x01\x00\x00'<\
+\x00\x00\x01\x9b\xb8\xd7\x01\xb1\
+\x00\x00\x00\xce\x00\x00\x00\x00\x00\x01\x00\x00\x18\xcb\
+\x00\x00\x01\x9b\x95\xa0Q\x0e\
+\x00\x00\x03z\x00\x00\x00\x00\x00\x01\x00\x00<\xec\
+\x00\x00\x01\x9b\xb8\xd5\xc6\xbe\
+\x00\x00\x02\x82\x00\x00\x00\x00\x00\x01\x00\x000\xc4\
+\x00\x00\x01\x9b\xad\xee.^\
+\x00\x00\x05B\x00\x00\x00\x00\x00\x01\x00\x00i-\
+\x00\x00\x01\x9b\xad\xd2{,\
+\x00\x00\x00\x9e\x00\x00\x00\x00\x00\x01\x00\x00\x15\x8f\
+\x00\x00\x01\x9c>\xe1p\x0b\
+\x00\x00\x06\x1a\x00\x00\x00\x00\x00\x01\x00\x00z\x0d\
+\x00\x00\x01\x9b\xad\xb9\x14\xb2\
+\x00\x00\x04\xd4\x00\x00\x00\x00\x00\x01\x00\x00[\x18\
+\x00\x00\x01\x9e\xc3b\xc4\xbc\
+\x00\x00\x06\x00\x00\x00\x00\x00\x00\x01\x00\x00rO\
+\x00\x00\x01\x9e\xc3Ww\x94\
+\x00\x00\x00f\x00\x00\x00\x00\x00\x01\x00\x00\x12\xf6\
+\x00\x00\x01\x9b\xdc\xb5\xb3\xb8\
+\x00\x00\x04T\x00\x00\x00\x00\x00\x01\x00\x00Q\x0b\
+\x00\x00\x01\x9c>\xe1!\xf9\
+\x00\x00\x02X\x00\x00\x00\x00\x00\x01\x00\x00.k\
+\x00\x00\x01\x9b\xad\xbb\xcbZ\
+\x00\x00\x02>\x00\x00\x00\x00\x00\x01\x00\x00-%\
+\x00\x00\x01\x9b\x95\xa0\xb8\x91\
+\x00\x00\x05\x1c\x00\x00\x00\x00\x00\x01\x00\x00f\xa0\
+\x00\x00\x01\x9b\xad\xe6O\x7f\
+\x00\x00\x04\xf4\x00\x00\x00\x00\x00\x01\x00\x00^[\
+\x00\x00\x01\x9d\xa64s\xa5\
+\x00\x00\x00\xfc\x00\x00\x00\x00\x00\x01\x00\x00\x1b\x9e\
+\x00\x00\x01\x9dJ/\xb7x\
+\x00\x00\x008\x00\x00\x00\x00\x00\x01\x00\x00\x10N\
+\x00\x00\x01\x9b\xad\xc1t\xbb\
+\x00\x00\x05\x0a\x00\x00\x00\x00\x00\x01\x00\x00e\xca\
+\x00\x00\x01\x9b\xad\xb7\x89\xa4\
+\x00\x00\x02\xf8\x00\x00\x00\x00\x00\x01\x00\x009\x05\
+\x00\x00\x01\x9b\xad\xe4\xaac\
+\x00\x00\x04\xb0\x00\x00\x00\x00\x00\x01\x00\x00YC\
+\x00\x00\x01\x9b\xdc\xb5\xf3\xa5\
+\x00\x00\x04\xc2\x00\x00\x00\x00\x00\x01\x00\x00Z8\
+\x00\x00\x01\x9b\xad\xfd\xcd\x1f\
+\x00\x00\x01\x82\x00\x00\x00\x00\x00\x01\x00\x00#\xa9\
+\x00\x00\x01\x9d7&\xf5\xee\
+\x00\x00\x01\xf6\x00\x00\x00\x00\x00\x01\x00\x00*\x87\
+\x00\x00\x01\x9e\xc3Rl\x06\
+\x00\x00\x03\xf4\x00\x00\x00\x00\x00\x01\x00\x00F\xbb\
+\x00\x00\x01\x9b\xb8\x91\xf5\xa9\
+\x00\x00\x00\x80\x00\x00\x00\x00\x00\x01\x00\x00\x14\xa1\
+\x00\x00\x01\x9b\xad\xb8\xf4*\
+\x00\x00\x00J\x00\x00\x00\x00\x00\x01\x00\x00\x11M\
+\x00\x00\x01\x9b\xad\xc3\x818\
+\x00\x00\x01\x16\x00\x00\x00\x00\x00\x01\x00\x00\x1c\x8b\
+\x00\x00\x01\x9b\xad\xc2 \xe4\
+\x00\x00\x05\xca\x00\x00\x00\x00\x00\x01\x00\x00o\xd5\
+\x00\x00\x01\x9b\xad\xe5\xeb\x9e\
+\x00\x00\x01l\x00\x00\x00\x00\x00\x01\x00\x00\x22P\
+\x00\x00\x01\x9b\xae\xa8\x87j\
+\x00\x00\x02\x96\x00\x00\x00\x00\x00\x01\x00\x002\x94\
+\x00\x00\x01\x9b\xb8\xd5\xa7\xdb\
+\x00\x00\x00\xb4\x00\x00\x00\x00\x00\x01\x00\x00\x17\x7f\
+\x00\x00\x01\x9c\x0b\xe8\xc3\xcf\
+\x00\x00\x02j\x00\x00\x00\x00\x00\x01\x00\x00/m\
+\x00\x00\x01\x9b\x95\x93\xb5^\
+\x00\x00\x01\xce\x00\x00\x00\x00\x00\x01\x00\x00(\x9b\
+\x00\x00\x01\x9b\xad\xb7I9\
+\x00\x00\x04:\x00\x00\x00\x00\x00\x01\x00\x00O[\
+\x00\x00\x01\x9c>\xd6\xa7\x0f\
+\x00\x00\x04\x88\x00\x00\x00\x00\x00\x01\x00\x00U\x8d\
+\x00\x00\x01\x9c>\xd6\x5c\x89\
+\x00\x00\x01V\x00\x00\x00\x00\x00\x01\x00\x00!#\
+\x00\x00\x01\x9b\xad\xbc\xd6S\
+\x00\x00\x05\xa2\x00\x00\x00\x00\x00\x01\x00\x00m\xb5\
+\x00\x00\x01\x9e\xc3a\x03\xee\
+\x00\x00\x02\xbc\x00\x00\x00\x00\x00\x01\x00\x005K\
+\x00\x00\x01\x9b\xaeG\xd8\xaf\
+\x00\x00\x01>\x00\x00\x00\x00\x00\x01\x00\x00\x1fS\
+\x00\x00\x01\x9b\xad\xee\x9c\xc8\
+\x00\x00\x04$\x00\x00\x00\x00\x00\x01\x00\x00KG\
+\x00\x00\x01\x9cHw+e\
+\x00\x00\x05z\x00\x00\x00\x00\x00\x01\x00\x00lH\
+\x00\x00\x01\x9b\xb8\xd6,\x1e\
+\x00\x00\x03J\x00\x00\x00\x00\x00\x01\x00\x00;n\
+\x00\x00\x01\x9b\xad\xe59\x8b\
+\x00\x00\x04f\x00\x00\x00\x00\x00\x01\x00\x00R\xbb\
+\x00\x00\x01\x9b\xb3\x8c\x09\x8c\
+\x00\x00\x05`\x00\x00\x00\x00\x00\x01\x00\x00kY\
+\x00\x00\x01\x9b\xad\xb8\xcd\x16\
+\x00\x00\x01\x94\x00\x00\x00\x00\x00\x01\x00\x00%\xdf\
+\x00\x00\x01\x9b\xae\xa9\x07e\
+\x00\x00\x00 \x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\
+\x00\x00\x01\x9f\xe7Wm\xff\
+"
+
+def qInitResources():
+    QtCore.qRegisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
+
+def qCleanupResources():
+    QtCore.qUnregisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
+
+qInitResources()

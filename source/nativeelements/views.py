@@ -28,8 +28,8 @@ from PyQt6.QtWidgets import (
 )
 from styling.utils import SvgIcon
 from ui.commons import SwitchButton
-from ui.element_toolsets import ColorMenu, FontSizeBox
 from ui.StyledWidget import convertColors
+from ui.ui_etoolsets import ColorMenu, FontSizeBox
 
 
 class TextEditorMenuView:
@@ -72,7 +72,7 @@ class TextEditorMenuView:
         self.tb_Bold = QToolButton(self.tools_widget)
         self.tb_Bold.setMaximumSize(QSize(22, 22))
         self.tb_Bold.setText("")
-        icon2 = SvgIcon("icons:ic_bold.svg")
+        icon2 = SvgIcon(":/common/bold")
         self.tb_Bold.setIcon(icon2)
         self.tb_Bold.setIconSize(QSize(20, 20))
         self.tb_Bold.setCheckable(True)
@@ -82,7 +82,7 @@ class TextEditorMenuView:
         self.tb_Italic = QToolButton(self.tools_widget)
         self.tb_Italic.setFixedSize(QSize(22, 22))
         self.tb_Italic.setText("")
-        icon3 = SvgIcon("icons:ic_italic.svg")
+        icon3 = SvgIcon(":/common/italic")
         self.tb_Italic.setIcon(icon3)
         self.tb_Italic.setIconSize(QSize(20, 20))
         self.tb_Italic.setCheckable(True)
@@ -92,7 +92,7 @@ class TextEditorMenuView:
         self.tb_Underline = QToolButton(self.tools_widget)
         self.tb_Underline.setFixedSize(QSize(22, 22))
         self.tb_Underline.setText("")
-        icon4 = SvgIcon("icons:ic_underline.svg")
+        icon4 = SvgIcon(":/common/underline")
         self.tb_Underline.setIcon(icon4)
         self.tb_Underline.setIconSize(QSize(20, 20))
         self.tb_Underline.setCheckable(True)
@@ -101,7 +101,7 @@ class TextEditorMenuView:
 
         self.tb_TextColor = QToolButton(agent)
         self.tb_TextColor.setFixedSize(QSize(22, 22))
-        icon5 = SvgIcon("icons:ic_textColor.svg")
+        icon5 = SvgIcon(":/common/text_color")
         self.tb_TextColor.setIcon(icon5)
         self.tb_TextColor.setIconSize(QSize(20, 20))
         self.tb_TextColor.setObjectName("tb_text_color")
@@ -206,7 +206,7 @@ class TextEditorMenuView:
         self.tb_AlignLeft = QToolButton(self.tools_widget)
         self.tb_AlignLeft.setFixedSize(QSize(22, 22))
         self.tb_AlignLeft.setText("")
-        icon6 = SvgIcon("icons:ic_alignleft.svg")
+        icon6 = SvgIcon(":/common/align_left")
         self.tb_AlignLeft.setIcon(icon6)
         self.tb_AlignLeft.setIconSize(QSize(20, 20))
         self.tb_AlignLeft.setCheckable(True)
@@ -218,7 +218,7 @@ class TextEditorMenuView:
         self.tb_AlignCenter = QToolButton(self.tools_widget)
         self.tb_AlignCenter.setFixedSize(QSize(22, 22))
         self.tb_AlignCenter.setText("")
-        icon7 = SvgIcon("icons:ic_aligncenter.svg")
+        icon7 = SvgIcon(":/common/align_center")
         self.tb_AlignCenter.setIcon(icon7)
         self.tb_AlignCenter.setIconSize(QSize(20, 20))
         self.tb_AlignCenter.setCheckable(True)
@@ -244,21 +244,21 @@ class TextEditorMenuView:
         sep2 = agent.addSeparator()
         self.table_group.addAction(sep2)
 
-        self.ac_RowBottom = agent.addAction(SvgIcon("icons:ic_insertRowBottom.svg"), "")
+        self.ac_RowBottom = agent.addAction(SvgIcon(":/common/insert_txt_row_bottom"), "")
         self.table_group.addAction(self.ac_RowBottom)
-        self.ac_RowTop = agent.addAction(SvgIcon("icons:ic_insertRowTop.svg"), "")
+        self.ac_RowTop = agent.addAction(SvgIcon(":/common/insert_txt_row_top"), "")
         self.table_group.addAction(self.ac_RowTop)
-        self.ac_ColumnRight = agent.addAction(SvgIcon("icons:ic_insertColumnRight.svg"), "")
+        self.ac_ColumnRight = agent.addAction(SvgIcon(":/common/insert_txt_column_right"), "")
         self.table_group.addAction(self.ac_ColumnRight)
-        self.ac_ColumnLeft = agent.addAction(SvgIcon("icons:ic_insertColumnLeft.svg"), "")
+        self.ac_ColumnLeft = agent.addAction(SvgIcon(":/common/insert_text_column_left"), "")
         self.table_group.addAction(self.ac_ColumnLeft)
 
         sep3 = agent.addSeparator()
         self.table_group.addAction(sep3)
 
-        self.ac_DeleteRow = agent.addAction(SvgIcon("icons:ic_deleterow.svg"), "")
+        self.ac_DeleteRow = agent.addAction(SvgIcon(":/common/remove_txt_row"), "")
         self.table_group.addAction(self.ac_DeleteRow)
-        self.ac_DeleteColumn = agent.addAction(SvgIcon("icons:ic_deletecolumn.svg"), "")
+        self.ac_DeleteColumn = agent.addAction(SvgIcon(":/common/remove_txt_column"), "")
         self.table_group.addAction(self.ac_DeleteColumn)
 
         self.hyperlink_group = QActionGroup(agent)

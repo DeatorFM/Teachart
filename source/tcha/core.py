@@ -156,7 +156,7 @@ Debug ON:      {self._launch_config.debug}
 Database file: {self._launch_config.test_params.get("db", Settings.value("User/dbpath"))}
 Source-ID:     {self.source_id()}
 Language:      {self._launch_config.test_params.get("language", Settings.value("User/language").name)}
-Appearance:    {self._launch_config.test_params.get("User/appearance", Settings.value("User/appearance"))}
+Appearance:    {self._launch_config.test_params.get("theme", Settings.value("User/appearance"))}
 """
 
     def _load_settings(self) -> None:

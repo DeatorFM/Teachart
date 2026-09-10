@@ -38,7 +38,7 @@ def qss_to_py(name: str, input_qss: Path) -> None:
     STYLESHEETS[name] = compressed
 
     # Write to stylesheets.py
-    stylesheets_file = Path() / "source" / "themes" / "stylesheets.py"
+    stylesheets_file = Path() / "source" / "styling" / "stylesheets.py"
 
     py_content = "# Auto-generated - Do not edit manually\n\n"
     py_content += "STYLESHEETS = {\n"
