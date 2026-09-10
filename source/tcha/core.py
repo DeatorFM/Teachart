@@ -307,7 +307,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
     def _on_window_closed(self, wtype: str, wid: int):
         window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
         StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender": "APPCORE"})
-        if window.close_state == CloseState.CanCloseLater and self._restart_planned:
+        if window and window.close_state == CloseState.CanCloseLater and self._restart_planned:
             self._dialog_manager.mark_closed(wtype, wid)
             self.restart()
         else:
