@@ -170,7 +170,7 @@ def make_palette(color_def: dict[str, list[int, int, int, int]], apply_all=False
         "PlaceholderText",
     }
 
-    for key, rgba_values in color_def.items():
+    for key, rgba_values in sorted(color_def.items(), key=lambda item: "." in item[0]):
         parts = key.split(".")
         if len(parts) == 2:
             # Format: "ColorGroup.ColorRole" (e.g., "Disabled.Text")
