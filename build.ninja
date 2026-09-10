@@ -16,6 +16,8 @@ rule pyside_rcc
   command = cmd /c "$pyside6_rcc $in -g python | $python -c "import sys; print(sys.stdin.read().replace('PySide6','PyQt6'),end='')" > $out"
   description = Compiling Qt resources: $in -> $out
 
+# ADD: Get-ChildItem designer\*.ui | ForEach-Object { pyuic6 $_.FullName -o "source\ui\$($_.BaseName).py" } 
+
 rule compress_qss
   command = $python build/qss_to_py.py $name $in
   description = Compressing QSS: $name

@@ -216,9 +216,9 @@ class CellEditor(QListView):
 
     def remove_current_element(self) -> None:
         result = QMessageBox.question(
-            self,
+            None,
             tr("Confirm removal"),
-            tr("Are you sure you want to permanently remove this element?"),
+            tr("Are you sure you want to permanently remove the selected element?"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if result == QMessageBox.StandardButton.Yes:
@@ -1388,7 +1388,7 @@ class Table(BaseTable):
         if self.editor and model.rowCount() > 1:
             if any(model.get_row(rmv_row)):
                 result = QMessageBox.question(
-                    self,
+                    None,
                     tr("Confirm removal"),
                     tr(
                         "This row has content. Are you sure you want to permanently remove this row?"
@@ -1403,11 +1403,6 @@ class Table(BaseTable):
                 self.setCurrentIndex(QModelIndex())
                 model.removeRow(rmv_row)
 
-            if not self.copied_index().isValid():
-                clipboard = QApplication.clipboard()
-                clipboard.mimeData().removeFormat("application/x-teachart")
-                clipboard.dataChanged.emit()
-
     def remove_column(self, column: int = -1) -> None:
         """Removes column from model and clears clipboard if index with same column was copied"""
         rmv_col = column if column > -1 else self.currentIndex().column()
@@ -1415,7 +1410,7 @@ class Table(BaseTable):
         if self.editor and self.model().columnCount() > 1:
             if any(model.get_column(rmv_col)):
                 result = QMessageBox.question(
-                    self,
+                    None,
                     tr("Confirm removal"),
                     tr(
                         "This column has content. Are you sure you want to permanently remove this column?"

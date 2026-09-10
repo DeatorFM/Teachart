@@ -250,7 +250,7 @@ class TextEditorMenuView:
         self.table_group.addAction(self.ac_RowTop)
         self.ac_ColumnRight = agent.addAction(SvgIcon(":/common/insert_txt_column_right"), "")
         self.table_group.addAction(self.ac_ColumnRight)
-        self.ac_ColumnLeft = agent.addAction(SvgIcon(":/common/insert_text_column_left"), "")
+        self.ac_ColumnLeft = agent.addAction(SvgIcon(":/common/insert_txt_column_left"), "")
         self.table_group.addAction(self.ac_ColumnLeft)
 
         sep3 = agent.addSeparator()
