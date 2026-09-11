@@ -26,6 +26,7 @@ from styling.properties import NTHEME_PROPERTIES
 from tcha.dbmodels import create_database, reset_database
 from tcha.error import StandardLogger
 from tcha.utils import debug_enabled, word_as_bool
+from ui.ui_settings import Ui_SettingsDialog
 
 
 # In settings.py, add this function and remove the import
@@ -131,7 +132,9 @@ class SettingsDialog(QDialog):
         parent=None,
     ):
         super().__init__(parent, Qt.WindowType.Dialog)
-        self.ui = uic.loadUi("ui/settings.ui", self)
+        self.ui = Ui_SettingsDialog()
+        self.ui.setupUi(self)
+
         self.qsettings = qsettings
         self.database: QSqlDatabase = db
         self.settings = Settings.get_settings()
@@ -194,7 +197,7 @@ class SettingsDialog(QDialog):
     def _import_options(self) -> None:
         """Populates combo boxes for language and time format and themes"""
         for theme in get_themes():
-            self.cb_themes.insertItem(self.cb_themes.count(), theme.name, theme.value)
+            self.ui.cb_themes.insertItem(self.ui.cb_themes.count(), theme.name, theme.value)
 
         for value in Locale.__members__.values():
             self.ui.cb_language.addItem(value.name, value)
@@ -209,11 +212,11 @@ class SettingsDialog(QDialog):
 
     def _select_appearance(self, value: str) -> None:
         """Set appearance option based on Appearance value or int."""
-        i = self.cb_themes.findData(value)
+        i = self.ui.cb_themes.findData(value)
         if i > -1:
-            self.cb_themes.setCurrentIndex(i)
+            self.ui.cb_themes.setCurrentIndex(i)
         else:
-            self.cb_themes.setCurrentIndex(0)
+            self.ui.cb_themes.setCurrentIndex(0)
 
     def _select_language(self, locale: Locale) -> None:
         """Set language ComboBox for Locale value"""

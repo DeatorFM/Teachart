@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import random
 from pathlib import Path
@@ -36,7 +38,6 @@ from tcha.debug import FileView, ResourceView, TableTreeView, XmlView
 from tcha.error import StandardLogger
 from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
-from tcha.resmanager import ResourceContainer
 from tcha.settings import Settings
 from tcha.table import Table
 from tcha.tablemodel import TableModel
@@ -69,7 +70,7 @@ class Editor(BaseMainWindow):
     dialogCalled = pyqtSignal(str)
     fileOpened = pyqtSignal(Path, BaseMainWindow)
     fileSaved = pyqtSignal(Path)
-    presenterActivated = pyqtSignal(int, QGraphicsScene, QScreen)  # Scene, Target Screen
+    presenterActivated = pyqtSignal(QGraphicsScene, BaseMainWindow)  # Scene, Target Screen
     presenterClosed = pyqtSignal()
 
     def __init__(
@@ -238,7 +239,6 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     def open_file_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, tr("Open Sheet"), None, "*.lesson *.tch")
         if path:
-            self._caller = True
             self.fileOpened.emit(Path(path), self)
 
     def set_unsaved(self) -> None:
@@ -602,7 +602,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 [size],
                 orientation,
             )
-            self.presenterActivated.emit(self.wid, self.ui.canvas.scene(), self)
+            self.presenterActivated.emit(self.ui.canvas.scene(), self)
         else:
             self.ui.canvas.clear()
             self.presenterClosed.emit()
@@ -643,7 +643,11 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
     def open_xml_inspector(self) -> None:
         dialog = XmlView(self)
-        dialog.setup_view(self.lessonfile.xml(), self.lessonfile.xml("resources"))
+        dialog.setup_view(
+            self.lessonfile.xml("structure.xml"),
+            self.lessonfile.xml("lesson.xml"),
+            self.lessonfile.xml("metadata.xml"),
+        )
         dialog.show()
 
     def open_resource_view(self) -> None:

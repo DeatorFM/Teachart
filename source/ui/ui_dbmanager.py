@@ -3,6 +3,7 @@ from PyQt6.QtCore import QCoreApplication, QModelIndex, QSize, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlRelationalDelegate
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -131,7 +132,8 @@ class DbManagerView:
         hl3.addWidget(self.pb_new_course)
 
         self.pb_remove_course = IconButton(
-            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)), dbmanager
+            dbmanager.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon),
+            dbmanager,
         )
         self.pb_remove_course.setText("")
         self.pb_remove_course.setObjectName("pb_remove_course")
@@ -183,7 +185,7 @@ class DbManagerView:
         hl2.addWidget(self.pb_unassign_student)
 
         self.pb_remove_student = IconButton(
-            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)),
+            dbmanager.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon),
             self.student_tab,
         )
         self.pb_remove_student.setObjectName("pb_remove_student")
@@ -239,7 +241,7 @@ class DbManagerView:
         hl4.setObjectName("hl4")
 
         self.pb_remove_schedule = IconButton(
-            QIcon(dbmanager.style().standardPixmap(QStyle.StandardPixmap.SP_TrashIcon)),
+            dbmanager.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon),
             self.schedules_tab,
         )
         self.pb_remove_schedule.setText("")

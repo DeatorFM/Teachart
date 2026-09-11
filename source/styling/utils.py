@@ -86,7 +86,6 @@ class SvgIconEngine(QIconEngine):
 
         if mode == QIcon.Mode.Disabled:
             color = palette.color(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text)
-            print(color.name(QColor.NameFormat.HexArgb))
         else:
             color = palette.text().color()
         svg = svg.colored(color)

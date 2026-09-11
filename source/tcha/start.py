@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 from tcha.base import BaseMainWindow
 from tcha.consts import CloseState
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
+from ui.ui_about import Ui_AboutDialog
 from ui.ui_start import Ui_StartWindow
 
 
@@ -305,7 +306,8 @@ class StartWindow(BaseMainWindow):
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Dialog)
-        self.ui = uic.loadUi("ui/about_view.ui", self)
+        self.ui = Ui_AboutDialog()
+        self.ui.setupUi(self)
 
         self.setWindowModality(Qt.WindowModality.NonModal)
         self.resize(750, 380)

@@ -125,7 +125,7 @@ STANDARD_ICON_MAP: dict[QStyle.StandardPixmap, dict] = {
         "id": "double_arrow",
         "rotate": 90,
     },
-    QStyle.StandardPixmap.SP_TrashIcon: {"id": "delete", "os": ["Windows"]},
+    QStyle.StandardPixmap.SP_TrashIcon: {"id": "delete"},
     QStyle.StandardPixmap.SP_VistaShield: {"id": "security", "os": ["Darwin", "Linux"]},
     QStyle.StandardPixmap.SP_DialogAbortButton: {"id": "not_interested"},
     QStyle.StandardPixmap.SP_DialogIgnoreButton: {"id": "visibility_off"},

@@ -71,6 +71,7 @@ from tcha.error import StandardLogger
 from tcha.resmanager import FileResourceObject, ResourceContainer
 from tcha.settings import Locale, Settings
 from ui.ui_etoolsets import TextToolsetView
+from ui.ui_symbols import Ui_SymbolDialog
 
 # fmt: off
 UNICODECHART = {
@@ -1199,7 +1200,8 @@ class SymbolDialog(QDialog):
 
     def __init__(self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow) -> None:
         super().__init__(parent, flags)
-        self.ui = uic.loadUi("ui/UI_Symbols.ui", self)
+        self.ui = Ui_SymbolDialog()
+        self.ui.setupUi(self)
         self.fontfamily = fontfamily
 
         self.connect_signals()

@@ -331,6 +331,12 @@ class LessonFile(QObject):
             return True
         return False
 
+    def xml(self, name: str) -> str:
+        if self.extracted(name) and name.endswith(".xml"):
+            path = Path(self._tempdir.name) / name
+            return path.read_text()
+        return ""
+
     def set_metadata(self, metadata: FileMetaData) -> None:
         self._metadata = metadata
 

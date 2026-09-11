@@ -13,7 +13,10 @@ from PyQt6.QtWidgets import (
 from tcha.dbmodels import *
 from tcha.error import StandardLogger
 from tcha.utils import debug_enabled
+from ui.ui_add_course import Ui_AddCourseDialog
+from ui.ui_add_student import Ui_AddStudentDialog
 from ui.ui_dbmanager import AssignmentView, DbManagerView
+from ui.ui_record_view import Ui_RecordDialog
 
 
 class DbManager(QDialog, DbManagerView):
@@ -217,7 +220,8 @@ class DbManager(QDialog, DbManagerView):
 class AddCourseDialog(QDialog):
     def __init__(self, parent=None, flags=Qt.WindowType.Dialog):
         super().__init__(parent, flags)
-        self.ui = uic.loadUi("ui/ui_addcourse.ui", self)
+        self.ui = Ui_AddCourseDialog()
+        self.ui.setupUi(self)
 
     def name(self) -> str:
         return self.ui.le_cname.text()
@@ -249,7 +253,8 @@ class AddStudentDialog(QDialog):
         flags=Qt.WindowType.Dialog,
     ):
         super().__init__(parent, flags)
-        self.ui = uic.loadUi("ui/ui_addstudent.ui", self)
+        self.ui = Ui_AddStudentDialog()
+        self.ui.setupUi(self)
 
         self.ui.cb_courses.setModel(course_model)
         self.ui.cb_courses.setModelColumn(1)
@@ -354,7 +359,8 @@ class RecordView(QDialog):
         flags=Qt.WindowType.Dialog,
     ):
         super().__init__(parent, flags)
-        self.ui = uic.loadUi("ui/record_view.ui", self)
+        self.ui = Ui_RecordDialog()
+        self.ui.setupUi(self)
 
         student_model = StudentModel(course_model.database())
         self.filtered_student_model = FilteredStudentModel(student_model)

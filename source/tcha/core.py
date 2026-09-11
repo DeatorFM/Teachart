@@ -470,12 +470,13 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
 
     def show_presenter(self) -> None:
         if self._dialog_manager.is_opened("PresenterView"):
+            pv = self._dialog_manager.get_dialog("PresenterView")
             if WinApi.get_display_mode() == DisplayMode.Extended:
-                self._presenter_view.showFullScreen()
+                pv.showFullScreen()
 
             elif WinApi.get_display_mode() == DisplayMode.Duplicated:
                 WinApi.set_display_mode(DisplayMode.Extended)
-                QTimer.singleShot(500, lambda: self._presenter_view.showFullScreen())
+                QTimer.singleShot(500, lambda: pv.showFullScreen())
 
     def close_presenter(self) -> None:
         presenter_view = self._dialog_manager.get_dialog("PresenterView")

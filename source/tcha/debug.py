@@ -15,12 +15,17 @@ from tcha.lesson import Lesson
 from tcha.lfio import LessonFile
 from tcha.resmanager import ResourceContainer
 from tcha.tablemodel import CellModel, TableModel
+from ui.ui_debug_file_info import Ui_FileInspector
+from ui.ui_debug_resources import Ui_ResourcesView
+from ui.ui_debug_table import Ui_TableInspector
+from ui.ui_debug_xml import Ui_XMLInspector
 
 
 class FileView(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool)
-        self.ui = uic.loadUi("ui/debug_file_info.ui", self)
+        self.ui = Ui_FileInspector()
+        self.ui.setupUi(self)
 
     def setup_view(self, lf: LessonFile, lesson: Lesson, schedule_id: int | None) -> None:
         if lf.path:
@@ -29,7 +34,7 @@ class FileView(QDialog):
             self.ui.lb_show_path.setText("No file")
 
         self.ui.lb_show_fileid.setText(lf.file_id.hex)
-        self.ui.lb_show_version.setText(str(lf.version))
+        self.ui.lb_show_version.setText(str(lf.max_version))
 
         if lesson.course_id != 0:
             self.ui.lb_show_course_name.setText(lesson.course_name)
@@ -55,15 +60,19 @@ class FileView(QDialog):
 class XmlView(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool)
-        self.ui = uic.loadUi("ui/debug_xml.ui", self)
+        self.ui = Ui_XMLInspector()
+        self.ui.setupUi(self)
 
-    def setup_view(self, structure_xml: QFile, resource_xml: QFile) -> None:
+    def setup_view(self, structure_xml: str, lesson_xml: str, metadata_xml: str) -> None:
         structure_def = QDomDocument()
         structure_def.setContent(structure_xml)
-        resource_def = QDomDocument()
-        resource_def.setContent(resource_xml)
+        lesson_def = QDomDocument()
+        lesson_def.setContent(lesson_xml)
+        metadata_def = QDomDocument()
+        metadata_def.setContent(metadata_xml)
         self.ui.tb_structure.setText(structure_def.toString(2))
-        self.ui.tb_resources.setText(resource_def.toString(2))
+        self.ui.tb_lesson.setText(lesson_def.toString(2))
+        self.ui.tb_metadata.setText(metadata_def.toString(2))
 
 
 class ResourceViewModel(QAbstractTableModel):
@@ -119,13 +128,15 @@ class ResourceViewModel(QAbstractTableModel):
 class ResourceView(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool)
-        self.ui = uic.loadUi("ui/debug_resources.ui", self)
+        self.ui = Ui_ResourcesView()
+        self.ui.setupUi(self)
+
         self.resize(830, 500)
 
     def setup_view(self, rescont: ResourceContainer) -> None:
         model = ResourceViewModel(rescont)
         self.ui.tv_robjects.setModel(model)
-        self.tv_robjects.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.ui.tv_robjects.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
 
 @dataclass(frozen=True)
@@ -366,9 +377,10 @@ class TableTreeView(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool)
-        self.ui = uic.loadUi("ui/debug_table.ui", self)
+        self.ui = Ui_TableInspector()
+        self.ui.setupUi(self)
 
     def setup_view(self, tablemodel: TableModel) -> None:
         tree_model = TreeTableModel(tablemodel, None)
         self.ui.tv_table.setModel(tree_model)
-        self.tv_table.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.ui.tv_table.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)

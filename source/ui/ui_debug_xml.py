@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file 'D:\Coding\Teachart\designer\ui_debug_xml.ui'
+# Form implementation generated from reading ui file 'designer/ui_debug_xml.ui'
 #
 # Created by: PyQt6 UI code generator 6.11.0
 #
@@ -9,15 +9,15 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_xml_dialog(object):
-    def setupUi(self, xml_dialog):
-        xml_dialog.setObjectName("xml_dialog")
-        xml_dialog.resize(488, 380)
-        xml_dialog.setWindowTitle("XML Inspector")
-        xml_dialog.setSizeGripEnabled(True)
-        self.verticalLayout = QtWidgets.QVBoxLayout(xml_dialog)
+class Ui_XMLInspector(object):
+    def setupUi(self, XMLInspector):
+        XMLInspector.setObjectName("XMLInspector")
+        XMLInspector.resize(488, 380)
+        XMLInspector.setWindowTitle("XML Inspector")
+        XMLInspector.setSizeGripEnabled(True)
+        self.verticalLayout = QtWidgets.QVBoxLayout(XMLInspector)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.tw_xmls = QtWidgets.QTabWidget(parent=xml_dialog)
+        self.tw_xmls = QtWidgets.QTabWidget(parent=XMLInspector)
         self.tw_xmls.setObjectName("tw_xmls")
         self.structure_tab = QtWidgets.QWidget()
         self.structure_tab.setObjectName("structure_tab")
@@ -31,30 +31,39 @@ class Ui_xml_dialog(object):
         self.tb_structure.setOpenLinks(False)
         self.tb_structure.setObjectName("tb_structure")
         self.verticalLayout_2.addWidget(self.tb_structure)
-        self.tw_xmls.addTab(self.structure_tab, "")
-        self.resources_tab = QtWidgets.QWidget()
-        self.resources_tab.setObjectName("resources_tab")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.resources_tab)
+        self.tw_xmls.addTab(self.structure_tab, "structure")
+        self.lesson_tab = QtWidgets.QWidget()
+        self.lesson_tab.setObjectName("lesson_tab")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.lesson_tab)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.tb_resources = QtWidgets.QTextBrowser(parent=self.resources_tab)
+        self.tb_lesson = QtWidgets.QTextBrowser(parent=self.lesson_tab)
         font = QtGui.QFont()
         font.setFamily("Consolas")
-        self.tb_resources.setFont(font)
-        self.tb_resources.setObjectName("tb_resources")
-        self.verticalLayout_3.addWidget(self.tb_resources)
-        self.tw_xmls.addTab(self.resources_tab, "")
+        self.tb_lesson.setFont(font)
+        self.tb_lesson.setObjectName("tb_lesson")
+        self.verticalLayout_3.addWidget(self.tb_lesson)
+        self.tw_xmls.addTab(self.lesson_tab, "lesson")
+        self.metadata_tab = QtWidgets.QWidget()
+        self.metadata_tab.setObjectName("metadata_tab")
+        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.metadata_tab)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        self.tb_metadata = QtWidgets.QTextBrowser(parent=self.metadata_tab)
+        self.tb_metadata.setObjectName("tb_metadata")
+        self.verticalLayout_4.addWidget(self.tb_metadata)
+        self.tw_xmls.addTab(self.metadata_tab, "metadata")
         self.verticalLayout.addWidget(self.tw_xmls)
 
-        self.retranslateUi(xml_dialog)
-        self.tw_xmls.setCurrentIndex(0)
-        QtCore.QMetaObject.connectSlotsByName(xml_dialog)
+        self.retranslateUi(XMLInspector)
+        self.tw_xmls.setCurrentIndex(2)
+        QtCore.QMetaObject.connectSlotsByName(XMLInspector)
 
-    def retranslateUi(self, xml_dialog):
+    def retranslateUi(self, XMLInspector):
         _translate = QtCore.QCoreApplication.translate
-        self.tb_structure.setHtml(_translate("xml_dialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+        self.tb_structure.setHtml(_translate("XMLInspector", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Consolas\'; font-size:8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>"))
-        self.tw_xmls.setTabText(self.tw_xmls.indexOf(self.structure_tab), _translate("xml_dialog", "structure"))
-        self.tw_xmls.setTabText(self.tw_xmls.indexOf(self.resources_tab), _translate("xml_dialog", "resources"))
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:\'Consolas\'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p></body></html>"))
