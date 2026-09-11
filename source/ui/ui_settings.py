@@ -20,7 +20,9 @@ class Ui_SettingsDialog(object):
         self.hl5_2 = QtWidgets.QHBoxLayout()
         self.hl5_2.setSpacing(0)
         self.hl5_2.setObjectName("hl5_2")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         self.hl5_2.addItem(spacerItem)
         self.pb_edit_ini = QtWidgets.QPushButton(parent=SettingsDialog)
         self.pb_edit_ini.setObjectName("pb_edit_ini")
@@ -37,7 +39,9 @@ class Ui_SettingsDialog(object):
         self.lb_appearance.setObjectName("lb_appearance")
         self.hl1.addWidget(self.lb_appearance)
         self.cb_themes = QtWidgets.QComboBox(parent=self.gb_general)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.cb_themes.sizePolicy().hasHeightForWidth())
@@ -54,15 +58,20 @@ class Ui_SettingsDialog(object):
         self.vl3 = QtWidgets.QVBoxLayout()
         self.vl3.setObjectName("vl3")
         self.lb_language = QtWidgets.QLabel(parent=self.gb_locale)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lb_language.sizePolicy().hasHeightForWidth())
         self.lb_language.setSizePolicy(sizePolicy)
         self.lb_language.setObjectName("lb_language")
+        self.lb_language.setVisible(False)
         self.vl3.addWidget(self.lb_language)
         self.lb_time_format = QtWidgets.QLabel(parent=self.gb_locale)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lb_time_format.sizePolicy().hasHeightForWidth())
@@ -74,6 +83,7 @@ class Ui_SettingsDialog(object):
         self.vl4.setObjectName("vl4")
         self.cb_language = QtWidgets.QComboBox(parent=self.gb_locale)
         self.cb_language.setObjectName("cb_language")
+        self.cb_language.setVisible(False)
         self.vl4.addWidget(self.cb_language)
         self.cb_time_format = QtWidgets.QComboBox(parent=self.gb_locale)
         self.cb_time_format.setObjectName("cb_time_format")
@@ -133,21 +143,27 @@ class Ui_SettingsDialog(object):
         self.pb_reset_database.setMinimumSize(QtCore.QSize(0, 25))
         self.pb_reset_database.setObjectName("pb_reset_database")
         self.hl4.addWidget(self.pb_reset_database)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum
+        )
         self.hl4.addItem(spacerItem1)
         self.vl6.addLayout(self.hl4)
         self.vl1.addWidget(self.gb_database)
         self.settings_buttonbox = QtWidgets.QDialogButtonBox(parent=SettingsDialog)
         self.settings_buttonbox.setMinimumSize(QtCore.QSize(0, 30))
         self.settings_buttonbox.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.settings_buttonbox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Apply|QtWidgets.QDialogButtonBox.StandardButton.Cancel|QtWidgets.QDialogButtonBox.StandardButton.RestoreDefaults)
+        self.settings_buttonbox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.StandardButton.Apply
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            | QtWidgets.QDialogButtonBox.StandardButton.RestoreDefaults
+        )
         self.settings_buttonbox.setCenterButtons(False)
         self.settings_buttonbox.setObjectName("settings_buttonbox")
         self.vl1.addWidget(self.settings_buttonbox)
 
         self.retranslateUi(SettingsDialog)
-        self.settings_buttonbox.accepted.connect(SettingsDialog.accept) # type: ignore
-        self.settings_buttonbox.rejected.connect(SettingsDialog.reject) # type: ignore
+        self.settings_buttonbox.accepted.connect(SettingsDialog.accept)  # type: ignore
+        self.settings_buttonbox.rejected.connect(SettingsDialog.reject)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(SettingsDialog)
 
     def retranslateUi(self, SettingsDialog):
@@ -162,7 +178,9 @@ class Ui_SettingsDialog(object):
         self.gb_document.setTitle(_translate("SettingsDialog", "Editor"))
         self.cb_always_schedule.setText(_translate("SettingsDialog", "Always schedule lessons"))
         self.cb_compress_images.setText(_translate("SettingsDialog", "Compress images"))
-        self.cb_single_selection.setText(_translate("SettingsDialog", "Always select single elements of cell"))
+        self.cb_single_selection.setText(
+            _translate("SettingsDialog", "Always select single elements of cell")
+        )
         self.gb_database.setTitle(_translate("SettingsDialog", "Database"))
         self.lb_location.setText(_translate("SettingsDialog", "Location"))
         self.pb_new_database.setText(_translate("SettingsDialog", "Create New"))
