@@ -356,7 +356,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         return self._dialog_manager.get_container("Editor").values()
 
     def open_paths(self) -> list[Path]:
-        [Path(editor.path) for editor in self.opened_editors()]
+        return [Path(editor.path) for editor in self.opened_editors()]
 
     def open_dialog(self, wtype: str) -> None:
         match wtype:

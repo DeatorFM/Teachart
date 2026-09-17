@@ -264,7 +264,7 @@ class PictureEditor(BaseElementEditor):
         self._max_width = max_width
         StandardLogger.debug(
             f"Opened PictureEditr with max width: {self._max_width}",
-            extra={"sender", "PICTUREEDITOR"},
+            extra={"sender": "PICTUREEDITOR"},
         )
 
         self.ui.piclabel.set_max_width(max_width)

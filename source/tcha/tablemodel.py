@@ -237,7 +237,7 @@ class CellModel(QAbstractListModel):
         return self._work_data.current_size
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
-        return len(self._data)
+        return len(self._work_data)
 
     def add_model(self, model: BaseElementModel) -> None:
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
@@ -312,9 +312,6 @@ class CellModel(QAbstractListModel):
         self.layoutChanged.emit()
         self.modelChanged.emit()
         return model
-
-    def index(self, row: int, column: int = 0, parent: QModelIndex = ...) -> QModelIndex:
-        return self.createIndex(row, column, 1)
 
     def index_for_num(self, num: int) -> QModelIndex:
         """Returns the model with the given number. If not found returns an invalid QModelIndex."""

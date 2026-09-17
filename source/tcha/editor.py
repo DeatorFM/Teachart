@@ -628,7 +628,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
 
-    # Debug menus
+    # Debug menus available on --debug
 
     def open_file_inspector(self) -> None:
         dialog = FileView(self)

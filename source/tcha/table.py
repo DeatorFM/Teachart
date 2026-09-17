@@ -287,6 +287,10 @@ class CellEditor(QListView):
         self.change_index(current)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            event.ignore()
+            return
+
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.pos()
             index = self.indexAt(event.pos())
@@ -304,6 +308,10 @@ class CellEditor(QListView):
             self.setCurrentIndex(new_idx)
 
     def mouseMoveEvent(self, event):
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            event.ignore()
+            return
+
         if not (event.buttons() & Qt.MouseButton.LeftButton):
             return
 
