@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
 from tcha.base import BaseMainWindow
 from tcha.consts import (
     ClipboardContent,
-    CloseState,
     EditingLevel,
     SaveState,
     TableViewMode,
@@ -69,6 +68,7 @@ class SaveWorker(QRunnable):
 class Editor(BaseMainWindow):
     dialogCalled = pyqtSignal(str)
     fileOpened = pyqtSignal(Path, BaseMainWindow)
+    fileSaving = pyqtSignal()
     fileSaved = pyqtSignal(Path)
     presenterActivated = pyqtSignal(QGraphicsScene, BaseMainWindow)  # Scene, Target Screen
     presenterClosed = pyqtSignal()
@@ -97,7 +97,6 @@ class Editor(BaseMainWindow):
         # Attributes
         self._wid = random.getrandbits(32)
         self.save_state = SaveState.Saved if lessonfile.mode == "r" else SaveState.Unsaved
-        self._close_state = CloseState.CanClose
         self.element_definitions = edefinitions
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
@@ -212,10 +211,6 @@ class Editor(BaseMainWindow):
     def wid(self) -> int:
         return self._wid
 
-    @property
-    def close_state(self):
-        return self._close_state
-
     # File Methods
 
     def document_info(self) -> str:
@@ -301,6 +296,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 f"Save operation started for file: {self.lessonfile.path} with document properties:\n{self.document_info()}",
                 extra={"sender": "EDITOR"},
             )
+            self.fileSaving.emit()
             save(None)
             return True
         else:
@@ -313,6 +309,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                     extra={"sender": "EDITOR"},
                 )
                 self.save_state = SaveState.Saving
+                self.fileSaving.emit()
                 save(path)
                 return True
             self.ui.ac_save.setEnabled(True)
@@ -343,6 +340,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 extra={"sender": "EDITOR"},
             )
             self.statusBar().showMessage(self.tr("Saving failed. Check log for details."), 3000)
+            self.fileSaved.emit(Path(" "))
 
     def schedule(self) -> None:
         """Creates a new schedule if not existing. If the button state is off the schedule will be deleted"""
@@ -668,7 +666,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # Event handlers
 
     def closeEvent(self, ev: QCloseEvent):
-        """THe user is asked if they want to savbe the document when there are unsaved changes"""
+        """The user is asked if they want to savbe the document when there are unsaved changes"""
         if self.save_state is SaveState.Unsaved:
             result = QMessageBox.question(
                 self,
@@ -683,7 +681,6 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 if not saved:
                     ev.ignore()
                     return
-                self._close_state = CloseState.CanCloseLater
             elif result == QMessageBox.StandardButton.Discard:
                 pass
             else:
@@ -697,8 +694,9 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
         if self.save_state != SaveState.Saving:
             self.tablemodel.rescont.close_file_streams()
-            super().closeEvent(ev)
             self.closed.emit("Editor", self.wid)
+            super().closeEvent(ev)
+
         else:
             self.save_state = SaveState.SaveAndQuit
             ev.ignore()

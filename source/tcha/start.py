@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QMenu,
 )
 from tcha.base import BaseMainWindow
-from tcha.consts import CloseState
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from ui.ui_about import Ui_AboutDialog
 from ui.ui_start import Ui_StartWindow
@@ -246,10 +245,6 @@ class StartWindow(BaseMainWindow):
     @property
     def wid(self):
         return 0
-
-    @property
-    def close_state(self):
-        return CloseState.CanClose
 
     def open_file(self, index: QModelIndex) -> None:
         if index.column() == 0:

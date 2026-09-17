@@ -8,7 +8,7 @@ from shutil import rmtree
 from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QDateTime, QTimer, pyqtSignal
+from PyQt6.QtCore import QDateTime, QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 from PyQt6.QtWidgets import (
@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 from styling.theming import load_theme
 from styling.utils import apply_style
 from tcha.base import BaseMainWindow
-from tcha.consts import RESOURCE_PATH, CloseState, DisplayMode
+from tcha.consts import AppState, DisplayMode
 from tcha.dbmodels import (
     CourseModel,
     ScheduleModel,
@@ -88,6 +88,70 @@ def test_lesson_models(db) -> tuple[CourseModel, ScheduleModel, StudentModel]:
     return cmodel, smodel, tmodel
 
 
+class StateManager(QObject):
+    """Object that manages states to control if certain operations in an app are allowed"""
+
+    restartAuthorised = (
+        pyqtSignal()
+    )  # Is emitted when all files saving operations are completed and a restart is scheduled
+    restartReqested = pyqtSignal()  # Emitted when a restart is scheduled but not authorised
+
+    def __init__(self, dialog_manager: DialogManager, parent=None):
+        super().__init__(parent)
+        self._dmanager = dialog_manager
+        self._states = AppState.Launching
+        self._saving_ops = 0
+
+    @property
+    def states(self) -> AppState:
+        return self._states
+
+    def add_state(self, state: AppState) -> None:
+        self._states |= state
+
+    def remove_state(self, state: AppState) -> None:
+        StandardLogger.info(
+            f"Removed state: {state}",
+            extra={"sender": "STATEMANAGER"},
+        )
+        self._states &= ~state
+
+    def restart_allowed(self) -> bool:  # Add new conditions if necessary
+        return (
+            self._states & AppState.Restarting
+            and self._saving_ops < 1
+            and self._dmanager.all_closed()
+        )
+
+    def schedule_restart(self):
+        self._states |= AppState.Restarting
+        self.restartReqested.emit()
+        StandardLogger.debug(
+            "Restart as been scheduled and will be executed when possible",
+            extra={"sender": "STATEMANAGER"},
+        )
+        if self.restart_allowed():
+            self.restartAuthorised.emit()
+            return
+
+    def log_saving_operation(self) -> None:
+        self._states |= AppState.Saving
+        self._saving_ops += 1
+
+    def remove_saving_operation(self) -> None:
+        self._saving_ops -= 1
+
+        if self._saving_ops < 1:
+            self.remove_state(AppState.Saving)
+
+        if self.restart_allowed():
+            self.restartAuthorised.emit()
+
+    def attempt_restart(self):
+        if self.restart_allowed():
+            self.restartAuthorised.emit()
+
+
 class MetaApp(type(QApplication)):
     _instances: typing.ClassVar[dict] = {}
     _lock: Lock = Lock()
@@ -101,20 +165,20 @@ class MetaApp(type(QApplication)):
 
 
 class AppCore(QApplication, metaclass=MetaApp):
-    restartRequested = pyqtSignal()
+    restartInitiated = pyqtSignal()
 
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
         self.setApplicationVersion(AppInfo.app_ver)
-        self.setWindowIcon(QIcon(str(RESOURCE_PATH / "images" / "logo.svg")))
+        self.setWindowIcon(QIcon(":/logo/logo_main"))
 
         self._db: QSqlDatabase | None = None
         self._dialog_manager = DialogManager()
+        self._state_manager = StateManager(self._dialog_manager, self)
         self._presenter_view: PresenterView | None = None
         self._edefinitions = get_all_definitions()
         self._clean_up_list: list[Path] = []
         self._launch_config = parse_args()
-        self._restart_planned = False
 
         StandardLogger.init_logger(self._launch_config.logging_level)
         StandardLogger.info(
@@ -129,11 +193,6 @@ class AppCore(QApplication, metaclass=MetaApp):
             Settings.value("Application/recent"),
             Settings.value("Application/pinned"),
         )
-        self._source_id = (
-            self._course_model.source_id()
-            if not self._launch_config.test
-            else self._launch_config.test_params.get("source_id", self._course_model.source_id())
-        )
 
         self.init_display_mode = WinApi.get_display_mode()
         StandardLogger.info(
@@ -143,6 +202,9 @@ class AppCore(QApplication, metaclass=MetaApp):
         self.aboutToQuit.connect(self.on_quitting)
         self.screenAdded.connect(self.on_screen_changed)
         self.screenRemoved.connect(self.on_screen_changed)
+
+        self._state_manager.restartReqested.connect(self._on_restart_requested)
+        self._state_manager.restartAuthorised.connect(self.restart)
 
     @cache
     @staticmethod
@@ -180,6 +242,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 appearance=Settings.value("User/appearance"),
                 language=Settings.value("User/language"),
             )
+        self._state_manager.add_state(AppState.Running)
 
     def _set_launch_settings(self, *, dbpath: Path, appearance: str, language: Locale) -> None:
         """Applies settings of arguments"""
@@ -284,12 +347,16 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 if not wid:
                     self.create_editor()
                     return True
+                return True
 
         self.open_start_dialog()
         return True
 
     def opened_editors(self) -> list[Editor]:
         return self._dialog_manager.get_container("Editor").values()
+
+    def open_paths(self) -> list[Path]:
+        [Path(editor.path) for editor in self.opened_editors()]
 
     def open_dialog(self, wtype: str) -> None:
         match wtype:
@@ -307,13 +374,13 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
     def _on_window_closed(self, wtype: str, wid: int):
         window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
         StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender": "APPCORE"})
-        if window:
-            if window.close_state == CloseState.CanCloseLater and self._restart_planned:
-                self._dialog_manager.mark_closed(wtype, wid)
-                self.restart()
-            else:
-                self._dialog_manager.mark_closed(wtype, wid)
-                self._restart_planned = False
+        self._dialog_manager.mark_closed(wtype, wid)
+
+        if not self.opened_editors():
+            self._state_manager.remove_state(AppState.Editing)
+
+        if self._state_manager.states & AppState.Restarting:
+            self._state_manager.attempt_restart()
 
     def create_editor(self) -> int:
         """Creates an editor with a new LessonFile object and returns its window is (wid)"""
@@ -324,6 +391,8 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         )
         editor_window.dialogCalled.connect(self.open_dialog)
         editor_window.fileOpened.connect(self.open_file)
+        editor_window.fileSaving.connect(self._state_manager.log_saving_operation)
+        editor_window.fileSaved.connect(self._state_manager.remove_saving_operation)
         editor_window.presenterActivated.connect(self.open_presenter)
         editor_window.presenterClosed.connect(self.close_presenter)
         editor_window.closed.connect(self._on_window_closed)
@@ -334,15 +403,12 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         if start_dialog:
             start_dialog.close()
 
+        self._state_manager.add_state(AppState.Editing)
         editor_window.show()
         return editor_window.wid
 
     def open_file(self, path: Path, caller: BaseMainWindow | None = None) -> int:
-        if (
-            path
-            and path.exists()
-            and path not in [Path(editor.path) for editor in self.opened_editors()]
-        ):
+        if path and path.exists() and path not in self.open_paths():
             editor_window = None
             wid = 0
 
@@ -354,11 +420,13 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 caller.set_status_bar_msg(status_label)
 
             if lf.open("r", str(path)):
-                editor_window = self._dialog_manager.open(
+                editor_window: Editor = self._dialog_manager.open(
                     "Editor", self._course_model, self._schedule_model, self._edefinitions, lf
                 )
                 editor_window.dialogCalled.connect(self.open_dialog)
                 editor_window.fileOpened.connect(self.open_file)
+                editor_window.fileSaving.connect(self._state_manager.log_saving_operation)
+                editor_window.fileSaved.connect(self._state_manager.remove_saving_operation)
                 editor_window.presenterActivated.connect(self.open_presenter)
                 editor_window.presenterClosed.connect(self.close_presenter)
                 editor_window.ui.ac_recent.setMenu(self._file_model.export_recent_as_menu(6))
@@ -387,6 +455,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 self._file_model.append_file(str(path))
                 if editor_window:
                     editor_window.set_recent_files(self._file_model.export_recent_as_menu(6))
+                    self._state_manager.add_state(AppState.Editing)
                     editor_window.show()
                     wid = editor_window.wid
 
@@ -438,7 +507,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if button == QMessageBox.StandardButton.Yes:
-                    self.restart()
+                    self._state_manager.schedule_restart()
                 self._dialog_manager.mark_closed("SettingsDialog")
                 return
             if dialog.return_flags & ReturnFlags.UpdateStyle:
@@ -508,15 +577,27 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         return self._db
 
     def restart(self) -> None:
-        self._restart_planned = True
-        StandardLogger.info(
-            "Restart as been scheduled and will be executed when possible",
-            extra={"sender": "APPCORE"},
+        StandardLogger.info("Restarting")
+        if self._db is not None and self._db.isOpen():
+            connection_name = self._db.connectionName()
+            self._db.close()
+            QSqlDatabase.removeDatabase(connection_name)
+
+        self._load_settings()
+        self._course_model = CourseModel(self._db)
+        self._schedule_model = ScheduleModel(self._db)
+        self._file_model = OpenFileModel(
+            Settings.value("Application/recent"),
+            Settings.value("Application/pinned"),
         )
-        if self._dialog_manager.close_all():
-            StandardLogger.info("Restarting")
-            self.quit()
-            self.restartRequested.emit()
+        self._state_manager.remove_state(AppState.Restarting)
+        self.show_startup_window()
+        # self.setQuitOnLastWindowClosed(True)
+
+    def _on_restart_requested(self):
+        # self.setQuitOnLastWindowClosed(False)
+        self._dialog_manager.close_all()
+        self._state_manager.attempt_restart()
 
     def on_quitting(self) -> None:
         recent = self._file_model.export_recent()

@@ -5,10 +5,12 @@ PROJECT_PATH = Path().parent
 RESOURCE_PATH = PROJECT_PATH / "resources"
 
 
-class CloseState(Enum):
-    CannotClose = 0
-    CanClose = 1
-    CanCloseLater = 2
+class AppState(Flag):
+    Launching = 0
+    Running = 1
+    Editing = 2
+    Saving = 4
+    Restarting = 8
 
 
 class DialogType(Enum):

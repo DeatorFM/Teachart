@@ -1,9 +1,10 @@
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QMainWindow, QWidget
 from tcha.dbmanager import DbManager
 from tcha.editor import Editor
+from tcha.error import StandardLogger
 from tcha.settings import SettingsDialog
 from tcha.start import AboutDialog, StartWindow
 from tcha.table import PresenterView
@@ -25,7 +26,7 @@ class DialogContainer(dict):
 
 
 class DialogManager:
-    """Manages top level windows of application that are called from AppCore. Thanks to the Anki dev team for inspiration :-)"""
+    """Manages top level windows of application that are called from AppCore. Thanks to the Ankitects dev team for inspiration :-)"""
 
     _dialogs: ClassVar[dict[str, list[type, QWidget | DialogContainer[str, QWidget] | None]]] = {
         "Editor": [Editor, DialogContainer(Editor)],
@@ -55,12 +56,12 @@ class DialogManager:
     def get_dialog(self, wtype: str, wid: int = 0) -> QWidget | None:
         """Get single instance only dialog if existing else None."""
         if wtype in self._containers:
-            return self._dialogs[wtype][1].get(wid)
+            return self._dialogs[wtype][1].get(wid, 0)
         return self._dialogs.get(wtype, [None, None])[1]
 
     def get_container(self, wtype: str) -> DialogContainer:
         if wtype in self._containers:
-            return self._dialogs.get(wtype)[1]
+            return self._dialogs.get(wtype, 0)[1]
         return DialogContainer(None)
 
     def open(self, wtype: str, *args: Any, **kwargs: Any) -> QWidget | None:
@@ -82,14 +83,23 @@ class DialogManager:
             else:
                 inst = wclass(*args, **kwargs)
                 winst[inst.wid] = inst
-                return inst
+                StandardLogger.debug(
+                    f"Opened window of class {wtype} with id {inst.wid}",
+                    extra={"sender": "DIALOGMANAGER"},
+                )
+                return winst[inst.wid]
 
             return winst
         return None
 
     def mark_closed(self, wtype: str, wid: int = 0) -> None:
         if wtype in self._containers:
-            del self._dialogs[wtype][1][wid]
+            StandardLogger.debug(
+                f"Marking window {wtype} with id {wid} closed.",
+                extra={"sender": "DIALOGMANAGER"},
+            )
+            self._dialogs[wtype][1].pop(wid, None)
+
         else:
             self._dialogs[wtype] = [self._dialogs[wtype][0], None]
 
@@ -108,8 +118,10 @@ class DialogManager:
             if wtype in self._containers:
                 _, cont = self._dialogs[wtype]
                 for key, value in list(cont.items()):
+                    value: QMainWindow
                     if value.close():
-                        del cont[key]
+                        print(f"Close window {wtype} with id {key}")
+                        cont.pop(key)
                         continue
                     result = False
             else:
