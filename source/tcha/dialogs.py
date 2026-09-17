@@ -56,7 +56,7 @@ class DialogManager:
     def get_dialog(self, wtype: str, wid: int = 0) -> QWidget | None:
         """Get single instance only dialog if existing else None."""
         if wtype in self._containers:
-            return self._dialogs[wtype][1].get(wid, 0)
+            return self._dialogs[wtype][1].get(wid)
         return self._dialogs.get(wtype, [None, None])[1]
 
     def get_container(self, wtype: str) -> DialogContainer:
