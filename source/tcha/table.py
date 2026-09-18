@@ -970,6 +970,7 @@ class BaseTable(QTableView):
             if success:
                 event.accept()
                 self.changeMade.emit()
+                self.scrollTo(drop_index)
             else:
                 event.ignore()
         else:

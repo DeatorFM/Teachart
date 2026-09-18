@@ -5,12 +5,12 @@ description = "Qt based gui app to create lesson plans for teachers"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "pyinstaller",
     "PyQt6>=6.6.10",
 ]
 
 [project.scripts]
 teachart = "main:main"
-tpack = "theming.tpack:main"
 
 [dependency-groups]
 dev = [
@@ -22,9 +22,9 @@ dev = [
 build = ["pyinstaller>=6.0.0"]
 
 [tool.setuptools]
-packages = ["tcha", "ui", "themes", "nativeelements", "resources", "theming"]
+packages = ["tcha", "ui", "styling", "nativeelements"]
 py-modules = ["main"]
-package-dir = {"" = "source", "theming" = "theming"}
+package-dir = {"" = "source"}
 
 [tool.pytest.ini_options]
 pythonpath = ["source"]

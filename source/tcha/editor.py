@@ -187,6 +187,7 @@ class Editor(BaseMainWindow):
         self.ui.table.editingLevelChanged.connect(self.editing_level_changed)
         self.ui.table.currentEditorIndexChanged.connect(self.current_editor_index_changed)
         self.ui.table.clipboardChanged.connect(self.clipboard_changed)
+        self.ui.table.changeMade.connect(self.set_unsaved)
 
         self.ui.ac_cell_finish_editing.triggered.connect(self.table.close_active_editor)
         self.ui.ac_append_row.triggered.connect(self.table.add_row_at_end)

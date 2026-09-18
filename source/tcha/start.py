@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QMenu,
 )
+from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
 from ui.ui_about import Ui_AboutDialog
@@ -191,7 +192,7 @@ class StartWindow(BaseMainWindow):
         self.ui.setupUi(self)
 
         if file_mode:
-            debug_tag = self.tr("Debug-Mode") if self.debug_enabled() else ""
+            debug_tag = self.tr("Debug-Mode") if utils.debug_enabled() else ""
             self.ui.ac_new.setVisible(False)
             self.ui.ac_settings.setVisible(False)
             self.setWindowTitle(f"{self.tr('Open File')} {debug_tag}")

@@ -106,6 +106,7 @@ class Ui_Editor(object):
         self.corner_widget.setMaximumHeight(25)
         cw_layout = QHBoxLayout(self.corner_widget)
         cw_layout.setContentsMargins(0, 0, 0, 0)
+        cw_layout.setSpacing(0)
         self.corner_widget.setLayout(cw_layout)
 
         self.tb_open = QToolButton(MainWindow)
@@ -118,7 +119,7 @@ class Ui_Editor(object):
         self.tb_save.setIcon(icon9)
         cw_layout.addWidget(self.tb_save)
 
-        self.menubar.setCornerWidget(self.corner_widget, Qt.Corner.TopRightCorner)
+        self.menubar.setCornerWidget(self.corner_widget, Qt.Corner.TopLeftCorner)
         MainWindow.setMenuBar(self.menubar)
 
         self.statusbar = QStatusBar(parent=MainWindow)

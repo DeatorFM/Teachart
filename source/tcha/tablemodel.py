@@ -928,6 +928,7 @@ class TableModel(QAbstractTableModel):
                         if len(source_cell) > 0:
                             model = source_cell.pop(mime_data.cell_row)
                             target_cell.append(model)
+                            self.dataChanged.emit(parent, parent)
                             return True
 
             elif action == Qt.DropAction.CopyAction and mime_data.element_data:

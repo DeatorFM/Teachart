@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: teachart
-Version: 1.0.0a1
-Summary: Qt based gui app to create lesson plans for teachers
-Requires-Python: >=3.12
-Description-Content-Type: text/markdown
-Requires-Dist: PyQt6>=6.6.10

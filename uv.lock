@@ -320,6 +320,7 @@ name = "teachart"
 version = "1.0.0a1"
 source = { editable = "." }
 dependencies = [
+    { name = "pyinstaller" },
     { name = "pyqt6" },
 ]
 
@@ -335,7 +336,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pyqt6", specifier = ">=6.6.10" }]
+requires-dist = [
+    { name = "pyinstaller" },
+    { name = "pyqt6", specifier = ">=6.6.10" },
+]
 
 [package.metadata.requires-dev]
 build = [{ name = "pyinstaller", specifier = ">=6.0.0" }]
