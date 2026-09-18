@@ -294,6 +294,7 @@ class TextEditor(BaseTextElementEditor):
         # Initial routines
         self.default_format = self.last_format
         self.menu = TextEditorMenu(self)
+        self._dialog = None
 
         if not self.is_empty():
             self.currentPropsChanged.emit(self.current_text_props())
@@ -365,6 +366,9 @@ class TextEditor(BaseTextElementEditor):
         if self.menu:
             self.menu.deleteLater()
             self.menu = None
+        if self._dialog:
+            self._dialog.close()
+            self._dialog = None
         super().closeEvent(event)
 
     def fit_to_text(self) -> None:
@@ -603,9 +607,9 @@ class TextEditor(BaseTextElementEditor):
         return False
 
     def open_symbol_dialog(self) -> None:
-        dialog = SymbolDialog(self.currentFont().family())
-        dialog.characterClicked.connect(self.insert_symbol)
-        dialog.show()
+        self._dialog = SymbolDialog(self.currentFont().family(), self)
+        self._dialog.characterClicked.connect(self.insert_symbol)
+        self._dialog.show()
 
     def insert_symbol(self, symbol: str) -> None:
         self.insertPlainText(symbol)
@@ -1185,11 +1189,6 @@ class TextToolset(BaseElementToolset):
         else:
             return QTextCharFormat.VerticalAlignment.AlignNormal
 
-    def open_symbol_dialog(self) -> None:
-        dialog = SymbolDialog(self.cb_Font.currentFont().family())
-        dialog.characterClicked.connect(self.send_symbol)
-        dialog.show()
-
     # def hideEvent(self, e: QHideEvent) -> None:
     #     self.table_frame.hide()
     #     super().hideEvent(e)
@@ -1198,14 +1197,15 @@ class TextToolset(BaseElementToolset):
 class SymbolDialog(QDialog):
     characterClicked = pyqtSignal(str)
 
-    def __init__(self, fontfamily: str, parent=None, flags=Qt.WindowType.SubWindow) -> None:
-        super().__init__(parent, flags)
+    def __init__(self, fontfamily: str, parent=None, flags=Qt.WindowType.Dialog) -> None:
+        super().__init__(None, flags)
         self.ui = Ui_SymbolDialog()
         self.ui.setupUi(self)
         self.fontfamily = fontfamily
 
         self.connect_signals()
         self.import_character_sets()
+        self.setModal(False)
 
     def connect_signals(self) -> None:
         self.ui.cb_category.currentTextChanged.connect(self.set_table)
@@ -1222,14 +1222,14 @@ class SymbolDialog(QDialog):
         self.ui.TW_Symbols.clear()
         self.ui.LB_UnicodeName.setText("")
 
-        rows = len(self.chars[charset]) // 16
+        rows = len(UNICODECHART[charset]) // 16
         self.ui.TW_Symbols.setColumnCount(16)
         self.ui.TW_Symbols.setRowCount(rows)
 
         for irow in range(self.ui.TW_Symbols.rowCount()):
             for icolumn in range(self.ui.TW_Symbols.columnCount()):
                 try:
-                    item = QTableWidgetItem(chr(self.chars[charset][irow * 16 + icolumn]))
+                    item = QTableWidgetItem(chr(UNICODECHART[charset][irow * 16 + icolumn]))
                     font = QFont()
                     font.setPointSize(12)
                     font.setFamily(self.fontfamily)

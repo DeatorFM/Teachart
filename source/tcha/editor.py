@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
 )
+from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.consts import (
     ClipboardContent,
@@ -89,6 +90,9 @@ class Editor(BaseMainWindow):
         self.courses = FilteredCourseModel(courses, self)
         self.schedules = schedules
 
+        self.ui.cb_course.setModel(self.courses)
+        self.ui.cb_course.setModelColumn(1)
+
         self.lessonfile = lessonfile
         self.lesson: Lesson
 
@@ -106,8 +110,6 @@ class Editor(BaseMainWindow):
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
         self.connect_signals()
-        self.ui.cb_course.setModel(self.courses)
-        self.ui.cb_course.setModelColumn(1)
         self.setMouseTracking(True)
         self.table.check_clipboard()
 
@@ -239,9 +241,9 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     def set_unsaved(self) -> None:
         self.save_state = SaveState.Unsaved
 
-    def set_lesson(self, lesson: Lesson) -> None:
+    def set_lesson(self, lesson: Lesson | None) -> None:
         if lesson:
-            if lesson.source_id == self.courses.source_id():
+            if lesson.source_id == utils.source_id():
                 source_idx = self.courses.sourceModel().index_for_id(lesson.course_id)
                 if source_idx.isValid():
                     mapped_idx = self.courses.mapFromSource(source_idx)
@@ -411,8 +413,8 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
     def set_course(self) -> None:
         """Sets the new course to lesson model to the current selection of the course list combo box."""
-        if self.lesson.source_id != self.courses.source_id():
-            self.lesson.source_id = self.courses.source_id()
+        if self.lesson.source_id != utils.source_id():
+            self.lesson.source_id = utils.source_id()
         item = self.courses.getRow(self.ui.cb_course.currentIndex())
         self.lesson.set_course(item.name, item.id)
         if item.duration > 0:
@@ -479,6 +481,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
             self.ui.ac_paste.setEnabled(self.table.can_paste())
             self.ui.ac_freeze_row.setEnabled(True)
             self.ui.ac_from_clipboard.setEnabled(self.table.can_create_from_clipboard())
+            self.ui.ac_goto_active.setEnabled(True)
 
             if self.table.frozen_table.frozen_row == self.table.currentIndex().row():
                 self.ui.ac_freeze_row.set_text("unfreeze")

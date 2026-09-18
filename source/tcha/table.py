@@ -34,7 +34,6 @@ from PyQt6.QtGui import (
     QDrag,
     QDropEvent,
     QKeyEvent,
-    QKeySequence,
     QMouseEvent,
     QPainter,
     QPainterPath,
@@ -134,6 +133,7 @@ class CellEditor(QListView):
         self.setLineWidth(0)
         self.setSizeAdjustPolicy(QListView.SizeAdjustPolicy.AdjustToContents)
         self.setSelectionMode(QListView.SelectionMode.SingleSelection)
+        self.setSelectionBehavior(QListView.SelectionBehavior.SelectRows)
         self.setEditTriggers(QListView.EditTrigger.CurrentChanged)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setStyleSheet("background-color: white;")
@@ -254,6 +254,12 @@ class CellEditor(QListView):
         compatible = compatible_mime_types()
         return current <= compatible
 
+    def selectionChanged(self, selected, deselected):
+        print(
+            f"Selection changed from {[index.row() for index in selected.indexes()]} to {[index.row() for index in deselected.indexes()]}"
+        )
+        return super().selectionChanged(selected, deselected)
+
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
         self.currentIndexChanged.emit(current, previous)
@@ -287,10 +293,6 @@ class CellEditor(QListView):
         self.change_index(current)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            event.ignore()
-            return
-
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.pos()
             index = self.indexAt(event.pos())
@@ -298,6 +300,7 @@ class CellEditor(QListView):
                 self.setCurrentIndex(QModelIndex())
                 if index.isValid():
                     self.setCurrentIndex(index)
+                    self.edit(index)
                 event.accept()
                 return
         super().mousePressEvent(event)
@@ -308,9 +311,6 @@ class CellEditor(QListView):
             self.setCurrentIndex(new_idx)
 
     def mouseMoveEvent(self, event):
-        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            event.ignore()
-            return
 
         if not (event.buttons() & Qt.MouseButton.LeftButton):
             return
@@ -440,6 +440,7 @@ class CellDelegate(QStyledItemDelegate):
 
             if self.hovered_index.table_index == index:
                 selected = model.index(self.hovered_index.cell_index, 0)
+                editor.setCurrentIndex(selected)
                 editor.edit(selected)
                 return
 

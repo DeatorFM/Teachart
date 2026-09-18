@@ -163,7 +163,7 @@ class TextToolsetView:
             "#20124d",
             "#4c1130",
         ]
-        self.color_menu = ColorMenu(convertColors(textcolors), agent)
+        self.color_menu = ColorMenu(convertColors(textcolors), None)
         action_widget = agent.widgetForAction(self.ac_textcolor)
         action_widget.setMenu(self.color_menu)
         action_widget.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -227,7 +227,7 @@ class TextToolsetView:
 
         icon17 = SvgIcon(":/common/table")
         self.ac_table = agent.addAction(icon17, None)
-        self.menu_table = TableMenu(agent)
+        self.menu_table = TableMenu()
         agent.widgetForAction(self.ac_table).setMenu(self.menu_table)
         agent.widgetForAction(self.ac_table).setPopupMode(
             QToolButton.ToolButtonPopupMode.InstantPopup

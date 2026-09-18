@@ -78,6 +78,8 @@ class MimeData:
 
 @dataclass(frozen=True)
 class Trindex:
+    """Combined table and cell index as structure"""
+
     table_index: QModelIndex
     cell_index: int
 
