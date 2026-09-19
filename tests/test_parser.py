@@ -8,35 +8,35 @@ from tcha.utils import LaunchConfig, parse_args
 @pytest.fixture
 def argument_cases() -> dict[tuple[str], LaunchConfig | None]:
     return {
-        (): LaunchConfig(None, True, 30, False, False, {}),
-        ("lesson.tch",): LaunchConfig(Path("lesson.tch"), True, 30, False, False, {}),
-        ("--clean",): LaunchConfig(None, True, 30, True, False, {}),
-        ("--debug",): LaunchConfig(None, False, 0, False, False, {}),
+        (): LaunchConfig(None, False, 0, False, False, {}),
+        ("lesson.tch",): LaunchConfig(Path("lesson.tch"), False, 0, False, False, {}),
+        ("--clean",): LaunchConfig(None, False, 0, True, False, {}),
+        ("--debug",): LaunchConfig(None, True, 0, False, False, {}),
         ("--debug", "10"): LaunchConfig(None, True, 10, False, False, {}),
         ("lesson.tch", "--clean", "--debug", "50"): LaunchConfig(
             Path("lesson.tch"), True, 50, True, False, {}
         ),
-        ("--test",): LaunchConfig(None, True, 30, False, False, {}),
+        ("--test",): LaunchConfig(None, False, 0, False, False, {}),
         ("--test", "source_id=B473DE34A"): LaunchConfig(
             None,
-            True,
-            30,
+            False,
+            0,
             False,
             True,
             {"source_id": "B473DE34A"},
         ),
         ("--test", "db=custom.tdb"): LaunchConfig(
             None,
-            True,
-            30,
+            False,
+            0,
             False,
             True,
             {"db": Path("custom.tdb")},
         ),
         ("--test", "theme=native:dark", "confetti=true"): LaunchConfig(
             None,
-            True,
-            30,
+            False,
+            0,
             False,
             True,
             {"theme": "native:dark", "confetti": True},

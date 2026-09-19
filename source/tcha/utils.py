@@ -96,8 +96,8 @@ def _parser(exit_on_error=True) -> ArgumentParser:
         "--debug",
         type=int,
         nargs="?",
-        const=30,
-        default=0,
+        const=0,
+        default=SUPPRESS,
         choices=[0, 10, 20, 30, 40, 50],
         help="Specify to enable debug features. You can set the logging level by passing and int otherwise it will be set to 30.",
     )
@@ -115,8 +115,8 @@ def parse_args(args: Iterable | None = None, *, exit_on_error=True) -> LaunchCon
 
     return LaunchConfig(
         Path(parsed.path) if parsed.path else None,
-        parsed.debug > 0,
-        parsed.debug,
+        hasattr(parsed, "debug"),
+        parsed.debug if hasattr(parsed, "debug") else 0,
         parsed.clean,
         any(test_params),
         test_params,
