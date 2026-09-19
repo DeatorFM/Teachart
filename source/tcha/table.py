@@ -100,7 +100,7 @@ class CellGeometry:
                 accumulate(model.item_size.height() for model in item)
             )
         else:
-            self._height_range = range(-1)
+            self._height_range = -1
             self._positions = ()
 
     @property
@@ -1166,10 +1166,11 @@ class Table(BaseTable):
                 self.verticalScrollBar().blockSignals(False)
             else:
                 self.verticalScrollBar().blockSignals(True)
-                last_row_height = self.sizeHintForRow(
-                    self.verticalHeader().logicalIndex(self.model().rowCount() - 1)
-                )
-                self.verticalScrollBar().setMaximum(last_row_height)
+                # last_row_height = self.sizeHintForRow(
+                #     self.verticalHeader().logicalIndex(self.model().rowCount() - 1)
+                # )
+                pos = sum(self.rowHeight(row) for row in range(self.model().rowCount() - 1))
+                self.verticalScrollBar().setMaximum(pos)
                 self.verticalScrollBar().blockSignals(False)
 
         self.on_vscrolled()

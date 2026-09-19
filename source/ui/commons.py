@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QEvent, QMimeData, QObject, QPoint, QSize, Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import (
@@ -33,6 +31,8 @@ from PyQt6.QtWidgets import (
 )
 from tcha.dbmodels import FilteredCourseModel, FilteredStudentModel
 from ui.StyledWidget import *
+
+__doc__ = "Module that hold various custom UI elements that are used throughout the application."
 
 
 class IconButton(QPushButton):
@@ -286,14 +286,19 @@ class SearchableComboBox(QComboBox):
         """A QComboBox that also functions as a search field for its items and supports filtered dbmodels."""
         super().__init__(parent)
         self.setLineEdit(StrongLineEdit(self))
+        self.lineEdit().setClearButtonEnabled(False)
         self.setView(ComboBoxListView(self))
         self.view().keyPress.connect(self.lineEdit().keyPressEvent)
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.setCompleter(None)
         self.lineEdit().textEdited.connect(self.filter_items)
+        self.lineEdit().editingFinished.connect(
+            lambda: self.lineEdit().setClearButtonEnabled(False)
+        )
 
     def filter_items(self, text: str):
+        self.lineEdit().setClearButtonEnabled(True)
         if isinstance(self.model(), (FilteredCourseModel, FilteredStudentModel)):
             self.model().set_search_filter(text)
             if self.model().rowCount() > 0:
@@ -301,6 +306,11 @@ class SearchableComboBox(QComboBox):
             else:
                 self.hidePopup()
             self.setEditText(text)
+
+    def setCurrentIndex(self, index):
+        self.lineEdit().setClearButtonEnabled(False)
+        super().setCurrentIndex(index)
+        self.clearFocus()
 
     def showPopup(self):
         super().showPopup()
@@ -313,6 +323,7 @@ class SearchableComboBox(QComboBox):
             self.lineEdit().setFocus()
         else:
             super().focusOutEvent(event)
+            self.lineEdit().setClearButtonEnabled(False)
 
 
 class PasteConfirmation(QMessageBox):

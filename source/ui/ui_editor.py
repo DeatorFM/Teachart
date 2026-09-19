@@ -94,8 +94,7 @@ class Ui_Editor(object):
         self.menu_debug = QMenu(parent=self.menubar)
         self.menu_debug.setObjectName("menu_debug")
 
-        if debug_enabled():
-            self.menu_debug.setVisible(False)
+        self.menu_debug.setVisible(debug_enabled())
 
         self.menuHelp = QMenu(parent=self.menubar)
         self.menuHelp.setObjectName("menuHelp")

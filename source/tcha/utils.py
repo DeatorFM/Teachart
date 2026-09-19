@@ -16,7 +16,6 @@ from tcha.error import StandardLogger
 # AppCore values convenience access
 
 
-@cache
 def debug_enabled() -> bool:
     return QApplication.instance().debug_enabled()
 
@@ -97,8 +96,8 @@ def _parser(exit_on_error=True) -> ArgumentParser:
         "--debug",
         type=int,
         nargs="?",
-        const=0,
-        default=30,
+        const=30,
+        default=0,
         choices=[0, 10, 20, 30, 40, 50],
         help="Specify to enable debug features. You can set the logging level by passing and int otherwise it will be set to 30.",
     )
