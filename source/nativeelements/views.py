@@ -591,7 +591,6 @@ class PictureEditorView:
         agent.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         agent.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         agent.setObjectName("PictureElement")
-        agent.setStyleSheet("background-color: white;")
         agent.setAutoFillBackground(True)
         self.main_layout = QVBoxLayout(agent)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)

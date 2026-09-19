@@ -352,10 +352,10 @@ class LessonFile(QObject):
         return self._metadata["file_id"]
 
     @property
-    def path(self) -> str | None:
+    def path(self) -> str:
         if self._f:
             return self._f.filename
-        return None
+        return " "
 
     @property
     def mode(self) -> Literal["w", "r"]:

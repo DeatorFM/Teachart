@@ -217,7 +217,7 @@ class TextModel(QTextDocument, BaseElementModel):
 
     def recalculate_size(self, width: int):
         self.setTextWidth(width - 8)
-        self.set_item_size(QSize(width, self.size().toSize().height() + 14))
+        self.set_item_size(QSize(width, self.size().toSize().height() + 10))
 
     def editable(self) -> bool:
         return True
@@ -290,6 +290,7 @@ class TextEditor(BaseTextElementEditor):
             "underlined": False,
         }
         self._target_width = target_width
+        self.fit_to_text()
 
         # Initial routines
         self.default_format = self.last_format
@@ -377,9 +378,9 @@ class TextEditor(BaseTextElementEditor):
         document.setTextWidth(self._target_width)
         new_height = document.size().height()
         if 0 <= new_height:
-            self.setFixedHeight(int(new_height) + 10)  # Add 10px buffer to prevent scrolling
+            self.setFixedHeight(int(new_height) + 6)
             document.set_item_size(
-                QSize(int(self._target_width) + 8, document.size().toSize().height() + 10)
+                QSize(int(self._target_width), document.size().toSize().height() + 10)
             )
             self.sizeChanged.emit(old_height, new_height)
 
@@ -884,7 +885,8 @@ class TextDelegate(BaseElementDelegate):
         self, parent: QWidget | None, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget | None:
         data: TextModel = index.data(Qt.ItemDataRole.EditRole)
-        editor = TextEditor(option.rect.width() - 8.0, data, parent)
+        content_width = index.model().work_item.width - 8
+        editor = TextEditor(content_width, data, parent)
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
         editor.installEventFilter(parent)
         editor.installEventFilter(self)
@@ -902,7 +904,7 @@ class TextDelegate(BaseElementDelegate):
         option: QStyleOptionViewItem,
         index: QModelIndex,
     ) -> None:
-        editor.setGeometry(option.rect.adjusted(2, 2, -5, -2))
+        editor.setGeometry(option.rect)
 
     def eventFilter(self, object: QObject, event: QEvent):
         if isinstance(object, TextEditor) and isinstance(event, QKeyEvent):

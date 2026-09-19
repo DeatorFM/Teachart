@@ -244,7 +244,7 @@ class SettingsDialog(QDialog):
     # Setter methods
 
     def set_appearance(self, index: int) -> None:
-        self.settings["User/appearance"] = self.cb_themes.itemData(index)
+        self.settings["User/appearance"] = self.ui.cb_themes.itemData(index)
         self._return_flag |= ReturnFlags.UpdateStyle
 
     def _on_language_set(self) -> None:

@@ -136,7 +136,6 @@ class CellEditor(QListView):
         self.setSelectionBehavior(QListView.SelectionBehavior.SelectRows)
         self.setEditTriggers(QListView.EditTrigger.CurrentChanged)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setStyleSheet("background-color: white;")
         self.setAutoFillBackground(True)
 
         self.setDragEnabled(True)
@@ -179,7 +178,7 @@ class CellEditor(QListView):
         model.rowsInserted.connect(self.update_list_geometry)
         model.rowsRemoved.connect(self.update_list_geometry)
 
-    def update_list_geometry(self) -> None:
+    def update_list_geometry(self, index: QModelIndex()) -> None:  # type: ignore
         self.geometriesChanged.emit()
         self.scheduleDelayedItemsLayout()
 
@@ -253,12 +252,6 @@ class CellEditor(QListView):
         current = frozenset(QApplication.clipboard().mimeData().formats())
         compatible = compatible_mime_types()
         return current <= compatible
-
-    def selectionChanged(self, selected, deselected):
-        print(
-            f"Selection changed from {[index.row() for index in selected.indexes()]} to {[index.row() for index in deselected.indexes()]}"
-        )
-        return super().selectionChanged(selected, deselected)
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
@@ -1435,10 +1428,10 @@ class Table(BaseTable):
             else:
                 self.setCurrentIndex(QModelIndex())
                 model.removeColumn(rmv_col)
-                if not self.copied_index().isValid():
-                    clipboard = QApplication.clipboard()
-                    clipboard.mimeData().removeFormat("application/x-teachart")
-                    clipboard.dataChanged.emit()
+                # if not self.copied_index().isValid():
+                #     clipboard = QApplication.clipboard()
+                #     clipboard.mimeData().removeFormat("application/x-teachart")
+                #     clipboard.dataChanged.emit()
 
     def keyPressEvent(self, e: QKeyEvent):
         if Qt.KeyboardModifier.ControlModifier in e.keyCombination().keyboardModifiers():

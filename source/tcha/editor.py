@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.consts import (
+    CellAction,
     ClipboardContent,
     EditingLevel,
     SaveState,
@@ -291,6 +292,8 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
             worker.signals.finished.connect(self._on_saving_finished)
             QThreadPool.globalInstance().start(worker)
 
+        self.table.handle_cell_action(self.ui.ac_elem_finish_editing)
+        self.table.close_active_editor()
         self.ui.ac_save.setEnabled(False)
         self.ui.tb_save.setEnabled(False)
         self.lesson.source_id = self.courses.source_id()

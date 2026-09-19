@@ -356,10 +356,10 @@ class CellModel(QAbstractListModel):
         if index.isValid():
             if role == Qt.ItemDataRole.EditRole:
                 self._data[index.row()] = value
-                self._data.recalculate_items()
+                # self._data.recalculate_items()
                 self.dataChanged.emit(index, index, [role])
                 StandardLogger.debug(
-                    "Data of name '{value.name}' saved to the model", extra={"sender": "CELLMODEL"}
+                    f"Data of name '{value.name}' saved to the model", extra={"sender": "CELLMODEL"}
                 )
                 return True
             return False
@@ -524,7 +524,16 @@ class CellModel(QAbstractListModel):
         return bool(self._data)
 
     def flags(self, index: QModelIndex):
-        return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        return (
+            Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsDragEnabled
+            | Qt.ItemFlag.ItemIsDropEnabled
+        )
+
+    def supportedDropActions(self):
+        return Qt.DropAction.MoveAction
 
     def __str__(self):
         return f"CellModel {self._data}"
