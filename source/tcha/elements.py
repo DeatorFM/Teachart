@@ -11,6 +11,7 @@ from PyQt6.QtCore import QMimeData
 Module to import element modules.
 """
 
+# Change if new elements have been implemented
 NATIVE_ELEMENTS = {
     "TextElement": {
         "module": "nativeelements.textelement",
@@ -61,6 +62,7 @@ def compatible_mime_types() -> frozenset[str]:
 
 @cache
 def get_definitions(name: str) -> BaseElementDefinitions | None:
+    """Returns element definition of name 'name'. Returns None if definition does not exist."""
     try:
         return getattr(
             importlib.import_module(NATIVE_ELEMENTS[name]["module"]),
@@ -80,6 +82,7 @@ def definition_for_mime_data(mime_data: QMimeData) -> BaseElementDefinitions | N
 
 
 def get_toolsets() -> dict[str, BaseElementToolset]:
+    """Returns all available toolsets as dictionary with element name as key and toolset as value."""
     return {
         key: getattr(importlib.import_module(val["module"]), val["definitions"])
         for key, val in NATIVE_ELEMENTS.items()

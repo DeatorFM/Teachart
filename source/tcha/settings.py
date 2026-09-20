@@ -220,12 +220,10 @@ class SettingsDialog(QDialog):
 
     def _select_language(self, locale: Locale) -> None:
         """Set language ComboBox for Locale value"""
-        assert isinstance(self.ui.cb_language, QComboBox)
         idx = self.ui.cb_language.findData(locale)
         self.ui.cb_language.setCurrentIndex(idx)
 
     def _select_time_format(self, tformat: TimeFormat) -> None:
-        assert isinstance(self.ui.cb_time_format, QComboBox)
         idx = self.ui.cb_time_format.findData(tformat)
         self.ui.cb_time_format.setCurrentIndex(idx)
 
@@ -466,6 +464,7 @@ class Values:
 
     @staticmethod
     def definition(key: str) -> Value | None:
+        """Returns the value definition for key 'key' if existinf else returns None"""
         return Values.__VALUES.get(key)
 
     @cache
@@ -482,6 +481,7 @@ class Values:
 
     @staticmethod
     def defaults() -> dict[str, Any]:
+        """Returns all default value as dictionary with settings key as key and default value as value."""
         return {key: value.default for key, value in Values.__VALUES}
 
     @staticmethod
@@ -490,6 +490,11 @@ class Values:
         scope: QSettings.Scope = QSettings.Scope.UserScope,
         clean=False,
     ) -> QSettings:
+        """
+        Creates a new QSettings instance with default values.
+        The ini-file will be created in the directory at Settings.user_path().
+        If 'clean' is True a new file will be created without overwriting an existing settings file.
+        """
         settings = (
             QSettings(format, scope, "Teachart", "settings")
             if not clean

@@ -30,6 +30,8 @@ class StatusSpinBox(QSpinBox):
 
 
 class StatusBarContainer(QObject):
+    """Container to hold and manage all widgets that should be displayed in a status bar."""
+
     messageShown = pyqtSignal(str, int)
     elementAdded = pyqtSignal(int)
 
@@ -52,6 +54,8 @@ class StatusBarContainer(QObject):
 
 
 class StatusBar(QStatusBar):
+    """Custom QStatusBar object that can handle a StatusBarContainer object."""
+
     def __init__(self, parent=...):
         super().__init__(parent)
         self._container: StatusBarContainer | None = None

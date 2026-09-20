@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QMenu,
 )
+from shiboken6 import isValid
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
@@ -252,27 +253,33 @@ class StartWindow(BaseMainWindow):
             self.fileOpened.emit(index.data(), self)
 
     def open_scheduled(self, index: QModelIndex) -> None:
+        """Opens a scheduled file at given index in the schedule model."""
         new_idx = self._schedule_model.index(index.row(), 5)
-        path = self._schedule_model.data(new_idx)
-        self.fileOpened.emit(Path(path), self)
+        if new_idx.isValid():
+            path = self._schedule_model.data(new_idx)
+            self.fileOpened.emit(Path(path), self)
 
     def open_file_dialog(self) -> None:
+        """Opens native file dialog. If a file has been selected a signal will be emitted with the selected path as a 'Path'-object"""
         path, _ = QFileDialog.getOpenFileName(
             self, tr("Open File Dialog"), filter=tr("Teachart document (*.tch)")
         )
         self.fileOpened.emit(Path(path), self)
 
     def set_past_schedules_visible(self, state: Qt.CheckState) -> None:
+        """Handles CheckState of the check box for showing past schedules in the list."""
         if state == Qt.CheckState.Checked:
             self._schedule_model.set_past_schedules_visible(True)
         else:
             self._schedule_model.set_past_schedules_visible(False)
 
     def on_date_changed(self, date: QDate) -> None:
+        """Handler when date in the calendar widget above the schedules list has been changed."""
         self._schedule_model.set_exclusive_date(date)
         self.update_schedule_message()
 
     def update_schedule_message(self) -> None:
+        """Updates the schedule message in the status bar."""
         count = self._schedule_model.rowCount()
         if count == 0:
             message = tr("No upcoming lessons today.")

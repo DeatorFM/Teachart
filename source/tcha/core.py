@@ -211,6 +211,9 @@ class AppCore(QApplication, metaclass=MetaApp):
     def arguments() -> list[str]:
         return super().arguments()
 
+    def db(self) -> QSqlDatabase | None:
+        return self._db
+
     def session_info(self) -> str:
         return f"""
 Session-ID:    {self.sessionId()}
@@ -222,6 +225,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
 """
 
     def _load_settings(self) -> None:
+        """Initialisation routine: Loads settings from file. If file does not exists or --clean is passed a new settings and database file will be created"""
         if not Settings.qsettings().allKeys() or self._launch_config.clean:
             self._first_time()
         if self._launch_config.test:
@@ -289,16 +293,16 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         )
 
     def _first_time(self) -> None:
+        """Routine on first startup or clean configuration."""
         qsettings = Values.default_qsettings(clean=self._launch_config.clean)
         Settings.set_qsettings(qsettings)
         Settings.set_value("Application/first_startup", False)
         self._db = create_database()
         Settings.set_value("User/dbpath", abspath(self._db.databaseName()))
-        language = self.language_dialog()
-        Settings.set_value("User/language", language.name)
 
-    def connect_signals(self) -> None:
-        self.aboutToQuit.connect(self.on_quitting)
+        # Will be implemented when translations have been added
+        # language = self.language_dialog()
+        # Settings.set_value("User/language", language.name)
 
     def debug_enabled(self) -> bool:
         return self._launch_config.debug
@@ -359,6 +363,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         return [Path(editor.path()) for editor in self.opened_editors()]
 
     def open_dialog(self, wtype: str) -> None:
+        """Opens dialog of type 'wtype'"""
         match wtype:
             case "Editor":
                 self.create_editor()
@@ -372,6 +377,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 self.open_about_dialog()
 
     def _on_window_closed(self, wtype: str, wid: int):
+        """Handler if a connected window of type BaseMainWindow is closed"""
         window: BaseMainWindow = self._dialog_manager.get_dialog(wtype, wid)
         StandardLogger.debug(f"Trying to close window  '{window}'.", extra={"sender": "APPCORE"})
         self._dialog_manager.mark_closed(wtype, wid)
@@ -408,6 +414,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         return editor_window.wid
 
     def open_file(self, path: Path, caller: BaseMainWindow | None = None) -> int:
+        """Opens file of path 'path'. If a caller window has been specified it will be used to show the loading progress of the file."""
         if path and path.exists() and path not in self.open_paths():
             editor_window = None
             wid = 0
@@ -481,6 +488,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         return wid
 
     def open_course_explorer(self) -> None:
+        """Opens DbManager window."""
         dialog = self._dialog_manager.open(
             "DbManager", self._course_model, self._schedule_model, None
         )
@@ -494,6 +502,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         self._dialog_manager.mark_closed("DbManager")
 
     def open_settings(self, parent=None) -> None:
+        """Opens Settings dialog."""
         dialog = self._dialog_manager.open(
             "SettingsDialog", self._course_model.database(), Settings.qsettings()
         )
@@ -516,6 +525,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         self._dialog_manager.mark_closed("SettingsDialog")
 
     def open_start_dialog(self, file_mode=False) -> None:
+        """Opens a window of type StartWindow. If 'file_mode' is True the window will be shown without the option to create a new file."""
         window = self._dialog_manager.open(
             "StartWindow", self._file_model, self._schedule_model, file_mode
         )
@@ -525,11 +535,13 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         window.show()
 
     def open_about_dialog(self) -> None:
+        """Opens window of type AboutDialog."""
         dialog = self._dialog_manager.open("AboutDialog")
         dialog.exec()
         self._dialog_manager.mark_closed("AboutDialog")
 
     def open_presenter(self, scene: QGraphicsScene, editor: Editor) -> None:
+        """Opens a presenter view with the given QGraphicsScene 'scene' and a reference to the calling Editor 'editor'."""
         presenter_view = self._dialog_manager.open("PresenterView", scene, editor)
         presenter_view.view.setScene(scene)
         presenter_view.set_current_editor(editor)
@@ -538,6 +550,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
         self.show_presenter()
 
     def show_presenter(self) -> None:
+        """Shows the currently open PresenterView if existing"""
         if self._dialog_manager.is_opened("PresenterView"):
             pv = self._dialog_manager.get_dialog("PresenterView")
             if WinApi.get_display_mode() == DisplayMode.Extended:
@@ -548,6 +561,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 QTimer.singleShot(500, lambda: pv.showFullScreen())
 
     def close_presenter(self) -> None:
+        """Closes the current presenter if existing."""
         presenter_view = self._dialog_manager.get_dialog("PresenterView")
         if presenter_view:
             presenter_view.view.setScene(None)
@@ -557,11 +571,13 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 WinApi.set_display_mode(self.init_display_mode)
 
     def _disable_presenter_mode(self) -> None:
+        """Disables presenter mode for every open editor instance."""
         for editor in self.opened_editors():
             editor.enable_presenter_mode(False)
 
     def on_screen_changed(self) -> None:
-        if self._dialog_manager.is_opened("PresenterView"):
+        """Handler for 'screenChanged' signal."""
+        if self._dialog_manager.is_opened("PresenterView"):  # Opens a PresenterView if created
             if WinApi.get_display_mode() == DisplayMode.Single:
                 self.init_display_mode = DisplayMode.Single
                 self._disable_presenter_mode()
@@ -573,10 +589,8 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
 
         self.init_display_mode = WinApi.get_display_mode()
 
-    def db(self) -> QSqlDatabase | None:
-        return self._db
-
     def restart(self) -> None:
+        """Restarts the application by reopening database and repplying settings."""
         StandardLogger.info("Restarting")
         if self._db is not None and self._db.isOpen():
             connection_name = self._db.connectionName()

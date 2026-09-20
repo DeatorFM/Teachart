@@ -126,6 +126,7 @@ class LessonFile(QObject):
         return v
 
     def open(self, mode: Literal["r", "w"], path: str | None = None) -> bool:
+        """Opens the file at 'path' with the given mode 'mode'."""
         if mode == "r" and path:
             try:
                 self._last_saved = QDateTime.currentDateTime()
@@ -239,7 +240,6 @@ class LessonFile(QObject):
             self.change_open_mode("r")
             self._logger.log(logging.INFO, "Finished writing successfully.")
 
-            self.init_reader()
             self._f.extract("structure.xml", self.temppath)
             self._f.extract("lesson.xml", self.temppath)
             self._f.extract("metadata.xml", self.temppath)
@@ -270,9 +270,11 @@ class LessonFile(QObject):
         self._state = WriteState.SerialisedBuffer
 
     def _copy(self, resobj: ResourceTransferObject) -> None:
+        """Copies a resource file to the .tch-archive"""
         self._f.write(resobj.src_path, f"resources/{resobj.filename}")
 
     def _write_new(self, resobj: ResourceTransferObject) -> None:
+        """Writes a new resource file to the .tch-archive"""
         with self._f.open(f"resources/{resobj.filename}", "w") as f:
             f.write(resobj.data)
 
@@ -288,13 +290,8 @@ class LessonFile(QObject):
             return f.read()
 
     def extracted(self, name: str) -> bool:
-        return osp.exists(osp.join(self.temppath, name))
-
-    def init_reader(self) -> bool:
-        if not self._reader and self._tempdir and self.file_id:
-            self._reader = IOLogger(self.file_id)
-            return True
-        return False
+        """Returns True if all contents of the -.tch-file have been extracted"""
+        return osp.exists(osp.join(self.temppath, name)
 
     def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
@@ -332,6 +329,7 @@ class LessonFile(QObject):
         return False
 
     def xml(self, name: str) -> str:
+        """Returns the content of an xml-subfile from .tch-archive as string."""
         if self.extracted(name) and name.endswith(".xml"):
             path = Path(self._tempdir.name) / name
             return path.read_text()
@@ -464,6 +462,7 @@ class XmlReader(QObject):
         self._cached_table_model = None
 
     def start_reading(self) -> bool:
+        """Marks the reading process as started if all conditions have been met."""
         if self._tchpath.has_required_files():
             self._reading_state = ReadState.Reading
             self._reading_progess = 0
@@ -475,6 +474,7 @@ class XmlReader(QObject):
         return False
 
     def finish_reading(self) -> None:
+        """Marks reading process as finished. Reading operations cannot be executed after this."""
         self._reading = ReadState.ReadingFinished
 
     @property
@@ -498,6 +498,7 @@ class XmlReader(QObject):
         return self._cached_table_model
 
     def clear_caches(self) -> None:
+        """Clears the caches of the read data."""
         self._cached_metadata = None
         self._cached_lesson = None
         self._cached_table_model = None
@@ -773,6 +774,7 @@ class XmlReader(QObject):
 
     @staticmethod
     def validate_version(version: str) -> bool:
+        """Validates if the given file version can be parsed."""
         return bool(version.isnumeric() and int(CURRENT_VERSION) >= int(version))
 
     def read_header(

@@ -477,6 +477,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
     # table.editingLevelChanged
     def editing_level_changed(self, level: EditingLevel) -> None:
+        """Handler of Table's 'editingLevelChanged'-signal."""
         StandardLogger.debug(f"Editing level changed to: {level.name}", extra={"sender": "EDITOR"})
         if level & EditingLevel.CellEditing:
             self.ui.table_group.setEnabled(True)
@@ -518,6 +519,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # table.currentEditorIndexChanged
     @pyqtSlot(QModelIndex)
     def current_editor_index_changed(self, idx: QModelIndex) -> None:
+        """Handler of Table's currentEditorIndexChanged'-signal."""
         if self.presenter_mode:
             model: BaseElementModel = idx.data()
             if model:
@@ -528,6 +530,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # table.clipboardChanged
     @pyqtSlot(ClipboardContent)
     def clipboard_changed(self, changed: ClipboardContent) -> None:
+        """Handler of QApplication's 'clipboardChanged'-signal"""
         if changed == ClipboardContent.NotParsable:
             self.ui.ac_paste.setEnabled(False)
             self.ui.ac_from_clipboard.setEnabled(False)
@@ -573,6 +576,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         )
 
     def has_index_copied(self) -> bool:
+        """Checks if the clipboard contains data of the application specific 'application/x-teachart'-format"""
         clipboard = QApplication.clipboard()
         if clipboard:  # noqa: SIM102
             if "application/x-teachart" in clipboard.mimeData().formats():
@@ -582,6 +586,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # Presenter Functions
 
     def enable_presenter_mode(self, enabled: bool) -> None:
+        """Setups table and editor ui for presenter mode and notifies application to create PresenterView instance."""
         self.ui.dw_presenter.setEnabled(enabled)
         self.ui.dw_presenter.setVisible(enabled)
         self.ui.tb_table.setEnabled(not enabled)
@@ -618,6 +623,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # Dialog opener
 
     def open_course_record(self) -> None:
+        """Opens RecordView window with currently selected course"""
         dialog = RecordView(self.lesson.course_id, self.courses.sourceModel(), self)
         dialog.managerCalled.connect(lambda: self.dialogCalled.emit("DbManager"))
         dialog.open()
@@ -674,7 +680,12 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
     # Event handlers
 
     def closeEvent(self, ev: QCloseEvent):
-        """The user is asked if they want to savbe the document when there are unsaved changes"""
+        """
+        The user is asked if they want to save the document when there are unsaved changes.
+        If 'Save' the application saves the document and closes the editor on completion.
+        If 'Discard' the editor is closed without saving the document.
+        If 'Cancel' the editor is not closed.
+        """
         if self.save_state is SaveState.Unsaved:
             result = QMessageBox.question(
                 self,

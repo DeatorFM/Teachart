@@ -152,13 +152,6 @@ class CellEditor(QListView):
 
         self.activated.connect(lambda: self.elementActivated.emit(True))
 
-        # Create context menu
-        self.context_menu = QMenu(self)
-        self.add_text_action = QAction("Add Text", self)
-        self.add_picture_action = QAction("Add Picture", self)
-        self.context_menu.addAction(self.add_text_action)
-        self.context_menu.addAction(self.add_picture_action)
-
     # Toolset methods
 
     def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
@@ -218,6 +211,7 @@ class CellEditor(QListView):
             )
 
     def remove_current_element(self) -> None:
+        """Removes element of current index"""
         result = QMessageBox.question(
             None,
             tr("Confirm removal"),
@@ -231,18 +225,21 @@ class CellEditor(QListView):
             model.removeRow(index.row())
 
     def move_element_up(self) -> None:
+        """Move element with active editor up by one"""
         model = self.model()
         index = self.currentIndex()
         if index.row() > 0:
             model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() - 1)
 
     def move_element_down(self) -> None:
+        """Move element with active editor down by one"""
         model = self.model()
         index = self.currentIndex()
         if index.row() != model.rowCount() - 1:
             model.moveRow(QModelIndex(), index.row(), QModelIndex(), index.row() + 1)
 
     def clear_item(self) -> None:
+        """Removes all objects from the current CellItem"""
         result = QMessageBox.question(
             None,
             "Confirm deletion",
@@ -269,7 +266,6 @@ class CellEditor(QListView):
             self.geometriesChanged.emit()
 
     def copy_index(self, index: QModelIndex) -> None:
-        # TODO: Implement function for element editors
         if index.isValid():
             clipboard = QApplication.clipboard()
             mime_data = self.model().mimeData([index], Qt.DropAction.CopyAction)
@@ -280,9 +276,6 @@ class CellEditor(QListView):
             self.editor and self.editor.can_copy()
         ):  # Copy permission check to avoid overwriting copied data of active editor
             self.copy_index(self.currentIndex())
-
-    def copied_index(self) -> QModelIndex:
-        return QModelIndex
 
     def enable_presenter_mode(self, enabled: bool):
         self._pres_mode = enabled
@@ -453,7 +446,7 @@ class CellDelegate(QStyledItemDelegate):
         if event.type() == QEvent.Type.FocusOut:
             return True
 
-        if isinstance(event, QKeyEvent) and isinstance(object, CellEditor):
+        if isinstance(event, QKeyEvent) and isinstance(object, CellEditor):  # noqa: SIM102
             if object.state() == QListView.State.EditingState:
                 object.keyPressEvent(event)
                 return True
@@ -501,6 +494,7 @@ class HeaderView(QHeaderView):
         return super().model()
 
     def activate_editor(self, section: int) -> None:
+        """Activates the QLineEdit editor to edit the label of a section"""
         if self.orientation() == Qt.Orientation.Horizontal:
             self.editingStarted.emit()
             text = self.model().headerData(
@@ -1428,15 +1422,9 @@ class Table(BaseTable):
                 if result == QMessageBox.StandardButton.Yes:
                     self.setCurrentIndex(QModelIndex())
                     model.removeColumn(rmv_col)
-                    if self.copied_index() and self.copied_index().column() == rmv_col:
-                        QApplication.clipboard().clear()
             else:
                 self.setCurrentIndex(QModelIndex())
                 model.removeColumn(rmv_col)
-                # if not self.copied_index().isValid():
-                #     clipboard = QApplication.clipboard()
-                #     clipboard.mimeData().removeFormat("application/x-teachart")
-                #     clipboard.dataChanged.emit()
 
     def keyPressEvent(self, e: QKeyEvent):
         if Qt.KeyboardModifier.ControlModifier in e.keyCombination().keyboardModifiers():
