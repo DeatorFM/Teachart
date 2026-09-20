@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.consts import (
-    CellAction,
     ClipboardContent,
     EditingLevel,
     SaveState,

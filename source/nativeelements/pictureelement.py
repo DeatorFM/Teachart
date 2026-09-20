@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cache
 from pathlib import Path
 
 from nativeelements.audioelement import AudioElementDefinitions
@@ -623,6 +624,10 @@ class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def editor(model: PictureModel):
         return PictureEditor(model)
+
+    @staticmethod
+    def delegate(toolset: PictureToolset | None = None, parent=None):
+        return PictureDelegate(toolset, parent)
 
     @staticmethod
     def resource_flag():

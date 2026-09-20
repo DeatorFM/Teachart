@@ -355,12 +355,17 @@ class CellDelegate(QStyledItemDelegate):
 
     def __init__(self, parent: QObject | None = ...) -> None:
         super().__init__(parent)
-        self.extra_emit = False
+        self._delegates = {}
         self._open_editor_index = QModelIndex()
+
         self.hovered_index = Trindex(QModelIndex(), -1)
+        self.extra_emit = False
 
         self.element_selection = False
         self.mouse_pos = QPoint()
+
+    def set_delegates(self, delegates: dict[str, BaseElementDelegate]):
+        self._delegates = delegates
 
     def paint(
         self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex
@@ -384,7 +389,7 @@ class CellDelegate(QStyledItemDelegate):
                 cmodel = CellModel(cell, index)
                 for i, model in enumerate(cell):
                     if model:
-                        delegate: BaseElementDelegate = model.delegate(None, self.parent())
+                        delegate: BaseElementDelegate = self._delegates.get(model.name)
                         delegate_size = delegate.sizeHint(sub_option, cmodel.index(i, 0))
                         sub_option.rect = QRect(
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
@@ -438,8 +443,6 @@ class CellDelegate(QStyledItemDelegate):
         model.setData(index, editor.model().item)
 
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
-        # item: CellItem = index.data()
-        # item.recalculate_items()
         self.sizeHintChanged.emit(index)
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
@@ -579,7 +582,6 @@ class BaseTable(QTableView):
         self.setVerticalHeader(HeaderView(Qt.Orientation.Vertical, self))
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.verticalHeader().sectionMoved.connect(self.update_row_geometries)
         self.verticalHeader().sectionMoved.connect(self.close_active_editor)
         self.verticalHeader().sectionMoved.connect(self._on_vsection_moved)
         self.horizontalHeader().sectionResized.connect(self.close_active_editor)
@@ -653,7 +655,7 @@ class BaseTable(QTableView):
                 )
                 self.horizontalHeader().resizeSection(column, size)
 
-            self.update_row_geometries()
+            self.update_row_geometries(QModelIndex())
             self.update_count_label()
 
             return True
@@ -816,10 +818,10 @@ class BaseTable(QTableView):
             self.verticalHeader().resizeSections()
             super().paintEvent(e)
 
-    def update_row_geometries(self) -> None:
-        self.verticalHeader().resizeSections()
-        self.update()
-        self.viewport().update()
+    def update_row_geometries(self, index: QModelIndex = QModelIndex()) -> None:
+        if index.isValid():
+            self.verticalHeader().resizeSection(index.row(), self.sizeHintForRow(index.row()))
+        self.update(index)
 
     def update_count_label(self) -> None:
         translated1 = tr("R")
@@ -884,7 +886,7 @@ class BaseTable(QTableView):
         super().keyReleaseEvent(ev)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if event.buttons() & Qt.MouseButton.LeftButton:
+        if event.buttons() & Qt.MouseButton.LeftButton:  # noqa: SIM102
             if self._drag_start_position:
                 distance = (event.pos() - self._drag_start_position).manhattanLength()
                 if distance >= QApplication.startDragDistance():
@@ -979,7 +981,7 @@ class BaseTable(QTableView):
         return False
 
     def copy_index(self, index: QModelIndex) -> None:
-        if index.isValid():
+        if index.isValid():  # noqa: SIM102
             if self.editor and self.editor.state() == QListView.State.EditingState:
                 element_index = self.editor.currentIndex()
                 if element_index.isValid():
@@ -1625,8 +1627,8 @@ class FrozenRowTable(BaseTable):
         else:
             return super().sizeHint()
 
-    def update_row_geometries(self):
-        super().update_row_geometries()
+    def update_row_geometries(self, index: QModelIndex = QModelIndex()):
+        super().update_row_geometries(index)
         self.adjustSize()
 
     def wheelEvent(self, ev: QWheelEvent):

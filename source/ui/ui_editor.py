@@ -901,6 +901,12 @@ class Ui_Editor(object):
             toolset.visibilityChanged.connect(self.on_element_toolbar_visibilty_changed)
             d[key] = toolset
         self.table.set_toolset_reference(d)
+        self.table.itemDelegate().set_delegates(
+            {
+                definition.name(): definition.delegate(None, self.table.itemDelegate().parent())
+                for definition in edefinitions.values()
+            }
+        )
         return d
 
     def on_element_toolbar_visibilty_changed(self, open: bool) -> None:

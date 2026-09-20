@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unicodedata
 import webbrowser
+from functools import cache
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -1295,6 +1296,10 @@ class TextElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def editor(model: TextModel):
         return TextEditor(model)
+
+    @staticmethod
+    def delegate(toolset: TextToolset | None, parent=None):
+        return TextDelegate(toolset, parent)
 
     @staticmethod
     def resource_flag():

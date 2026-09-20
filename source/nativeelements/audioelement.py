@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os.path
 from copy import deepcopy
+from functools import cache
 from pathlib import Path
 from typing import Self, Type
 
@@ -757,6 +758,10 @@ class AudioElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def editor(model: AudioModel) -> AudioEditor:
         return AudioEditor(model)
+
+    @staticmethod
+    def delegate(toolset: AudioToolset | None = None, parent=None):
+        return AudioDelegate(toolset, parent)
 
     @staticmethod
     def resource_flag():

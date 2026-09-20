@@ -291,7 +291,7 @@ class LessonFile(QObject):
 
     def extracted(self, name: str) -> bool:
         """Returns True if all contents of the -.tch-file have been extracted"""
-        return osp.exists(osp.join(self.temppath, name)
+        return osp.exists(osp.join(self.temppath, name))
 
     def get_table(self) -> TableModel | None:
         """Returns TableModel if file is loaded."""
