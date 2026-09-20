@@ -68,6 +68,8 @@ def decode_mime_data(mime_data: QMimeData) -> MimeData | None:
 
 @dataclass(frozen=True)
 class MimeData:
+    """Deserialised mime data of an element model as structure"""
+
     model_id: int
     level: int
     table_row: int
@@ -121,6 +123,7 @@ class CellItem(list):
         raise TypeError(f"Argument must be of type of BaseElementModel but type is {type(object)}")
 
     def rects(self, top_left: QPoint = QPoint(0, 0)) -> list[QRect]:
+        """Returns a list of QRects of each model."""
         y_offset = 0
         rects = []
         for model in self:
@@ -158,6 +161,7 @@ class CellItem(list):
             item.recalculate_size(self.width)
 
     def set_header_item(self, hheader: HeaderDataItem) -> None:
+        """Sets reference to header item for size calculation."""
         self._header = hheader
         self.recalculate_items()
 
@@ -168,6 +172,7 @@ class CellItem(list):
         return new_item
 
     def row_for_pos(self, y_pos: int) -> int:
+        """Returns the index of the row at the given y position."""
         y_offset = 0
         for row, model in enumerate(self):
             model: BaseElementModel
@@ -197,6 +202,8 @@ class CellItem(list):
 
 @dataclass
 class CachedModel:
+    """Representation of a cached model for editing."""
+
     index: QPersistentModelIndex
     model: CellModel
 
@@ -242,6 +249,7 @@ class CellModel(QAbstractListModel):
         return len(self._work_data)
 
     def add_model(self, model: BaseElementModel) -> None:
+        """Adds model to collection"""
         self.beginInsertRows(QModelIndex(), len(self._data), len(self._data))
         self._data.append(model)
         self._work_data.append(model)
@@ -281,6 +289,7 @@ class CellModel(QAbstractListModel):
             self.add_model(model)
 
     def create_from_clipboard(self, definition: BaseElementDefinitions | None) -> None:
+        """Creates a model from the current clipboard data using the given element definition and adds the created model to the collection if successful."""
         if definition:
             mime_data = QGuiApplication.clipboard().mimeData()
             model = definition.model_from_mime_data(self.tablemodel.rescont, mime_data)
@@ -288,6 +297,7 @@ class CellModel(QAbstractListModel):
                 self.add_model(model)
 
     def clear(self) -> None:
+        """Removes all data."""
         self.beginResetModel()
         self._data.clear()
         self._work_data.clear()
@@ -309,6 +319,7 @@ class CellModel(QAbstractListModel):
             return False
 
     def pop_model(self, row: int) -> BaseElementModel:
+        """Removes a model from the data array at the given row number and returns it."""
         model = self._data.pop(row)
         self._work_data.pop(row)
         self.layoutChanged.emit()
@@ -507,13 +518,6 @@ class CellModel(QAbstractListModel):
         except IndexError:
             return False
 
-    @classmethod
-    def create_with_models(cls: Self, models: Sequence[BaseElementModel]) -> Self:
-        cell = cls()
-        for model in models:
-            cell.add_model(model)
-        return cell
-
     def parent(self):
         return super().parent()
 
@@ -544,6 +548,8 @@ class CellModel(QAbstractListModel):
 
 @dataclass
 class HeaderDataItem:
+    """Data representation of a section in a QHeaderView"""
+
     visual_index: int
     orientation: Qt.Orientation
     section_size: int
@@ -552,10 +558,12 @@ class HeaderDataItem:
 
     @classmethod
     def horizontal(cls, idx: int) -> HeaderDataItem:
+        """Returns a default horizontal HeaderDataItem with the given visual index 'idx'"""
         return cls(idx, Qt.Orientation.Horizontal, 100)
 
     @classmethod
     def vertical(cls, idx: int) -> HeaderDataItem:
+        """Returns a default vertical HeaderDataItem with the given visual index 'idx'"""
         return cls(idx, Qt.Orientation.Vertical, 30, False)
 
     def __deepcopy__(self, memo: dict | None = None) -> HeaderDataItem:
@@ -583,14 +591,6 @@ class TableModel(QAbstractTableModel):
     @property
     def model_id(self) -> int:
         return self._model_id
-
-    def is_valid(self) -> bool:
-        return (
-            self.rowCount() >= 1
-            and self.columnCount() >= 1
-            and len(self._header_data[Qt.Orientation.Horizontal]) == self.columnCount()
-            and len(self._header_data[Qt.Orientation.Vertical]) == self.rowCount()
-        )
 
     @property
     def rescont(self) -> ResourceContainer:
@@ -628,9 +628,11 @@ class TableModel(QAbstractTableModel):
     # Indexing utilities
 
     def get_row(self, row: int) -> tuple[CellItem]:
+        """Gets whole row as tuple"""
         return tuple(self._data[row])
 
     def get_column(self, column: int) -> tuple[CellItem]:
+        """Gets whole column as tuple"""
         return tuple([row[column] for row in self._data])
 
     def visual_row_order(self) -> dict[int, int]:
@@ -875,6 +877,7 @@ class TableModel(QAbstractTableModel):
         return True
 
     def _decode_element_data(self, bytearr: QByteArray) -> list[BaseElementModel]:
+        """Decodes the bytes to a list of elements"""
         stream = QDataStream(bytearr, QIODevice.OpenModeFlag.ReadOnly)
         models = []
         while not stream.atEnd():
@@ -999,6 +1002,7 @@ class TableModel(QAbstractTableModel):
         return ["application/x-teachart"]
 
     def swap_items(self, source_index: QModelIndex, destination_index: QModelIndex) -> None:
+        """Swaps the items positions source_index<->destination_index"""
         source_row, source_column = source_index.row(), source_index.column()
         destination_row, destination_column = (
             destination_index.row(),
@@ -1030,6 +1034,7 @@ class TableModel(QAbstractTableModel):
         self.modelChanged.emit()
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
+        """Writes table data to a xml stream writer."""
         writer.writeStartElement("table")
         writer.writeAttribute("rows", str(self.rowCount()))
         writer.writeAttribute("columns", str(self.columnCount()))
@@ -1054,9 +1059,6 @@ class TableModel(QAbstractTableModel):
         writer.writeEndElement()
         return writer
 
-    def expected_row_height(self, row: int) -> int:
-        return max([cell.height for cell in self._data[row]])
-
     def flags(self, index):
         return (
             Qt.ItemFlag.ItemIsEditable
@@ -1070,8 +1072,8 @@ class TableModel(QAbstractTableModel):
         self._data.clear()
         self._header_data.clear()
 
-    def __bool__(self) -> bool:
-        return self.is_valid()
+    # def __bool__(self) -> bool:
+    #     return self.is_valid()
 
     def __del__(self) -> None:
         if self._data:
@@ -1082,7 +1084,7 @@ class TableModel(QAbstractTableModel):
 
 
 class IndexModel(QAbstractListModel):
-    """Model to only display the row indices."""
+    """Model to only display the row indices using visual indexes of a header."""
 
     def __init__(self, vheader: QHeaderView, parent=None):
         super().__init__(parent)
@@ -1106,6 +1108,7 @@ class IndexModel(QAbstractListModel):
             self.endRemoveRows()
 
     def add_inactive_index(self, idx: QPersistentModelIndex) -> None:
+        """Add index to a list of indexes that are invisible to the view."""
         if idx.isValid():
             self._inactive.append(idx)
             visual_row = self._vheader.visualIndex(idx.row())
@@ -1113,6 +1116,7 @@ class IndexModel(QAbstractListModel):
             self.dataChanged.emit(QModelIndex(visual_idx), QModelIndex(visual_idx))
 
     def clear_inactive_indices(self):
+        """Clears list of invisible indexes to the view."""
         if self._inactive:
             min_row = min(self._inactive, key=lambda x: self._vheader.visualIndex(x.row())).row()
             max_row = max(self._inactive, key=lambda x: self._vheader.visualIndex(x.row())).row()

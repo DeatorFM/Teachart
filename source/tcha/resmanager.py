@@ -253,7 +253,7 @@ class ResourceContainer(QObject):
     def make_path(self, extension: str) -> str:
         """Creates path to temporary folder and returns its random generated path as a string"""
         extension = extension.strip(".")
-        return f"{self._tempdir.name}/{self._generate_32_char_string()}.{extension}"
+        return f"{self.tempdir.name}/{self._generate_32_char_string()}.{extension}"
 
     def _generate_32_char_string(self) -> str:
         characters = string.ascii_letters + string.digits

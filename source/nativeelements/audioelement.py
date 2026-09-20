@@ -805,7 +805,7 @@ class AudioElementDefinitions(BaseElementDefinitions):
                 urls,
             )
         )[0].toLocalFile()
-        resobj = rescont.save(AudioElementDefinitions.type(), url)
+        resobj = rescont.save(AudioElementDefinitions.type(), Path(url))
         return AudioModel(resobj)
 
     @staticmethod

@@ -302,6 +302,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 f"Save operation started for file: {self.lessonfile.path} with document properties:\n{self.document_info()}",
                 extra={"sender": "EDITOR"},
             )
+            self.save_state = SaveState.Saving
             self.fileSaving.emit()
             save(None)
             return True

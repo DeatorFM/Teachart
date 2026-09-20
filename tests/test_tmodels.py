@@ -373,10 +373,6 @@ class TestTableModel:
         model2 = TableModel.new(2, 2)
         assert model1.model_id != model2.model_id
 
-    def test_is_valid(self, table_model):
-        """Test is_valid returns True for valid model."""
-        assert table_model.is_valid() is True
-
     def test_insert_rows(self, table_model):
         """Test inserting rows."""
         initial_rows = table_model.rowCount()

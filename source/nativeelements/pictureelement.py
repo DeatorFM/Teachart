@@ -576,9 +576,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def get_file(parent=None) -> str | None:
         path, _ = QFileDialog.getOpenFileName(
-            parent,
-            directory=str(Path.home()),
-            filter=tr("Image files *.png, *.bmp *.jpeg *.jpg"),
+            parent, directory=str(Path.home()), filter=tr("Image files *.png, *.bmp *.jpeg *.jpg")
         )
         if path and Settings.value("User/editor.compress_image"):
             return PictureElementDefinitions.compress_resource(path)
@@ -678,7 +676,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
             path = rescont.make_path("png")
             image = QImage(mime_data.imageData())
             if image.save(path):
-                resobj = rescont.save(PictureElementDefinitions.type(), path)
+                resobj = rescont.save(PictureElementDefinitions.type(), Path(path))
                 return PictureModel(resobj)
         elif mime_data.hasUrls():
             url = mime_data.urls()[0]

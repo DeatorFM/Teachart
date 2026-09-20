@@ -94,8 +94,6 @@ class Ui_Editor(object):
         self.menu_debug = QMenu(parent=self.menubar)
         self.menu_debug.setObjectName("menu_debug")
 
-        self.menu_debug.setVisible(debug_enabled())
-
         self.menuHelp = QMenu(parent=self.menubar)
         self.menuHelp.setObjectName("menuHelp")
 
@@ -687,6 +685,7 @@ class Ui_Editor(object):
         self.menubar.addAction(self.menu_view.menuAction())
         self.menubar.addAction(self.menu_opt.menuAction())
         self.menubar.addAction(self.menu_debug.menuAction())
+        self.menu_debug.menuAction().setVisible(debug_enabled())
         self.menubar.addAction(self.menuHelp.menuAction())
 
         # Construct Lesson Toolbar

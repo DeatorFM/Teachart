@@ -108,6 +108,7 @@ class CellGeometry:
         return self._index
 
     def get_cell_index(self, gcell_top_left: QPoint, gmouse_pos: QPoint) -> int:
+        """Returns the index for the mouse position and the top left corner of the cell"""
         ypos = gmouse_pos.y() - gcell_top_left.y()
         if ypos < self._height_range:
             return bisect.bisect_left(self._positions, ypos)
@@ -124,6 +125,7 @@ class CellEditor(QListView):
     currentIndexChanged = pyqtSignal(QModelIndex, QModelIndex)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Used to edit a cell model"""
         super().__init__(parent)
         self._toolsets: dict[str, BaseElementToolset] | None = None
 
@@ -160,6 +162,7 @@ class CellEditor(QListView):
     # Toolset methods
 
     def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
+        """Sets the toolsets that needs to be used by the element editors"""
         self._toolsets = toolsets
 
     def on_closed(self) -> None:
@@ -170,6 +173,7 @@ class CellEditor(QListView):
 
     @property
     def editor(self) -> BaseElementEditor | BaseTextElementEditor | None:
+        """Returns the currently opened editor if existing else None"""
         return self.indexWidget(self.currentIndex())
 
     def setModel(self, model):
@@ -441,8 +445,8 @@ class CellDelegate(QStyledItemDelegate):
         model.setData(index, editor.model().item)
 
     def update_cell_geometry(self, rect: QRect, index: QModelIndex) -> None:
-        item: CellItem = index.data()
-        item.recalculate_items()
+        # item: CellItem = index.data()
+        # item.recalculate_items()
         self.sizeHintChanged.emit(index)
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
@@ -504,7 +508,7 @@ class HeaderView(QHeaderView):
                 self.orientation(),
                 Qt.ItemDataRole.DisplayRole,
             )
-            self.line_edit.setText(text)
+            self.line_edit.setText(str(text))
             self.line_edit.show()
             self._last_section = self.visualIndex(section)
             rect = self.rect()
