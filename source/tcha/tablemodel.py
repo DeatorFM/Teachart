@@ -159,6 +159,7 @@ class CellItem(list):
             item: BaseElementModel
             # IMPLEMENT PARALLELISATION OF RECALCULATION
             item.recalculate_size(self.width)
+        print("New item height: ", self.height)
 
     def set_header_item(self, hheader: HeaderDataItem) -> None:
         """Sets reference to header item for size calculation."""

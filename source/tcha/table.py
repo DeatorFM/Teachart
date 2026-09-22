@@ -379,10 +379,10 @@ class CellDelegate(QStyledItemDelegate):
             # Apply 2px padding to simulate CellEditor frame
             cell_rect = option.rect.adjusted(2, 2, -2, -2)
             y_offset = 2
-            if (
-                cell_rect.width() < 140 and cell_rect.width() > 135
-            ):  # Text display problems between 125 and 130 to fix
-                cell_rect.setWidth(140)
+            # if (
+            #     cell_rect.width() < 140 and cell_rect.width() > 135
+            # ):  # Text display problems between 125 and 130 to fix
+            #     cell_rect.setWidth(140)
             cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
@@ -519,14 +519,14 @@ class HeaderView(QHeaderView):
 
         if self.orientation() == Qt.Orientation.Horizontal:
             cells: list[CellItem] = self.model().get_column(logicalIndex)
-            for cell in cells:
-                cell.recalculate_items()
             self.model().setHeaderData(
                 logicalIndex,
                 self.orientation(),
                 QSize(newSize, 30),
                 Qt.ItemDataRole.SizeHintRole,
             )
+            for cell in cells:
+                cell.recalculate_items()
 
     def on_editing_finished(self) -> None:
         text = self.line_edit.text()
@@ -963,6 +963,7 @@ class BaseTable(QTableView):
             if success:
                 event.accept()
                 self.changeMade.emit()
+                self.update_row_geometries(drop_index)
                 self.scrollTo(drop_index)
             else:
                 event.ignore()

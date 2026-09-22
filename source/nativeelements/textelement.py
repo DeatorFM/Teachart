@@ -188,6 +188,7 @@ class TextModel(QTextDocument, BaseElementModel):
         option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         self.setDefaultTextOption(option)
         self.setDocumentMargin(8.0)
+        self.setUseDesignMetrics(True)
 
     def xml(self, writer: QXmlStreamWriter) -> QXmlStreamWriter:
         writer.writeEmptyElement("element")
@@ -218,7 +219,13 @@ class TextModel(QTextDocument, BaseElementModel):
 
     def recalculate_size(self, width: int):
         self.setTextWidth(width - 8)
-        self.set_item_size(QSize(width, self.size().toSize().height() + 10))
+        self.set_item_size(
+            QSize(
+                width,
+                self.size().toSize().height() + 10 if self.size().toSize().height() > 30 else 30,
+            )
+        )
+        print("TextElement item height: ", self._item_size.height())
 
     def editable(self) -> bool:
         return True
@@ -858,16 +865,10 @@ class TextDelegate(BaseElementDelegate):
         # Apply 2px padding for element content
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
 
-        document = QTextDocument()
-        document.setHtml(data.toHtml())
-        document.setDocumentMargin(8.0)  # Match TextModel's document margin
-        if document.characterCount() > 0:
-            document.setTextWidth(float(sub_rect.width() - 8))  # Consistent with sizeHint
-
         painter.save()
         painter.translate(sub_rect.topLeft())
 
-        document.drawContents(painter)
+        data.drawContents(painter)
         painter.restore()
 
         if index.row() < index.model().rowCount() - 1:
