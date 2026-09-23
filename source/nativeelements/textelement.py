@@ -3,6 +3,7 @@ from __future__ import annotations
 import unicodedata
 import webbrowser
 from functools import cache
+from typing import TypedDict, NotRequired
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -273,6 +274,17 @@ class TextModel(QTextDocument, BaseElementModel):
     def close(self) -> None:
         self._resource.delete_member()
         self._resource = None
+
+class TextProps(TypedDict, total=False):
+    family: list[str]
+    size: float
+    bold: bool
+    italic: bool
+    underlined: bool
+    alignment: Qt.AlignmentFlag
+    veralign: QTextCharFormat.VerticalAlignment
+    color: QColor
+    bgcolor: QColor
 
 
 class TextEditor(BaseTextElementEditor):
@@ -943,7 +955,7 @@ class TextDelegate(BaseElementDelegate):
 
 
 class TextToolset(BaseElementToolset):
-    fontSet = pyqtSignal(dict)
+    fontSet = pyqtSignal(TextProps)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -1038,7 +1050,7 @@ class TextToolset(BaseElementToolset):
         self.ui.tabletools_group.setVisible(visible)
 
     @pyqtSlot(dict)
-    def set_font_props(self, props: dict) -> None:
+    def set_font_props(self, props: TextProps) -> None:
         for key, value in props.items():
             match key:
                 case "family":
@@ -1057,8 +1069,8 @@ class TextToolset(BaseElementToolset):
                     self.show_alignment(value)
                 case "veralign":
                     self.show_vertical_alignment(value)
-                # case "color":
-                #     self.set_button_color(self._fontProperties["color"], value)
+                case "color":
+                    self.set_button_color(self._fontProperties["color"], value)
                 # case "bcolor":
                 #     self.set_bg_button_color(self._fontProperties["bcolor"], value)
             self._fontProperties[key] = value

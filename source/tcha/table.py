@@ -525,6 +525,7 @@ class HeaderView(QHeaderView):
                 QSize(newSize, 30),
                 Qt.ItemDataRole.SizeHintRole,
             )
+            # Recalculate every item based on
             for cell in cells:
                 cell.recalculate_items()
 
