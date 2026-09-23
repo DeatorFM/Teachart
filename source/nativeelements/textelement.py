@@ -3,7 +3,7 @@ from __future__ import annotations
 import unicodedata
 import webbrowser
 from functools import cache
-from typing import TypedDict, NotRequired
+from typing import NotRequired, TypedDict
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -188,6 +188,9 @@ class TextModel(QTextDocument, BaseElementModel):
         option = self.defaultTextOption()
         option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         self.setDefaultTextOption(option)
+        font = self.defaultFont()
+        font.setFamilies(["Calibri"])
+        font.setPointSize(12)
         self.setDocumentMargin(8.0)
         self.setUseDesignMetrics(True)
 
@@ -275,6 +278,7 @@ class TextModel(QTextDocument, BaseElementModel):
         self._resource.delete_member()
         self._resource = None
 
+
 class TextProps(TypedDict, total=False):
     family: list[str]
     size: float
@@ -300,11 +304,10 @@ class TextEditor(BaseTextElementEditor):
         self.setDocument(model)
 
         # Attributes
-        self.type_lang = Locale[Settings.qsettings().value("User/language", "EnglishUK", str)]
         self.last_char: str
-        self.last_format: dict = {
+        self.last_format: TextProps = {
             "family": ["Calibri"],
-            "size": 10.0,
+            "size": 12.0,
             "bold": False,
             "italic": False,
             "underlined": False,
@@ -317,17 +320,14 @@ class TextEditor(BaseTextElementEditor):
         self.menu = TextEditorMenu(self)
         self._dialog = None
 
-        if not self.is_empty():
-            self.currentPropsChanged.emit(self.current_text_props())
-
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setMouseTracking(True)  # When a hyperlink is under the mouse
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setLineWrapMode(TextEditor.LineWrapMode.FixedPixelWidth)
         self.setLineWrapColumnOrWidth(3)
-        self.textCursor().movePosition(QTextCursor.MoveOperation.End)
         self.connect_signals()
+        self.textCursor().movePosition(QTextCursor.MoveOperation.End)
 
     @property
     def toolset(self) -> str:
@@ -405,7 +405,7 @@ class TextEditor(BaseTextElementEditor):
             self.sizeChanged.emit(old_height, new_height)
 
     @pyqtSlot(dict)
-    def set_text_format(self, props: dict) -> None:
+    def set_text_format(self, props: TextProps) -> None:
         """Gets signal from the editor when the font properties are changed by the user"""
         self.setFocus()
 
@@ -438,10 +438,7 @@ class TextEditor(BaseTextElementEditor):
         self.mergeCurrentCharFormat(cformat)
 
     def bool_to_weight(self, bold: bool) -> QFont.Weight:
-        if bold:
-            return QFont.Weight.Bold
-        else:
-            return QFont.Weight.Normal
+        return QFont.Weight.Bold if bold else QFont.Weight.Normal
 
     def allowed_font_size(self, point: float) -> float:
         """Prevents that font size is larger than width"""
@@ -477,7 +474,7 @@ class TextEditor(BaseTextElementEditor):
         super().mouseMoveEvent(e)
 
     def wheelEvent(self, e):
-        return
+        e.ignore()
 
     def on_cursor_position_changed(self) -> None:
         table = self.in_table()
@@ -623,9 +620,7 @@ class TextEditor(BaseTextElementEditor):
 
     def in_table(self) -> bool:
         cursor = self.textCursor()
-        if cursor.currentTable():
-            return True
-        return False
+        return bool(cursor.currentTable())
 
     def open_symbol_dialog(self) -> None:
         self._dialog = SymbolDialog(self.currentFont().family(), self)
@@ -675,16 +670,13 @@ class TextEditor(BaseTextElementEditor):
             self.viewport().setCursor(Qt.CursorShape.IBeamCursor)
             return False
 
-    def current_text_props(self) -> dict:
+    def current_text_props(self, include_color=False) -> TextProps:
         cursor = self.textCursor()
         cformat = cursor.charFormat()
-        props = {}
+        props = TextProps()
 
         if not cursor.hasSelection():
-            if cformat.fontWeight() == 700:
-                props["bold"] = True
-            else:
-                props["bold"] = False
+            props["bold"] = cformat.fontWeight() == 700
             props["italic"] = cformat.fontItalic()
             props["underlined"] = cformat.fontUnderline()
             props["family"] = self.has_format(cformat.fontFamilies(), self.last_format["family"])
@@ -693,16 +685,20 @@ class TextEditor(BaseTextElementEditor):
             props["alignment"] = self.alignment()
 
             if cformat.fontPointSize() > 0:
-                if cformat.fontPointSize() % 1 == 0:
-                    props["size"] = int(cformat.fontPointSize())
-                else:
-                    props["size"] = cformat.fontPointSize()
+                props["size"] = (
+                    int(cformat.fontPointSize())
+                    if cformat.fontPointSize() % 1 == 0
+                    else cformat.fontPointSize()
+                )
+
             else:
-                if self.fontPointSize() % 1 == 0:
-                    props["size"] = int(self.last_format["size"])
-                else:
-                    props["size"] = self.last_format["size"]
-            props["color"] = self.textColor()
+                props["size"] = (
+                    int(self.last_format["size"])
+                    if self.fontPointSize() % 1 == 0
+                    else self.last_format["size"]
+                )
+            if include_color:
+                props["color"] = self.textColor()
 
         return props
 
@@ -955,7 +951,7 @@ class TextDelegate(BaseElementDelegate):
 
 
 class TextToolset(BaseElementToolset):
-    fontSet = pyqtSignal(TextProps)
+    fontSet = pyqtSignal(dict)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -977,8 +973,7 @@ class TextToolset(BaseElementToolset):
         editor.currentPropsChanged.connect(self.set_font_props)
         editor.tableEntered.connect(self.set_table_tools_visible)
 
-        if editor.is_empty():
-            self.set_font_props(editor.current_text_props())
+        self.set_font_props(editor.current_text_props(True))
 
         self.fontSet.connect(editor.set_text_format)
 
@@ -1070,7 +1065,7 @@ class TextToolset(BaseElementToolset):
                 case "veralign":
                     self.show_vertical_alignment(value)
                 case "color":
-                    self.set_button_color(self._fontProperties["color"], value)
+                    self.set_button_color(value)
                 # case "bcolor":
                 #     self.set_bg_button_color(self._fontProperties["bcolor"], value)
             self._fontProperties[key] = value
@@ -1088,17 +1083,17 @@ class TextToolset(BaseElementToolset):
         return self._fontProperties
 
     def on_font_family_changed(self) -> None:
-        props = {}
+        props = TextProps()
         props["family"] = self.ui.cb_Font.currentFont().families()
         self.fontSet.emit(props)
 
     def on_font_size_changed(self, value: float) -> None:
-        props = {}
+        props = TextProps()
         props["size"] = value
         self.fontSet.emit(props)
 
     def on_color_set(self, color: QColor) -> None:
-        props = {}
+        props = TextProps()
         if color.name() == "#ffffff" or color.name() == "#000000":
             props["color"] = QColor()
         else:
@@ -1109,16 +1104,13 @@ class TextToolset(BaseElementToolset):
     def set_button_color(self, color: QColor) -> None:
         if color:
             svg = Svg.from_file(":/common/text_color")
+            ic_engine = SvgIconEngine(svg)
             if color.isValid():
-                ic_engine = SvgIconEngine(svg)
+                print("Color set: ", color.name())
                 ic_engine.set_path_color("lineBottom", color)
             else:
-                theme_val = Settings.qsettings().value("User/appearance", "light", str)
-                ic_engine = SvgIconEngine(svg)
-                if theme_val == "light":
-                    ic_engine.set_path_color("lineBottom", QColor(Qt.GlobalColor.black))
-                else:
-                    ic_engine.set_path_color("lineBottom", QColor(Qt.GlobalColor.white))
+                print("Standard color set: ", self.palette().text().color().name())
+                ic_engine.set_path_color("lineBottom", self.palette().text().color())
             self.ui.ac_textcolor.setProperty("color", color)
             self.ui.ac_textcolor.setIcon(QIcon(ic_engine))
 
@@ -1129,17 +1121,17 @@ class TextToolset(BaseElementToolset):
     #     return self.csb_BackgroundColor.color()
 
     def on_bold_set(self) -> None:
-        props = {}
+        props = TextProps()
         props["bold"] = self.ui.ac_bold.isChecked()
         self.fontSet.emit(props)
 
     def on_italic_set(self) -> None:
-        props = {}
+        props = TextProps()
         props["italic"] = self.ui.ac_italic.isChecked()
         self.fontSet.emit(props)
 
     def on_underlined_set(self) -> None:
-        props = {}
+        props = TextProps()
         props["underlined"] = self.ui.ac_underline.isChecked()
         self.fontSet.emit(props)
 
@@ -1163,7 +1155,7 @@ class TextToolset(BaseElementToolset):
             self.ui.ac_superscript.setChecked(False)
 
     def on_alignment_set(self) -> None | Qt.AlignmentFlag:
-        props = {}
+        props = TextProps()
         if self.ui.ac_align_left.isChecked():
             props["alignment"] = Qt.AlignmentFlag.AlignLeft
         elif self.ui.ac_align_center.isChecked():
@@ -1186,7 +1178,7 @@ class TextToolset(BaseElementToolset):
         return None
 
     def on_vertical_alignment_set(self):
-        props = {}
+        props = TextProps()
         if self.ui.ac_superscript.isChecked():
             props["veralign"] = QTextCharFormat.VerticalAlignment.AlignSuperScript
             self.ui.ac_subscript.setChecked(False)
