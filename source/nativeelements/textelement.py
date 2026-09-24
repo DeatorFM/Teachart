@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pprint
 import unicodedata
 import webbrowser
 from functools import cache
@@ -191,6 +192,7 @@ class TextModel(QTextDocument, BaseElementModel):
         font = self.defaultFont()
         font.setFamilies(["Calibri"])
         font.setPointSize(12)
+        self.setDefaultFont(font)
         self.setDocumentMargin(8.0)
         self.setUseDesignMetrics(True)
 
@@ -302,6 +304,7 @@ class TextEditor(BaseTextElementEditor):
             f"Open TextEditor with target width: {target_width}", extra={"sender": "TEXTEDITOR"}
         )
         self.setDocument(model)
+        self.setFont(model.defaultFont())
 
         # Attributes
         self.last_char: str
@@ -359,6 +362,7 @@ class TextEditor(BaseTextElementEditor):
 
         self.document().blockCountChanged.connect(self.on_new_block)
         self.document().contentsChanged.connect(self.fit_to_text)
+        self.document().contentsChanged.connect(self.on_contents_changed)
         self.fit_to_text()
 
     def disconnect_signals(self) -> None:
@@ -411,8 +415,6 @@ class TextEditor(BaseTextElementEditor):
 
         cformat = QTextCharFormat()
         for key, value in props.items():
-            self.last_format[key] = value
-
             match key:
                 case "family":
                     cformat.setFontFamilies(value)
@@ -490,6 +492,10 @@ class TextEditor(BaseTextElementEditor):
     def on_new_block(self) -> None:
         self.set_text_format(self.last_format)
         self.currentPropsChanged.emit(self.last_format)
+
+    def on_contents_changed(self) -> None:
+        if self.is_empty():
+            self.set_text_format(self.last_format)
 
     def insert_list(self, lformat: QTextListFormat.Style) -> None:
         self.setFocus()
@@ -684,22 +690,21 @@ class TextEditor(BaseTextElementEditor):
             props["veralign"] = cformat.verticalAlignment()
             props["alignment"] = self.alignment()
 
-            if cformat.fontPointSize() > 0:
+            print("Current font size: ", self.fontPointSize())
+            if self.fontPointSize() > 0:
                 props["size"] = (
-                    int(cformat.fontPointSize())
-                    if cformat.fontPointSize() % 1 == 0
-                    else cformat.fontPointSize()
+                    int(self.fontPointSize())
+                    if self.fontPointSize() % 1 == 0
+                    else self.fontPointSize()
                 )
 
             else:
-                props["size"] = (
-                    int(self.last_format["size"])
-                    if self.fontPointSize() % 1 == 0
-                    else self.last_format["size"]
-                )
+                size = self.document().defaultFont().pointSizeF()
+                props["size"] = int(size) if size % 1 == 0 else size
             if include_color:
                 props["color"] = self.textColor()
 
+        pprint.pp(props)
         return props
 
     def has_format(self, fmt, default):
