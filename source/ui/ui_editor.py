@@ -419,6 +419,7 @@ class Ui_Editor(object):
         self.ac_course_rec.setObjectName("ac_course_rec")
         icon11 = SvgIcon(":/common/info")
         self.ac_course_rec.setIcon(icon11)
+        self.ac_course_rec.setEnabled(True)
 
         icon12 = SvgIcon(":/common/schedule")
         icon13 = SvgIcon(":/common/scheduled")

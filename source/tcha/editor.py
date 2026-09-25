@@ -87,7 +87,7 @@ class Editor(BaseMainWindow):
         self.ui.setupUi(self)
 
         # Models
-        self.courses = FilteredCourseModel(courses, self)
+        self.courses = FilteredCourseModel(courses, self.tr("No course"), self)
         self.schedules = schedules
 
         self.ui.cb_course.setModel(self.courses)
@@ -420,6 +420,10 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         if self.lesson.source_id != utils.source_id():
             self.lesson.source_id = utils.source_id()
         item = self.courses.getRow(self.ui.cb_course.currentIndex())
+        if item.id == 0:
+            self.ui.ac_course_rec.setEnabled(False)
+        else:
+            self.ui.ac_course_rec.setEnabled(True)
         self.lesson.set_course(item.name, item.id)
         if item.duration > 0:
             self.ui.sb_duration.setValue(item.duration)

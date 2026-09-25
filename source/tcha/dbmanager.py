@@ -31,7 +31,7 @@ class DbManager(QDialog, DbManagerView):
         self.setupUi(self)
 
         self._course_model = course_model
-        self._filtered_course_model = FilteredCourseModel(self._course_model, self)
+        self._filtered_course_model = FilteredCourseModel(self._course_model, self.tr("All students"), self)
 
         self._student_model = StudentModel(self._course_model.database(), self)
         self._filtered_student_model = FilteredStudentModel(self._student_model, self)
@@ -210,7 +210,6 @@ class DbManager(QDialog, DbManagerView):
             current_idx = self.tv_schedules.selectionModel().currentIndex()
             source_idx = self._filtered_schedule_model.mapToSource(current_idx)
             self._schedule_model.removeRow(source_idx.row())
-            # self._schedule_model.rowsRemoved.emit()
             self._schedule_model.select()
 
     # def _on_student_clicked(self, index: QModelIndex) -> None:

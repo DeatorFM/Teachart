@@ -287,7 +287,7 @@ class CellEditor(QListView):
             self._drag_start_position = event.pos()
             index = self.indexAt(event.pos())
             if self.state() == QListView.State.EditingState and index != self.currentIndex():
-                self.setCurrentIndex(QModelIndex())
+                self.close_active_editor()
                 if index.isValid():
                     self.setCurrentIndex(index)
                     self.edit(index)
@@ -947,6 +947,7 @@ class BaseTable(QTableView):
                 )
                 self._editor.dropEvent(editor_event)
                 event.accept()
+                self.close_active_editor()
                 return
 
             if drop_index.isValid():
@@ -970,6 +971,9 @@ class BaseTable(QTableView):
                 event.ignore()
         else:
             event.ignore()
+
+    self.close_active_editor()
+
 
     # Copy and paste functions
 

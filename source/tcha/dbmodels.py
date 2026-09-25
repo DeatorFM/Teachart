@@ -262,8 +262,8 @@ class CourseModel(QSqlTableModel):
     def data(self, idx: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if idx.row() == 0:
-                if idx.column() == 1:
-                    return tr("All students")
+                if idx.column() == 2:
+                    return ""
                 else:
                     return super().data(idx, role)
             if idx.column() == 2:
@@ -572,10 +572,11 @@ class StudentModel(QSqlRelationalTableModel):
 class FilteredCourseModel(QSortFilterProxyModel):
     courseDataChanged = pyqtSignal()
 
-    def __init__(self, source_model: CourseModel, parent=None):
+    def __init__(self, source_model: CourseModel, course0_text = "", parent=None):
         super().__init__(parent)
         self.setSourceModel(source_model)
         self._search_str = ""
+        self._course0_text = course0_text
 
     def index_for_id(self, id: int) -> QModelIndex:
         source_idx = self.sourceModel().index_for_id(id)
@@ -601,6 +602,16 @@ class FilteredCourseModel(QSortFilterProxyModel):
 
     def source_id(self) -> str:
         return self.sourceModel().source_id()
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole) -> Any:
+        if role == Qt.ItemDataRole.DisplayRole:
+            source_idx = self.source_index(index).row() 
+            if source_idx(index).row() == 0 and source_idx.column() == 1:
+                return self._course0_text
+
+        return super().data(index, role)
+
+
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex):
         if source_parent.isValid():
