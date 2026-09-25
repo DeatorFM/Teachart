@@ -972,7 +972,7 @@ class BaseTable(QTableView):
         else:
             event.ignore()
 
-    self.close_active_editor()
+        self.close_active_editor()
 
 
     # Copy and paste functions
