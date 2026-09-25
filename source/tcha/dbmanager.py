@@ -19,16 +19,16 @@ from ui.ui_dbmanager import AssignmentView, DbManagerView
 from ui.ui_record_view import Ui_RecordDialog
 
 
-class DbManager(QDialog, DbManagerView):
+class DbManager(QDialog):
     def __init__(
         self,
         course_model: CourseModel,
         schedule_model: ScheduleModel,
         parent=None,
-        flags=Qt.WindowType.Dialog,
     ):
-        super().__init__(parent, flags)
-        self.setupUi(self)
+        super().__init__(parent, Qt.WindowType.Dialog)
+        self.ui = DbManagerView()
+        self.ui.setupUi(self)
 
         self._course_model = course_model
         self._filtered_course_model = FilteredCourseModel(self._course_model, self.tr("All students"), self)
@@ -39,45 +39,45 @@ class DbManager(QDialog, DbManagerView):
         self._schedule_model = schedule_model
         self._filtered_schedule_model = FilteredScheduleModel(self._schedule_model, self)
 
-        self.tv_courses.setModel(self._filtered_course_model)
+        self.ui.tv_courses.setModel(self._filtered_course_model)
         if not debug_enabled():
-            self.tv_courses.hideColumn(0)
-            self.tv_courses.hideColumn(3)
-        self.tv_courses.selectionModel().setCurrentIndex(
+            self.ui.tv_courses.hideColumn(0)
+            self.ui.tv_courses.hideColumn(3)
+        self.ui.tv_courses.selectionModel().setCurrentIndex(
             self._filtered_course_model.index(0, 1),
             QItemSelectionModel.SelectionFlag.SelectCurrent,
         )
-        self.tv_courses.selectionModel().select(
+        self.ui.tv_courses.selectionModel().select(
             QItemSelection(self._course_model.index(0, 0), self._course_model.index(0, 3)),
             QItemSelectionModel.SelectionFlag.SelectCurrent,
         )
 
-        self.tv_students.setModel(self._filtered_student_model)
+        self.ui.tv_students.setModel(self._filtered_student_model)
         if not debug_enabled():
-            self.tv_students.hideColumn(0)
+            self.ui.tv_students.hideColumn(0)
 
-        self.tv_schedules.setModel(self._filtered_schedule_model)
+        self.ui.tv_schedules.setModel(self._filtered_schedule_model)
         if not debug_enabled():
-            self.tv_schedules.hideColumn(0)
-            self.tv_schedules.hideColumn(4)
+            self.ui.tv_schedules.hideColumn(0)
+            self.ui.tv_schedules.hideColumn(4)
 
-        self.le_search.textChanged.connect(self._filtered_course_model.set_search_filter)
-        self.pb_new_course.clicked.connect(self.add_course)
-        self.pb_remove_course.clicked.connect(self.remove_course)
-        self.tv_courses.selectionModel().currentRowChanged.connect(self.on_course_row_changed)
-        self.tv_courses.selectionModel().selectionChanged.connect(self.on_course_selection_changed)
-        self.pb_assign_students.clicked.connect(self._assign_button_clicked)
-        self.pb_unassign_student.clicked.connect(self.unassign_student)
-        self.pb_remove_student.clicked.connect(self.remove_student)
-        self.le2_search.textChanged.connect(self._filtered_student_model.set_search_filter)
-        self.pb_remove_schedule.clicked.connect(self.remove_schedule)
-        self.cb_show_unassigned.checkStateChanged.connect(self.set_disable_assigned_students)
+        self.ui.le_search.textChanged.connect(self._filtered_course_model.set_search_filter)
+        self.ui.pb_new_course.clicked.connect(self.add_course)
+        self.ui.pb_remove_course.clicked.connect(self.remove_course)
+        self.ui.tv_courses.selectionModel().currentRowChanged.connect(self.on_course_row_changed)
+        self.ui.tv_courses.selectionModel().selectionChanged.connect(self.on_course_selection_changed)
+        self.ui.pb_assign_students.clicked.connect(self._assign_button_clicked)
+        self.ui.pb_unassign_student.clicked.connect(self.unassign_student)
+        self.ui.pb_remove_student.clicked.connect(self.remove_student)
+        self.ui.le2_search.textChanged.connect(self._filtered_student_model.set_search_filter)
+        self.ui.pb_remove_schedule.clicked.connect(self.remove_schedule)
+        self.ui.cb_show_unassigned.checkStateChanged.connect(self.set_disable_assigned_students)
         self._course_model.courseDataChanged.connect(self._student_model.on_course_data_changed)
         self._course_model.courseDataChanged.connect(
             self._filtered_schedule_model.sourceModel().on_course_data_changed
         )
-        self.tv_students.selectionModel().selectionChanged.connect(self.on_student_row_changed)
-        self.tv_schedules.selectionModel().selectionChanged.connect(self.on_schedule_row_changed)
+        self.ui.tv_students.selectionModel().selectionChanged.connect(self.on_student_row_changed)
+        self.ui.tv_schedules.selectionModel().selectionChanged.connect(self.on_schedule_row_changed)
 
     def add_course(self) -> None:
         def isvalid() -> bool:
@@ -92,7 +92,7 @@ class DbManager(QDialog, DbManagerView):
             QMessageBox.warning(
                 self,
                 None,
-                tr(
+                self.tr(
                     "Course name is empty or duration set to 0. Please enter a valid course name and duration."
                 ),
             )
@@ -102,10 +102,10 @@ class DbManager(QDialog, DbManagerView):
 
     def set_course(self, id: int) -> None:
         idx = self._filtered_course_model.index_for_id(id)
-        self.tv_courses.setCurrentIndex(idx)
+        self.ui.tv_courses.setCurrentIndex(idx)
 
     def remove_course(self) -> None:
-        current_idx = self.tv_courses.selectionModel().currentIndex()
+        current_idx = self.ui.tv_courses.selectionModel().currentIndex()
         source_idx = self._filtered_course_model.mapToSource(current_idx)
         self._course_model.removeRow(source_idx.row())
         self._course_model.submitAll()
@@ -114,11 +114,11 @@ class DbManager(QDialog, DbManagerView):
 
     def on_course_row_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
         if current.row() == 0:
-            self.pb_remove_course.setEnabled(False)
-            self.cb_show_unassigned.setEnabled(True)
+            self.ui.pb_remove_course.setEnabled(False)
+            self.ui.cb_show_unassigned.setEnabled(True)
         else:
-            self.pb_remove_course.setEnabled(True)
-            self.cb_show_unassigned.setEnabled(False)
+            self.ui.pb_remove_course.setEnabled(True)
+            self.ui.cb_show_unassigned.setEnabled(False)
 
     def on_course_selection_changed(
         self, selected: QItemSelection, deselected: QItemSelection
@@ -136,11 +136,11 @@ class DbManager(QDialog, DbManagerView):
 
     def on_student_row_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if not selected.isEmpty():
-            self.pb_unassign_student.setEnabled(True)
-            self.pb_remove_student.setEnabled(True)
+            self.ui.pb_unassign_student.setEnabled(True)
+            self.ui.pb_remove_student.setEnabled(True)
         else:
-            self.pb_unassign_student.setEnabled(False)
-            self.pb_remove_student.setEnabled(False)
+            self.ui.pb_unassign_student.setEnabled(False)
+            self.ui.pb_remove_student.setEnabled(False)
 
     def set_disable_assigned_students(self, check_state: Qt.CheckState) -> None:
         if check_state == Qt.CheckState.Checked:
@@ -167,7 +167,7 @@ class DbManager(QDialog, DbManagerView):
             self._student_model.add_student(name, course_id, email)
 
     def assign_students(self) -> None:
-        current_idx = self.tv_courses.selectionModel().currentIndex()
+        current_idx = self.ui.tv_courses.selectionModel().currentIndex()
         source_idx = self._filtered_course_model.mapToSource(current_idx)
         course_id = self._course_model.data(self._course_model.index(source_idx.row(), 0))
         course_name = self._course_model.data(self._course_model.index(source_idx.row(), 1))
@@ -184,8 +184,8 @@ class DbManager(QDialog, DbManagerView):
             self.new_student()
 
     def unassign_student(self) -> None:
-        if self.tv_students.selectionModel().hasSelection():
-            current_idx = self.tv_students.selectionModel().currentIndex()
+        if self.ui.tv_students.selectionModel().hasSelection():
+            current_idx = self.ui.tv_students.selectionModel().currentIndex()
             self._filtered_student_model.setData(
                 self._filtered_student_model.index(current_idx.row(), 2),
                 0,
@@ -193,21 +193,21 @@ class DbManager(QDialog, DbManagerView):
             )
 
     def remove_student(self) -> None:
-        if self.tv_students.selectionModel().hasSelection():
-            current_idx = self.tv_students.selectionModel().currentIndex()
+        if self.ui.tv_students.selectionModel().hasSelection():
+            current_idx = self.ui.tv_students.selectionModel().currentIndex()
             source_idx = self._filtered_student_model.mapToSource(current_idx)
             self._student_model.removeRow(source_idx.row())
             self._student_model.select()
 
     def on_schedule_row_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if not selected.isEmpty():
-            self.pb_remove_schedule.setEnabled(True)
+            self.ui.pb_remove_schedule.setEnabled(True)
         else:
-            self.pb_remove_schedule.setEnabled(False)
+            self.ui.pb_remove_schedule.setEnabled(False)
 
     def remove_schedule(self) -> None:
         if self.tv_schedules.selectionModel().hasSelection():
-            current_idx = self.tv_schedules.selectionModel().currentIndex()
+            current_idx = self.ui.tv_schedules.selectionModel().currentIndex()
             source_idx = self._filtered_schedule_model.mapToSource(current_idx)
             self._schedule_model.removeRow(source_idx.row())
             self._schedule_model.select()

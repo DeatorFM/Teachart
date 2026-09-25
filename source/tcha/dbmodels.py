@@ -603,7 +603,7 @@ class FilteredCourseModel(QSortFilterProxyModel):
     def source_id(self) -> str:
         return self.sourceModel().source_id()
 
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole) -> Any:
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             source_idx = self.source_index(index).row() 
             if source_idx(index).row() == 0 and source_idx.column() == 1:
