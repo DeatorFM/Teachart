@@ -58,21 +58,6 @@ class Ui_FileInspector(object):
         self.lb_show_fileid.setText("")
         self.lb_show_fileid.setObjectName("lb_show_fileid")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_fileid)
-        self.lb_version = QtWidgets.QLabel(parent=self.gb_file)
-        font = QtGui.QFont()
-        font.setBold(False)
-        font.setWeight(50)
-        self.lb_version.setFont(font)
-        self.lb_version.setObjectName("lb_version")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.lb_version)
-        self.lb_show_version = QtWidgets.QLabel(parent=self.gb_file)
-        font = QtGui.QFont()
-        font.setBold(False)
-        font.setWeight(50)
-        self.lb_show_version.setFont(font)
-        self.lb_show_version.setText("")
-        self.lb_show_version.setObjectName("lb_show_version")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_version)
         self.verticalLayout.addWidget(self.gb_file)
         self.gb_lesson = QtWidgets.QGroupBox(parent=FileInspector)
         font = QtGui.QFont()
@@ -88,7 +73,9 @@ class Ui_FileInspector(object):
         font.setWeight(50)
         self.lb_course_name.setFont(font)
         self.lb_course_name.setObjectName("lb_course_name")
-        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.lb_course_name)
+        self.formLayout_2.setWidget(
+            1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.lb_course_name
+        )
         self.lb_courseid = QtWidgets.QLabel(parent=self.gb_lesson)
         font = QtGui.QFont()
         font.setBold(False)
@@ -143,7 +130,9 @@ class Ui_FileInspector(object):
         self.lb_show_course_name.setFont(font)
         self.lb_show_course_name.setText("")
         self.lb_show_course_name.setObjectName("lb_show_course_name")
-        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_course_name)
+        self.formLayout_2.setWidget(
+            1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_course_name
+        )
         self.lb_show_courseid = QtWidgets.QLabel(parent=self.gb_lesson)
         font = QtGui.QFont()
         font.setBold(False)
@@ -151,7 +140,9 @@ class Ui_FileInspector(object):
         self.lb_show_courseid.setFont(font)
         self.lb_show_courseid.setText("")
         self.lb_show_courseid.setObjectName("lb_show_courseid")
-        self.formLayout_2.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_courseid)
+        self.formLayout_2.setWidget(
+            2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_courseid
+        )
         self.lb_show_scheduleid = QtWidgets.QLabel(parent=self.gb_lesson)
         font = QtGui.QFont()
         font.setBold(False)
@@ -159,7 +150,9 @@ class Ui_FileInspector(object):
         self.lb_show_scheduleid.setFont(font)
         self.lb_show_scheduleid.setText("")
         self.lb_show_scheduleid.setObjectName("lb_show_scheduleid")
-        self.formLayout_2.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_scheduleid)
+        self.formLayout_2.setWidget(
+            3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_scheduleid
+        )
         self.lb_show_sourceid = QtWidgets.QLabel(parent=self.gb_lesson)
         font = QtGui.QFont()
         font.setBold(False)
@@ -167,7 +160,9 @@ class Ui_FileInspector(object):
         self.lb_show_sourceid.setFont(font)
         self.lb_show_sourceid.setText("")
         self.lb_show_sourceid.setObjectName("lb_show_sourceid")
-        self.formLayout_2.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_sourceid)
+        self.formLayout_2.setWidget(
+            4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_sourceid
+        )
         self.lb_show_date = QtWidgets.QLabel(parent=self.gb_lesson)
         font = QtGui.QFont()
         font.setBold(False)
@@ -191,9 +186,13 @@ class Ui_FileInspector(object):
         self.lb_show_duration.setFont(font)
         self.lb_show_duration.setText("")
         self.lb_show_duration.setObjectName("lb_show_duration")
-        self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_duration)
+        self.formLayout_2.setWidget(
+            8, QtWidgets.QFormLayout.ItemRole.FieldRole, self.lb_show_duration
+        )
         self.verticalLayout.addWidget(self.gb_lesson)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(
+            20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding
+        )
         self.verticalLayout.addItem(spacerItem)
 
         self.retranslateUi(FileInspector)
@@ -204,7 +203,6 @@ class Ui_FileInspector(object):
         FileInspector.setWindowTitle(_translate("FileInspector", "File Inspector"))
         self.lb_path.setText(_translate("FileInspector", "Path"))
         self.lb_fileid.setText(_translate("FileInspector", "File-ID"))
-        self.lb_version.setText(_translate("FileInspector", "Version"))
         self.gb_lesson.setTitle(_translate("FileInspector", "Lesson info"))
         self.lb_course_name.setText(_translate("FileInspector", "Course"))
         self.lb_courseid.setText(_translate("FileInspector", "Course-ID"))

@@ -325,6 +325,7 @@ class AudioEditorView:
 
 class PictureLabel(QLabel):
     resized = pyqtSignal(QSize)
+    MARGIN = 5
 
     class State(IntEnum):
         Inactive = 0
@@ -339,7 +340,7 @@ class PictureLabel(QLabel):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent, Qt.WindowType.Widget)
-        self.setMargin(4)
+        self.setMargin(self.MARGIN)
         self.setScaledContents(True)
         self.setMouseTracking(True)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -364,6 +365,7 @@ class PictureLabel(QLabel):
 
     def set_max_width(self, width: int) -> None:
         self._max_width = width
+        self.setMaximumWidth(width)
 
     def setPixmap(self, a0):
         super().setPixmap(a0)
@@ -481,9 +483,14 @@ class ResizeOverlay(QFrame):
             self._control_rects[PictureLabel.Section.BottomRight],
             self._control_rects[PictureLabel.Section.Right],
         ) = self.get_control_rects()
+        self._max_width = max_width
 
         self.setMinimumSize(10, 10)
         self.setMaximumWidth(max_width)
+
+    @property
+    def max_width(self) -> int:
+        return self._max_width
 
     def set_aspect_ratio(self, aspect_ratio: float) -> None:
         self._aspect_ratio = aspect_ratio

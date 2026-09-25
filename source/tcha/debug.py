@@ -1,11 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Any, Self
 
-from PyQt6 import uic
 from PyQt6.QtCore import (
     QAbstractItemModel,
     QAbstractTableModel,
-    QFile,
     QModelIndex,
     Qt,
 )
@@ -34,7 +32,6 @@ class FileView(QDialog):
             self.ui.lb_show_path.setText("No file")
 
         self.ui.lb_show_fileid.setText(lf.file_id.hex)
-        self.ui.lb_show_version.setText(str(lf.max_version))
 
         if lesson.course_id != 0:
             self.ui.lb_show_course_name.setText(lesson.course_name)

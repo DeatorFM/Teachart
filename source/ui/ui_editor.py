@@ -758,6 +758,9 @@ class Ui_Editor(object):
         self.tb_table.addAction(self.ac_rmv_column)
         self.tb_table.addSeparator()
         self.tb_table.addAction(self.ac_clear_cell)
+        self.tb_table.widgetForAction(self.ac_clear_cell).setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
 
         self.tb_cell.addAction(self.ac_elem_finish_editing)
         self.tb_cell.addAction(self.ac_elem_discard_changes)

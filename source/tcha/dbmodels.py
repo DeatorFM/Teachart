@@ -196,6 +196,7 @@ class CourseModel(QSqlTableModel):
 
     def __init__(self, db: QSqlDatabase, parent=None):
         super().__init__(parent, db)
+        self.setObjectName("CourseModel")
         self.setTable("Courses")
         self.select()
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
@@ -281,10 +282,23 @@ class CourseModel(QSqlTableModel):
             )
         return super().data(idx, role)
 
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+            if section == 1:
+                return self.tr("Name")
+            elif section == 2:
+                return self.tr("Duration")
+        return super().headerData(section, orientation, role)
+
     def cleanup(self) -> None:
         query = QSqlQuery(self.database())
         query.prepare("DELETE FROM Courses WHERE temporary = 1")
         query.exec()
+
+    def flags(self, index):
+        if index.row() == 0:
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        return super().flags(index)
 
     def __contains__(self, value: CourseItem | str) -> bool:
         if isinstance(value, CourseItem):
@@ -306,6 +320,7 @@ class CourseModel(QSqlTableModel):
 class ScheduleModel(QSqlRelationalTableModel):
     def __init__(self, db: QSqlDatabase, parent=None):
         super().__init__(parent, db)
+        self.setObjectName("ScheduleModel")
         self.setTable("Schedules")
         self.setRelation(1, QSqlRelation("Courses", "id", "name"))
         self.setJoinMode(QSqlRelationalTableModel.JoinMode.LeftJoin)
@@ -488,6 +503,7 @@ class StudentModel(QSqlRelationalTableModel):
 
     def __init__(self, db: QSqlDatabase, parent=None):
         super().__init__(parent, db)
+        self.setObjectName("StudentModel")
         self.setTable("Students")
         self.setRelation(2, QSqlRelation("Courses", "id", "name"))
         self.setJoinMode(QSqlRelationalTableModel.JoinMode.LeftJoin)
@@ -561,18 +577,18 @@ class StudentModel(QSqlRelationalTableModel):
     def headerData(self, section, orientation, role=...):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if section == 1:
-                return "Name"
+                return self.tr("Name")
             elif section == 2:
-                return "Course"
+                return self.tr("Course")
             elif section == 3:
-                return "E-Mail"
+                return self.tr("E-Mail")
         return super().headerData(section, orientation, role)
 
 
 class FilteredCourseModel(QSortFilterProxyModel):
     courseDataChanged = pyqtSignal()
 
-    def __init__(self, source_model: CourseModel, course0_text = "", parent=None):
+    def __init__(self, source_model: CourseModel, course0_text="", parent=None):
         super().__init__(parent)
         self.setSourceModel(source_model)
         self._search_str = ""
@@ -605,13 +621,11 @@ class FilteredCourseModel(QSortFilterProxyModel):
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
-            source_idx = self.source_index(index).row() 
-            if source_idx(index).row() == 0 and source_idx.column() == 1:
+            source_idx = self.mapToSource(index)
+            if source_idx.row() == 0 and source_idx.column() == 1:
                 return self._course0_text
 
         return super().data(index, role)
-
-
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex):
         if source_parent.isValid():
@@ -744,9 +758,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
                 return True
             if isinstance(course_name, str) and search in course_name.lower():
                 return True
-            if search in student.email:
-                return True
-            return False
+            return search in student.email
 
         return True
 
@@ -804,25 +816,28 @@ class FilteredScheduleModel(QSortFilterProxyModel):
         return super().lessThan(left, right)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
-        if self._exclusive_course_id:
+        if self._exclusive_course_id:  # noqa: SIM102
             if (
-                not self.sourceModel().course_id(self.sourceModel().index(source_row, 2))
+                not self.sourceModel().course_id(self.sourceModel().index(source_row, 2))  # noqa: SIM201
                 == self._exclusive_course_id
             ):
                 return False
 
         if self._exclusive_date:
             source_index = self.sourceModel().index(source_row, 2)
-            date = self.sourceModel().data(source_index, Qt.ItemDataRole.EditRole)
+            item_date = QDate.fromJulianDay(
+                self.sourceModel().data(source_index, Qt.ItemDataRole.EditRole)
+            )
 
-            if date == self._exclusive_date.toJulianDay():
+            if item_date == self._exclusive_date:
                 if not self._past_schedules_visible:
-                    current = QTime.currentTime()
+                    current_time = QTime.currentTime()
+                    current_date = QDate.currentDate()
                     source_index = self.sourceModel().index(source_row, 3)
                     item_time = QTime.fromMSecsSinceStartOfDay(
                         self.sourceModel().data(source_index, Qt.ItemDataRole.EditRole)
                     )
-                    return item_time > current
+                    return item_time > current_time or item_date > current_date
                 return True
             return False
 

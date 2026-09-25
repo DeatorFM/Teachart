@@ -12,7 +12,7 @@ from nativeelements.baseelement import (
     BaseElementToolset,
     QAction,
 )
-from nativeelements.views import PictureEditorView
+from nativeelements.views import PictureEditorView, PictureLabel
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QByteArray,
@@ -116,12 +116,12 @@ class PictureModel(BaseElementModel):
 
     def recalculate_size(self, width: int):
         if self._adjusted and width >= self._width:
-            self._item_size = QSize(width, self._item_size.height() + 4)
+            self._item_size = QSize(width, self._item_size.height() + 8)
             return
         else:
-            h = round(self.height * (width / self._width))
-            self.set_size(width, h)
-            self._item_size = QSize(width, h + 4)
+            height = round(self.height * (width / self._width))
+            self.set_size(width, height)
+            self._item_size = QSize(width, height + 8)
             self.set_adjusted(False)
 
     @property
@@ -218,6 +218,7 @@ class PictureModel(BaseElementModel):
     def shcopy(self) -> PictureModel:
         model = PictureModel(self.resource, self.width, self.height, self.rotation, self.adjusted)
         model.resource.delete_member()
+        model.set_item_size(self.item_size)
         return model
 
     def to_byte_array(self) -> QByteArray:
@@ -246,15 +247,11 @@ class PictureModel(BaseElementModel):
     def __str__(self) -> str:
         return f"Picture element: width={self._width} height={self._height} rotation={self._rotation} user_adjusted={self._adjusted}"
 
-    # def __del__(self) -> None:
-    #     self._resource.delete_member()
-    #     self._resource = None
-
 
 class PictureEditor(BaseElementEditor):
     sizeChanged = pyqtSignal(int, int)
 
-    def __init__(self, model: PictureModel, max_width: int, parent=None) -> None:
+    def __init__(self, model: PictureModel, rect: QRect, parent=None) -> None:
         super().__init__(parent)
         self.ui = PictureEditorView()
         self.ui.setUi(self)
@@ -262,14 +259,13 @@ class PictureEditor(BaseElementEditor):
 
         # Attributes
         self._model = model
-        self._max_width = max_width
+        self._max_width = rect.width()
         StandardLogger.debug(
-            f"Opened PictureEditr with max width: {self._max_width}",
+            f"Opened PictureEditor with max width: {self._max_width}",
             extra={"sender": "PICTUREEDITOR"},
         )
 
-        self.ui.piclabel.set_max_width(max_width)
-        self.ui.piclabel.setMaximumWidth(max_width)
+        self.ui.piclabel.set_max_width(self._max_width)
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
 
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
@@ -308,7 +304,7 @@ class PictureEditor(BaseElementEditor):
                 self._model.set_size(width, height)
                 self.ui.piclabel.setFixedSize(width, height)
         else:
-            self._model.set_height(self.ui.piclabel.width(), height)
+            self._model.set_height(height)
             self.ui.piclabel.setFixedSize(self.ui.piclabel.width(), height)
         self._model.set_item_size(QSize(self._max_width, height))
         self._model.set_adjusted(True)
@@ -354,7 +350,7 @@ class PictureEditor(BaseElementEditor):
         self._model.set_size(
             self.max_width, round(self._model.original_aspect_ratio * self.max_width)
         )
-        self._model.set_item_size(self.max_width, self._model.height)
+        self._model.set_item_size(QSize(self.max_width, self._model.height))
         self._model.set_rotation(0)
         self.sizeChanged.emit(self.model.width, self.model.height)
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
@@ -362,11 +358,8 @@ class PictureEditor(BaseElementEditor):
     def set_pixmap(self, width: int, height: int, rotation: int) -> None:
         """Sets the label with a pixmap of given specifications"""
         pixmap = self._model.pixmap.transformed(QTransform().rotate(rotation))
-        if self._model.adjusted:
-            self.ui.piclabel.setPixmap(pixmap)
-            self.ui.piclabel.setFixedSize(width, height)
-        else:
-            self.ui.piclabel.setPixmap(pixmap)
+        self.ui.piclabel.setPixmap(pixmap)
+        self.ui.piclabel.setFixedSize(width, height)
 
 
 class PictureDelegate(BaseElementDelegate):
@@ -391,21 +384,20 @@ class PictureDelegate(BaseElementDelegate):
 
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
 
-        style = option.widget.style()
-        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
-
         model: PictureModel = index.data()
         pixmap = model.pixmap
 
         if model.rotation % 360 > 0:
             pixmap = pixmap.transformed(QTransform().rotate(model.rotation))
 
-        if model.adjusted and sub_rect.width() >= model.width:
-            new_rect = QRect(sub_rect.topLeft(), model.size)
-            painter.drawPixmap(new_rect, pixmap)
-        else:
-            model.set_adjusted(False)
+        if not model.adjusted and sub_rect.width() > model.width:
             painter.drawPixmap(sub_rect, pixmap)
+        else:
+            margin = PictureLabel.MARGIN
+            new_rect = QRect(sub_rect.topLeft(), model.size).adjusted(
+                margin, margin, -margin, -margin
+            )
+            painter.drawPixmap(new_rect, pixmap)
 
         painter.restore()
 
@@ -424,7 +416,7 @@ class PictureDelegate(BaseElementDelegate):
     def createEditor(self, parent, option, index) -> PictureEditor:
         editor = PictureEditor(
             index.data(Qt.ItemDataRole.EditRole),
-            option.rect.width(),
+            option.rect,
             parent,
         )
         editor.sizeChanged.connect(lambda: self.sizeHintChanged.emit(index))
@@ -473,8 +465,6 @@ class PictureToolset(BaseElementToolset):
 
     def connect_editor(self, editor: PictureEditor) -> None:
         if editor:
-            self.widthSet.connect(editor.set_width)
-            self.heightSet.connect(editor.set_height)
             self.ui.ac_rotate_right.triggered.connect(editor.rotate_right)
             self.ui.ac_rotate_left.triggered.connect(editor.rotate_left)
             self.ui.ac_reset_image.triggered.connect(editor.restore_image)
@@ -483,6 +473,9 @@ class PictureToolset(BaseElementToolset):
 
             self.set_max_width(editor.max_width)
             self.set_attributes(editor.model)
+
+            self.widthSet.connect(editor.set_width)
+            self.heightSet.connect(editor.set_height)
 
             self.on_keep_aspect_ratio_toggled(self.ui.ac_keep_aspect_ratio.isChecked())
             self.setVisible(True)

@@ -159,7 +159,6 @@ class CellItem(list):
             item: BaseElementModel
             # IMPLEMENT PARALLELISATION OF RECALCULATION
             item.recalculate_size(self.width)
-        print("New item height: ", self.height)
 
     def set_header_item(self, hheader: HeaderDataItem) -> None:
         """Sets reference to header item for size calculation."""
@@ -686,7 +685,7 @@ class TableModel(QAbstractTableModel):
                 return model
             elif role == Qt.ItemDataRole.SizeHintRole:
                 return item.current_size
-            elif role == Qt.ItemDataRole.ToolTipRole:
+            elif role == Qt.ItemDataRole.ToolTipRole or role == Qt.ItemDataRole.StatusTipRole:
                 return None
             return item
         return None

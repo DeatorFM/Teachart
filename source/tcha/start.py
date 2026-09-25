@@ -5,7 +5,6 @@ import platform
 from dataclasses import dataclass
 from pathlib import Path
 
-from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -24,7 +23,6 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QMenu,
 )
-from shiboken6 import isValid
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel

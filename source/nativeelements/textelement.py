@@ -72,7 +72,6 @@ from styling.utils import Svg, SvgIconEngine
 from tcha.consts import ResourceFlag
 from tcha.error import StandardLogger
 from tcha.resmanager import FileResourceObject, ResourceContainer
-from tcha.settings import Locale, Settings
 from ui.ui_etoolsets import TextToolsetView
 from ui.ui_symbols import Ui_SymbolDialog
 
@@ -231,7 +230,6 @@ class TextModel(QTextDocument, BaseElementModel):
                 self.size().toSize().height() + 10 if self.size().toSize().height() > 30 else 30,
             )
         )
-        print("TextElement item height: ", self._item_size.height())
 
     def editable(self) -> bool:
         return True
@@ -690,7 +688,6 @@ class TextEditor(BaseTextElementEditor):
             props["veralign"] = cformat.verticalAlignment()
             props["alignment"] = self.alignment()
 
-            print("Current font size: ", self.fontPointSize())
             if self.fontPointSize() > 0:
                 props["size"] = (
                     int(self.fontPointSize())
@@ -704,7 +701,7 @@ class TextEditor(BaseTextElementEditor):
             if include_color:
                 props["color"] = self.textColor()
 
-        pprint.pp(props)
+        # pprint.pp(props)
         return props
 
     def has_format(self, fmt, default):
@@ -1114,7 +1111,6 @@ class TextToolset(BaseElementToolset):
                 print("Color set: ", color.name())
                 ic_engine.set_path_color("lineBottom", color)
             else:
-                print("Standard color set: ", self.palette().text().color().name())
                 ic_engine.set_path_color("lineBottom", self.palette().text().color())
             self.ui.ac_textcolor.setProperty("color", color)
             self.ui.ac_textcolor.setIcon(QIcon(ic_engine))

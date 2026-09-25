@@ -301,7 +301,6 @@ class CellEditor(QListView):
             self.setCurrentIndex(new_idx)
 
     def mouseMoveEvent(self, event):
-
         if not (event.buttons() & Qt.MouseButton.LeftButton):
             return
 
@@ -857,6 +856,8 @@ class BaseTable(QTableView):
             self._toolset_reference = toolsets
 
     def close_active_editor(self, hint=QStyledItemDelegate.EndEditHint.NoHint) -> None:
+        if self.editor and self.editor.state() == QListView.State.EditingState:
+            self.editor.close_active_editor()
         if self.selectionModel():
             self.selectionModel().clearCurrentIndex()
         if self.editor:
@@ -864,8 +865,6 @@ class BaseTable(QTableView):
             self.closeEditor(self.editor, hint)
 
     def closeEditor(self, editor: CellEditor | None, hint: QStyledItemDelegate.EndEditHint) -> None:
-        if editor and editor.state() != QListView.State.EditingState:
-            editor.close_active_editor()
         super().closeEditor(editor, hint)
         StandardLogger.debug(
             f"An cell editor has been closed: {editor}, {hint}", extra={"sender": "TABLE"}
@@ -973,7 +972,6 @@ class BaseTable(QTableView):
             event.ignore()
 
         self.close_active_editor()
-
 
     # Copy and paste functions
 

@@ -6,6 +6,7 @@ from PyQt6.QtCore import (
     QAbstractItemModel,
     QCoreApplication,
     QDate,
+    QDateTime,
     QEvent,
     QModelIndex,
     QPoint,
@@ -273,8 +274,9 @@ class ScheduledFileDelegate(QStyledItemDelegate):
         option.rect = option.rect.adjusted(3, 2, 3, 2)
 
         model: FilteredScheduleModel = index.model()
-        course_idx, time_idx, path_idx = (
+        course_idx, date_idx, time_idx, path_idx = (
             model.index(index.row(), 1),
+            model.index(index.row(), 2),
             model.index(index.row(), 3),
             model.index(index.row(), 5),
         )
@@ -286,15 +288,23 @@ class ScheduledFileDelegate(QStyledItemDelegate):
 
         option.rect = option.rect.adjusted(0, 18, 0, 18)
 
-        item_time = time_idx.data(Qt.ItemDataRole.EditRole)
-        current = QTime.currentTime().msecsSinceStartOfDay()
-        remaining = item_time - current if item_time > current else 0
-        qtime = QTime.fromMSecsSinceStartOfDay(remaining)
+        item_date_time = QDateTime()
+        item_date_time.setDate(QDate.fromJulianDay(date_idx.data(Qt.ItemDataRole.EditRole)))
+        item_date_time.addMSecs(time_idx.data(Qt.ItemDataRole.EditRole))
+        current_date_time = QDateTime.currentDateTime()
+        remaining_msecs: int = current_date_time.msecsTo(item_date_time)
+        remaining_days = remaining_msecs // 86_400_000
 
-        if remaining < 3_600_000:
-            remaining_str = tr(f"in {qtime.minute()} min")
+        if remaining_days == 0:
+            qtime = QTime.fromMSecsSinceStartOfDay(remaining_msecs)
+            if remaining_msecs < 3_600_000:
+                remaining_str = self.tr(f"in {qtime.minute()} min")
+            elif remaining_msecs < 3_600_000 * 24 and remaining_msecs > 3_600_000:
+                remaining_str = self.tr(f"in {qtime.hour()}h{qtime.minute()} min")
+        elif remaining_days < 0:
+            remaining_str = self.tr("Past")
         else:
-            remaining_str = tr(f"in {qtime.hour()}h{qtime.minute()}min")
+            remaining_str = self.tr(f"in {remaining_days} days")
 
         time_str = f"{time_idx.data()} ({remaining_str})"
         painter.setFont(self.TIME_FONT)
