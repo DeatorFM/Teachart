@@ -116,12 +116,12 @@ class PictureModel(BaseElementModel):
 
     def recalculate_size(self, width: int):
         if self._adjusted and width >= self._width:
-            self._item_size = QSize(width, self._item_size.height() + 8)
+            self._item_size = QSize(width, self._item_size.height())
             return
         else:
             height = round(self.height * (width / self._width))
             self.set_size(width, height)
-            self._item_size = QSize(width, height + 8)
+            self._item_size = QSize(width, height + 12)
             self.set_adjusted(False)
 
     @property
@@ -269,6 +269,7 @@ class PictureEditor(BaseElementEditor):
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
 
         self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
+        self.setAutoFillBackground(True)
 
     @property
     def model(self) -> PictureModel:
@@ -287,7 +288,7 @@ class PictureEditor(BaseElementEditor):
                 self._model.height * (width / self._model.width)
             )  # Current height * (new width / current width)
             self._model.set_size(width, height)
-            self._model.set_item_size(QSize(self._max_width, height))
+            self._model.set_item_size(QSize(self._max_width, height + 8))
             self.ui.piclabel.setFixedSize(width, height)
         else:
             self._model.set_width(width)
@@ -306,7 +307,7 @@ class PictureEditor(BaseElementEditor):
         else:
             self._model.set_height(height)
             self.ui.piclabel.setFixedSize(self.ui.piclabel.width(), height)
-        self._model.set_item_size(QSize(self._max_width, height))
+        self._model.set_item_size(QSize(self._max_width, height + 8))
         self._model.set_adjusted(True)
         self.sizeChanged.emit(self._model.width, self._model.height)
 
@@ -314,7 +315,7 @@ class PictureEditor(BaseElementEditor):
         self.setFocus()
         self._model.set_size(width, height)
         self._model.set_adjusted(True)
-        self._model.set_item_size(QSize(self._max_width, height))
+        self._model.set_item_size(QSize(self._max_width, height + 8))
         self.sizeChanged.emit(self.model.width, self.model.height)
 
     def adjust_label_size(self) -> None:
@@ -326,10 +327,10 @@ class PictureEditor(BaseElementEditor):
         if self._model.height > self._max_width:
             height = round(self._model.width / self.model._height * self._max_width)
             self._model.set_size(self._max_width, height)
-            self._model.set_item_size(QSize(self._max_width, height))
+            self._model.set_item_size(QSize(self._max_width, height + 8))
         else:
             self._model.set_size(self.model.height, self.model.width)
-            self._model.set_item_size(QSize(self._max_width, self.model.height))
+            self._model.set_item_size(QSize(self._max_width, self.model.height + 8))
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
         self.sizeChanged.emit(self._model.width, self._model.height)
 
@@ -338,10 +339,10 @@ class PictureEditor(BaseElementEditor):
         if self._model.height > self._max_width:
             height = round(self._model.width / self.model._height * self._max_width)
             self._model.set_size(self._max_width, height)
-            self._model.set_item_size(QSize(self._max_width, height))
+            self._model.set_item_size(QSize(self._max_width, height + 8))
         else:
             self._model.set_size(self.model.height, self.model.width)
-            self._model.set_item_size(QSize(self._max_width, self.model.height))
+            self._model.set_item_size(QSize(self._max_width, self.model.height + 8))
         self.sizeChanged.emit(self._model.width, self._model.height)
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
 
@@ -350,7 +351,7 @@ class PictureEditor(BaseElementEditor):
         self._model.set_size(
             self.max_width, round(self._model.original_aspect_ratio * self.max_width)
         )
-        self._model.set_item_size(QSize(self.max_width, self._model.height))
+        self._model.set_item_size(QSize(self.max_width, self._model.height + 8))
         self._model.set_rotation(0)
         self.sizeChanged.emit(self.model.width, self.model.height)
         self.set_pixmap(self._model.width, self._model.height, self._model.rotation)
@@ -363,9 +364,6 @@ class PictureEditor(BaseElementEditor):
 
 
 class PictureDelegate(BaseElementDelegate):
-    def __init__(self, toolset, parent=None):
-        super().__init__(toolset, parent)
-
     def paint(
         self,
         painter: QPainter | None,
@@ -429,8 +427,7 @@ class PictureDelegate(BaseElementDelegate):
         self._toolset.enable_presenter_mode(self.pres_mode)
 
     def updateEditorGeometry(self, editor: PictureEditor, option, index):
-        adjusted_rect = option.rect
-        editor.setGeometry(adjusted_rect)
+        editor.setGeometry(option.rect)
         editor.adjust_label_size()
 
     def setModelData(self, editor: PictureEditor, model: PictureModel, index: QModelIndex):
