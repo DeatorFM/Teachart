@@ -22,7 +22,7 @@ dev = [
 build = ["pyinstaller>=6.0.0"]
 
 [tool.setuptools]
-packages = ["tcha", "ui", "styling", "nativeelements"]
+packages = ["tcha", "ui", "styling", "nativeelements", "styling.resources"]
 py-modules = ["main"]
 package-dir = {"" = "source"}
 
