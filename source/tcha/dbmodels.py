@@ -768,7 +768,6 @@ class FilteredStudentModel(QSortFilterProxyModel):
 class FilteredScheduleModel(QSortFilterProxyModel):
     def __init__(self, source_model: ScheduleModel, parent=None):
         super().__init__(parent)
-        print("Filtered Schedule Model created")
         self.setSourceModel(source_model)
         self.setSortRole(Qt.ItemDataRole.EditRole)
 

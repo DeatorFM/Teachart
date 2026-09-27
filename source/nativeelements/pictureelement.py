@@ -226,7 +226,7 @@ class PictureModel(BaseElementModel):
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
         stream.writeQString(PictureElementDefinitions.name())  # Element name
-        stream.writeQString(self.resource.path)  # Resource path
+        stream.writeQString(self.resource.path.as_posix())  # Resource path
         stream.writeInt32(self.width)  # Width val
         stream.writeInt32(self.height)  # Height val
         stream.writeInt16(self.rotation)  # Rotation val
@@ -678,7 +678,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
                 return PictureModel(resobj)
         elif mime_data.hasUrls():
             url = mime_data.urls()[0]
-            resobj = rescont.save(AudioElementDefinitions.type(), url.toLocalFile())
+            resobj = rescont.save(AudioElementDefinitions.type(), Path(url.toLocalFile()))
             return PictureModel(resobj)
         return None
 

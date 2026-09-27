@@ -219,7 +219,7 @@ class AudioModel(BaseElementModel):
         stream = QDataStream(data, QIODevice.OpenModeFlag.WriteOnly)
 
         stream.writeQString(AudioElementDefinitions.name())  # Element name
-        stream.writeQString(self.resource.path)  # Resource path
+        stream.writeQString(self.resource.path.as_posix())  # Resource path
         stream.writeBool(self.is_repeating)  # Is repeating flag
         stream.writeUInt16(self.repeats)  # Repeat number
         stream.writeUInt64(self.pause_length)  # Pause length val
@@ -424,7 +424,7 @@ class AudioEditor(BaseElementEditor):
 
 
 class AudioDelegate(BaseElementDelegate):
-    def __init__(self, toolset: "AudioToolset", parent=None):
+    def __init__(self, toolset: AudioToolset, parent=None):
         super().__init__(toolset, parent)
         self._play_icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         self._cached_editor: AudioEditor

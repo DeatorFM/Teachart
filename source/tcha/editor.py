@@ -234,7 +234,9 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
             self.fileOpened.emit(path, self)
 
     def open_file_dialog(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, tr("Open Sheet"), None, "*.lesson *.tch")
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("Open Document"), directory=str(Path.home()), filter="*.lesson *.tch"
+        )
         if path:
             self.fileOpened.emit(Path(path), self)
 
@@ -306,7 +308,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
             return True
         else:
             path, _ = QFileDialog.getSaveFileName(
-                self, tr("Save lesson chart"), "", tr("Teachart document (*.tch)")
+                self, tr("Save lesson chart"), str(Path.home()), tr("Teachart document (*.tch)")
             )
             if path:
                 StandardLogger.info(

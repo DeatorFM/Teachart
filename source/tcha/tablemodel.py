@@ -886,7 +886,7 @@ class TableModel(QAbstractTableModel):
             if definition:
                 resource = stream.readQString()
                 if resource:
-                    resobj = self.rescont.save(definition.type(), resource)
+                    resobj = self.rescont.save(definition.type(), Path(resource))
                 else:
                     resobj = self.rescont.create(definition.type())
                 device = stream.device()

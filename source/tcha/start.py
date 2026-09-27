@@ -258,7 +258,10 @@ class StartWindow(BaseMainWindow):
     def open_file_dialog(self) -> None:
         """Opens native file dialog. If a file has been selected a signal will be emitted with the selected path as a 'Path'-object"""
         path, _ = QFileDialog.getOpenFileName(
-            self, tr("Open File Dialog"), filter=tr("Teachart document (*.tch)")
+            self,
+            tr("Open File Dialog"),
+            directory=str(Path.home()),
+            filter=tr("Teachart document (*.tch)"),
         )
         self.fileOpened.emit(Path(path), self)
 

@@ -74,7 +74,7 @@ class ThemeValue:
 
 
 class AppInfo:
-    app_ver = "1.0.0-a.1"
+    app_ver = "1.0.0-b.1"
     db_ver = "1"
 
     def __init__(self):
