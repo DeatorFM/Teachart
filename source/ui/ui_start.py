@@ -281,7 +281,7 @@ class ScheduledFileDelegate(QStyledItemDelegate):
             model.index(index.row(), 5),
         )
 
-        course_name = course_idx.data() if course_idx.data() else tr("No course")
+        course_name = course_idx.data() if course_idx.data() else self.tr("No course")
 
         painter.setFont(self.COURSE_FONT)
         painter.drawText(option.rect, 0, course_name)

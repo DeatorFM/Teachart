@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
 from styling.utils import SvgIcon
 from tcha.consts import CanvasTool, CellAction
 from tcha.error import StandardLogger
-from tcha.settings import Locale, Settings, TimeFormat
+from tcha.settings import Settings, TimeFormat
 from tcha.table import PresenterCanvas, Table
 from tcha.utils import debug_enabled
 from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAction
@@ -709,9 +709,8 @@ class Ui_Editor(object):
 
         qsettings = Settings.qsettings()
         self.dt_DateTime = QDateTimeEdit(MainWindow)
-        locale = Locale[qsettings.value("User/language", type=str)].value
         tformat = TimeFormat[qsettings.value("User/time_format", type=str)].value
-        qlocale = QLocale(locale.language, locale.region)
+        qlocale = QLocale()
         self.dt_DateTime.setLocale(qlocale)
         self.dt_DateTime.setDisplayFormat(
             f"{qlocale.dateFormat(QLocale.FormatType.ShortFormat)} {tformat}"

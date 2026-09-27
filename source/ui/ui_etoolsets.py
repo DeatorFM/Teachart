@@ -489,7 +489,6 @@ class FontSizeModel(QAbstractListModel):
             48.0,
             72.0,
         )
-        self._locale: QLocale = Settings.value("User/language").to_qlocale()
 
     def rowCount(self, parent=None):
         return len(self._sizes)
@@ -497,7 +496,7 @@ class FontSizeModel(QAbstractListModel):
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             evened_num = evened(self._sizes[index.row()])
-            return self._locale.toString(evened_num)
+            return QLocale().toString(evened_num)
         elif role == Qt.ItemDataRole.UserRole:
             return self._sizes[index.row()]
         else:

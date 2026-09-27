@@ -5,9 +5,10 @@ pyinstall.run(
         "source/main.py",
         "--onefile",
         "--windowed",
-        "--name=teachart",
+        "--name=teachart_1.0.0-b.1",
         "--icon=resources/icons/logo.ico",
         "--distpath=dist",
-        '--add-data="resources/icons:icons"',
+        "--collect-submodules=nativeelements",
+        "--collect-submodules=styling.resources",
     ]
 )

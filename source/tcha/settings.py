@@ -6,15 +6,13 @@ from enum import Enum, Flag, StrEnum
 from functools import cache
 from os.path import abspath, dirname, exists
 from pathlib import Path
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 
-from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QLocale, QSettings, QSize, Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSql import QSqlDatabase
 from PyQt6.QtWidgets import (
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -59,9 +57,7 @@ def get_external_theme_names() -> Iterator[tuple[str, str]]:
 def get_themes() -> list[ThemeValue]:
     themes = []
     for name, theme in NTHEME_PROPERTIES.items():
-        themes.append(
-            ThemeValue(theme["name"].get(Settings.value("User/language").name), f"native:{name}")
-        )
+        themes.append(ThemeValue(theme["name"].get("EnglishUK"), f"native:{name}"))
 
     for fname, theme_name in get_external_theme_names():
         themes.append(ThemeValue(theme_name, fname))
@@ -90,26 +86,6 @@ class LocaleValue:
     name: str
     language: QLocale.Language
     region: QLocale.Country
-
-
-class Locale(Enum):
-    EnglishUK = LocaleValue("English UK", QLocale.Language.English, QLocale.Country.UnitedKingdom)
-    German = LocaleValue("German", QLocale.Language.German, QLocale.Country.Germany)
-    Japanese = LocaleValue("Japanese", QLocale.Language.Japanese, QLocale.Country.Japan)
-
-    def to_qlocale(self) -> QLocale:
-        return QLocale(self.value.language, self.value.region)
-
-    def to_int(self) -> int:
-        return self.__class__._member_names_.index(self.name)
-
-    @classmethod
-    def from_int(cls, i: int) -> Self:
-        """Returns the value on the 'i'th place in initialisation order."""
-        try:
-            return list(cls)[i]
-        except IndexError:
-            return cls.EnglishUK
 
 
 class TimeFormat(StrEnum):
@@ -141,7 +117,6 @@ class SettingsDialog(QDialog):
         self._return_flag: ReturnFlags = ReturnFlags.Invalid
         self._settings_map: dict[str, Callable] = {
             "User/appearance": self._select_appearance,
-            "User/language": self._select_language,
             "User/time_format": self._select_time_format,
             "User/always_schedule": self._tick_always_schedule,
             "User/editor.compress_image": self._tick_compress_image,
@@ -155,7 +130,6 @@ class SettingsDialog(QDialog):
 
     def connect_signals(self) -> None:
         self.ui.cb_themes.activated.connect(self.set_appearance)
-        self.ui.cb_language.activated.connect(self._on_language_set)
         self.ui.cb_time_format.activated.connect(self._on_time_format_set)
         self.ui.cb_always_schedule.toggled.connect(self._on_always_schedule_set)
         self.ui.cb_compress_images.toggled.connect(self._on_compress_images_set)
@@ -199,9 +173,6 @@ class SettingsDialog(QDialog):
         for theme in get_themes():
             self.ui.cb_themes.insertItem(self.ui.cb_themes.count(), theme.name, theme.value)
 
-        for value in Locale.__members__.values():
-            self.ui.cb_language.addItem(value.name, value)
-
         self.ui.cb_time_format.addItem("24h", TimeFormat.TF24)
         self.ui.cb_time_format.addItem("12h", TimeFormat.TF12)
 
@@ -217,11 +188,6 @@ class SettingsDialog(QDialog):
             self.ui.cb_themes.setCurrentIndex(i)
         else:
             self.ui.cb_themes.setCurrentIndex(0)
-
-    def _select_language(self, locale: Locale) -> None:
-        """Set language ComboBox for Locale value"""
-        idx = self.ui.cb_language.findData(locale)
-        self.ui.cb_language.setCurrentIndex(idx)
 
     def _select_time_format(self, tformat: TimeFormat) -> None:
         idx = self.ui.cb_time_format.findData(tformat)
@@ -244,10 +210,6 @@ class SettingsDialog(QDialog):
     def set_appearance(self, index: int) -> None:
         self.settings["User/appearance"] = self.ui.cb_themes.itemData(index)
         self._return_flag |= ReturnFlags.UpdateStyle
-
-    def _on_language_set(self) -> None:
-        self.settings["User/language"] = self.ui.cb_language.currentData().name
-        self._return_flag |= ReturnFlags.UpdateLocale
 
     def _on_time_format_set(self) -> None:
         self.settings["User/time_format"] = self.ui.cb_time_format.currentData().name
@@ -447,7 +409,6 @@ class Values:
         "AppInfo/app_ver": Value(AppInfo.app_ver, str, True),
         "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
         "User/appearance": Value("native:light", str, True),
-        "User/language": Value(Locale.EnglishUK, Locale, False, lambda val: Locale[val]),
         "User/time_format": Value(TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]),
         "User/always_schedule": Value(False, bool, False, lambda val: word_as_bool(val)),
         "User/editor.compress_image": Value(False, bool, False, lambda val: word_as_bool(val)),
@@ -507,7 +468,6 @@ class Values:
 
         settings.beginGroup("User")
         settings.setValue("appearance", Values.default_value("User/appearance"))
-        settings.setValue("language", Values.default_value("User/language"))
         settings.setValue("time_format", Values.default_value("User/time_format", True))
         settings.setValue("always_schedule", Values.default_value("User/always_schedule"))
         settings.setValue(

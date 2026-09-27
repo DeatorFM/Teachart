@@ -31,7 +31,9 @@ class DbManager(QDialog):
         self.ui.setupUi(self)
 
         self._course_model = course_model
-        self._filtered_course_model = FilteredCourseModel(self._course_model, self.tr("All students"), self)
+        self._filtered_course_model = FilteredCourseModel(
+            self._course_model, self.tr("All students"), self
+        )
 
         self._student_model = StudentModel(self._course_model.database(), self)
         self._filtered_student_model = FilteredStudentModel(self._student_model, self)
@@ -65,7 +67,9 @@ class DbManager(QDialog):
         self.ui.pb_new_course.clicked.connect(self.add_course)
         self.ui.pb_remove_course.clicked.connect(self.remove_course)
         self.ui.tv_courses.selectionModel().currentRowChanged.connect(self.on_course_row_changed)
-        self.ui.tv_courses.selectionModel().selectionChanged.connect(self.on_course_selection_changed)
+        self.ui.tv_courses.selectionModel().selectionChanged.connect(
+            self.on_course_selection_changed
+        )
         self.ui.pb_assign_students.clicked.connect(self._assign_button_clicked)
         self.ui.pb_unassign_student.clicked.connect(self.unassign_student)
         self.ui.pb_remove_student.clicked.connect(self.remove_student)
@@ -81,9 +85,7 @@ class DbManager(QDialog):
 
     def add_course(self) -> None:
         def isvalid() -> bool:
-            if name and duration > 0:
-                return True
-            return False
+            return name and duration > 0
 
         ok, name, duration = AddCourseDialog.get_course_info(self)
         if ok and isvalid():
@@ -113,7 +115,10 @@ class DbManager(QDialog):
         self._course_model.courseDataChanged.emit()
 
     def on_course_row_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
-        if current.row() == 0:
+        source_idx = self._filtered_course_model.mapToSource(
+            self._filtered_course_model.index(current.row(), current.column())
+        )
+        if source_idx.row() == 0:
             self.ui.pb_remove_course.setEnabled(False)
             self.ui.cb_show_unassigned.setEnabled(True)
         else:

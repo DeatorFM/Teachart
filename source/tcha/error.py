@@ -178,10 +178,14 @@ class StandardLogger:
 
                 now = datetime.datetime.now(datetime.UTC)
                 if not cls.logdir().exists():
-                    cls.logdir().mkdir()
+                    cls.logdir().mkdir(parents=True)
                 logpath = cls.logdir() / f"session_{now:%Y%m%d%H%M%S}.log"
                 if level > 0:
-                    file_handler = logging.FileHandler(str(logpath))
+                    file_handler = (
+                        logging.FileHandler(str(logpath))
+                        if logpath.exists()
+                        else logging.FileHandler(str(logpath), mode="w")
+                    )
                     formatter = logging.Formatter(
                         "%(asctime)s - [%(levelname)s] - %(sender)s - %(message)s",
                         defaults={"sender": "APP"},

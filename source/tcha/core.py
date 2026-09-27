@@ -8,14 +8,13 @@ from shutil import rmtree
 from threading import Lock
 
 from PyQt6.QtCore import QT_TR_NOOP as tr
-from PyQt6.QtCore import QDateTime, QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QDateTime, QLocale, QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QGraphicsScene,
-    QInputDialog,
     QMessageBox,
 )
 from styling.theming import load_theme
@@ -33,7 +32,7 @@ from tcha.dialogs import DialogManager, Editor, PresenterView
 from tcha.elements import get_all_definitions
 from tcha.error import ErrorCode, IOLogger, StandardLogger
 from tcha.lfio import LessonFile
-from tcha.settings import AppInfo, Locale, ReturnFlags, Settings, Values
+from tcha.settings import AppInfo, ReturnFlags, Settings, Values
 from tcha.start import OpenFileModel
 from tcha.utils import WinApi, parse_args
 
@@ -169,6 +168,7 @@ class AppCore(QApplication, metaclass=MetaApp):
 
     def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
+        QLocale.setDefault(QLocale(QLocale.Language.English, QLocale.Country.UnitedKingdom))
         self.setApplicationVersion(AppInfo.app_ver)
         self.setWindowIcon(QIcon(":/logo/logo_main"))
 
@@ -220,7 +220,6 @@ Session-ID:    {self.sessionId()}
 Debug ON:      {self._launch_config.debug}
 Database file: {self._launch_config.test_params.get("db", Settings.value("User/dbpath"))}
 Source-ID:     {self.source_id()}
-Language:      {self._launch_config.test_params.get("language", Settings.value("User/language").name)}
 Appearance:    {self._launch_config.test_params.get("theme", Settings.value("User/appearance"))}
 """
 
@@ -248,7 +247,7 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
             )
         self._state_manager.add_state(AppState.Running)
 
-    def _set_launch_settings(self, *, dbpath: Path, appearance: str, language: Locale) -> None:
+    def _set_launch_settings(self, *, dbpath: Path, appearance: str, language: QLocale) -> None:
         """Applies settings of arguments"""
         if not Settings.qsettings().allKeys() or self._launch_config.clean:
             self._first_time()
@@ -322,19 +321,6 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
             return "0"
 
         return self._launch_config.test_params.get("source_id", from_db())
-
-    def language_dialog(self) -> Locale:
-        language, result = QInputDialog.getItem(
-            None,
-            "Language",
-            "Select your language",
-            [value.value.name for value in list(Locale)],
-        )
-        if result:
-            for i, value in enumerate(list(Locale)):
-                if value.value.name == language:
-                    return Locale.from_int(i)
-        return Values.default_value("User/language")
 
     def show_startup_window(self) -> bool:
         """Returns startup window based on arguments on startup"""

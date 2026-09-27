@@ -75,9 +75,12 @@ def create_database() -> QSqlDatabase:
 
     from tcha.settings import Settings
 
-    path = Settings.user_path() / "db" / f"tcha{num}.tdb"
+    dbdir = Settings.user_path() / "db"
+    path = dbdir / f"tcha{num}.tdb"
+    if not dbdir.exists():
+        dbdir.mkdir(parents=True)
     db.setDatabaseName(path.as_posix())
-    ok = db.open()
+    db.open()
 
     for query in QUERIES.values():
         db.exec(query)
@@ -458,10 +461,7 @@ class ScheduleModel(QSqlRelationalTableModel):
 
             qsettings = Settings.qsettings()
             if item.column() == 2:
-                from tcha.settings import Locale
-
-                locale = Locale[qsettings.value("User/language", type=str)].value
-                qlocale = QLocale(locale.language, locale.region)
+                qlocale = QLocale()
                 julian_day = self.record(item.row()).value("date")
                 qdate = QDate.fromJulianDay(julian_day)
                 return qlocale.toString(qdate, QLocale.FormatType.ShortFormat)

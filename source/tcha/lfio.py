@@ -353,7 +353,7 @@ class LessonFile(QObject):
     def path(self) -> str:
         if self._f:
             return self._f.filename
-        return " "
+        return ""
 
     @property
     def mode(self) -> Literal["w", "r"]:

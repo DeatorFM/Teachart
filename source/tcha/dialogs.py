@@ -42,7 +42,7 @@ class DialogManager:
     ]  # Dialog types that can have more than one instance open
 
     def define_custom_mapping(self, wtype: str, wclass: type, container=False) -> bool:
-        """Define custom mapping for Dialog with class name 'wtype'. If 'multi_ins't' is True a container"""
+        """Define custom mapping for Dialog with class name 'wtype'. A Dialog container is created if 'container' is True"""
         if wtype not in self._dialogs:
             if container and hasattr(wclass, "wid"):
                 self._dialogs[wtype] = [wclass, DialogContainer(wclass)]

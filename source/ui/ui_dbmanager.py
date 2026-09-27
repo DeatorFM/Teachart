@@ -1,9 +1,6 @@
-from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import QCoreApplication, QModelIndex, QSize, Qt
-from PyQt6.QtGui import QIcon
 from PyQt6.QtSql import QSqlRelationalDelegate
 from PyQt6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -211,6 +208,7 @@ class DbManagerView:
 
         self.cb_show_unassigned = QCheckBox(self.student_tab)
         self.cb_show_unassigned.setObjectName("cb_show_unassigned")
+        self.cb_show_unassigned.setEnabled(False)
         hl2.addWidget(self.cb_show_unassigned)
 
         spacerItem = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
