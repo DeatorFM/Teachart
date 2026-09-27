@@ -100,7 +100,7 @@ class AudioModel(BaseElementModel):
         self._current_time = current_time
         self._text = self._resource.path.name
 
-        self._item_size = QSize(100, 49)
+        self._item_size = QSize(100, 54)
 
     @staticmethod
     def restype() -> ResourceType:
@@ -123,7 +123,7 @@ class AudioModel(BaseElementModel):
         return writer
 
     def set_item_size(self, size: QSize):
-        self._item_size = QSize(size.width(), 49)
+        self._item_size = QSize(size.width(), 54)
 
     @property
     def resource(self) -> ResourceObject:
@@ -473,14 +473,6 @@ class AudioDelegate(BaseElementDelegate):
         QApplication.style().drawControl(
             QStyle.ControlElement.CE_PushButton, button_option, painter, option.widget
         )
-
-        # txtfield_option = QStyleOptionFrame()
-        # txtfield_option.palette = option.palette
-        # txtfield_option.rect = text_rect.adjusted(-3, -3, 3, 3)
-
-        # QApplication.style().drawPrimitive(
-        #     QStyle.PrimitiveElement.PE_PanelLineEdit, txtfield_option, painter
-        # )
 
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft, index.data().text)
 
