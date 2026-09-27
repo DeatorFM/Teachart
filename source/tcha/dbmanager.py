@@ -164,7 +164,7 @@ class DbManager(QDialog):
             self,
             self._course_model,
             self._filtered_course_model.mapToSource(
-                self.tv_courses.selectionModel().currentIndex()
+                self.ui.tv_courses.selectionModel().currentIndex()
             ).row(),
         )
         if ok:

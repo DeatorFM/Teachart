@@ -147,7 +147,7 @@ class DbManagerView:
         self.tv_courses.setItemDelegate(CourseDelegate(self.tv_courses))
         self.tv_courses.setSelectionMode(QTreeView.SelectionMode.SingleSelection)
         self.tv_courses.setAlternatingRowColors(True)
-        self.tv_courses.setSortingEnabled(True)
+
         vl1.addWidget(self.tv_courses)
 
         self.left_side.setLayout(vl1)
