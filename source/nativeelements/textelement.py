@@ -1108,7 +1108,6 @@ class TextToolset(BaseElementToolset):
             svg = Svg.from_file(":/common/text_color")
             ic_engine = SvgIconEngine(svg)
             if color.isValid():
-                print("Color set: ", color.name())
                 ic_engine.set_path_color("lineBottom", color)
             else:
                 ic_engine.set_path_color("lineBottom", self.palette().text().color())

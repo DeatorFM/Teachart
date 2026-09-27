@@ -5,7 +5,6 @@ description = "Qt based gui app to create lesson plans for teachers"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyinstaller",
     "PyQt6>=6.6.10",
 ]
 
@@ -13,13 +12,15 @@ dependencies = [
 teachart = "main:main"
 
 [dependency-groups]
-dev = [
-    "PySide6>=6.6.0",
+build = ["PySide6>=6.6.0"] # Only includes necessary libraries to run app
+dev = [ # Includes also libraries used for testing or formatting
+    "PyQt6>=6.6.10",
+    "PySide6>=6.6.0", # Only needed for parsing .qrc-files
     "pytest>=9.1.1",
     "ruff>=0.16.0",
-    "ninja>=1.13.0"
+    "ninja>=1.13.0" # For building commands
 ]
-build = ["pyinstaller>=6.0.0"]
+dist = ["pyinstaller>=6.0.0", "PySide6>=6.6.0",] # Tools needed to create a executable one file distribution
 
 [tool.setuptools]
 packages = ["tcha", "ui", "styling", "nativeelements", "styling.resources"]

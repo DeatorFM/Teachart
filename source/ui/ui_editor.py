@@ -41,6 +41,11 @@ from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAct
 
 
 class Ui_Editor(object):
+    def adjust_tables_size(self, height: int) -> None:
+        frozen_table_height = min(self.split_table.height() // 2, height)
+        table_height = self.table.height() - frozen_table_height
+        self.split_table.setSizes([frozen_table_height, table_height])
+
     def setupUi(self, MainWindow: QMainWindow):
         MainWindow.setObjectName("EditorView")
         MainWindow.resize(Settings.value("Application/editor.window_size"))
@@ -59,10 +64,12 @@ class Ui_Editor(object):
         self.vl2.setObjectName("vl2")
 
         self.split_table = QSplitter(Qt.Orientation.Vertical, self.centralwidget)
+        self.split_table.setChildrenCollapsible(False)
 
         self.table = Table(self.centralwidget)
         self.table.setObjectName("Table")
         self.table.sizesSplitted.connect(lambda x: self.split_table.moveSplitter(x, 0))
+        self.table.frozen_table.sizeChanged.connect(self.adjust_tables_size)
 
         self.split_table.addWidget(self.table.frozen_table)
         self.split_table.addWidget(self.table)
@@ -905,6 +912,12 @@ class Ui_Editor(object):
             d[key] = toolset
         self.table.set_toolset_reference(d)
         self.table.itemDelegate().set_delegates(
+            {
+                definition.name(): definition.delegate(None, self.table.itemDelegate().parent())
+                for definition in edefinitions.values()
+            }
+        )
+        self.table.frozen_table.itemDelegate().set_delegates(
             {
                 definition.name(): definition.delegate(None, self.table.itemDelegate().parent())
                 for definition in edefinitions.values()

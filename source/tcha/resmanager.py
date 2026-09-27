@@ -48,7 +48,6 @@ class ResourceObject(QObject):
     def delete_member(self) -> None:
         """Decreases member count in case a model stops using this resource"""
         self._member_count -= 1
-        print(f"New member count: {self._member_count}")
         if self._member_count < 1:
             StandardLogger.debug(
                 f"Object of name '{self.name}' and type '{self.type.name}' of no. {self.type_num} has expired.",

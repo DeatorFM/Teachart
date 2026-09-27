@@ -861,7 +861,7 @@ class BaseTable(QTableView):
         if self.selectionModel():
             self.selectionModel().clearCurrentIndex()
         if self.editor:
-            self.editor.disconnect()
+            # self.editor.disconnect()
             self.closeEditor(self.editor, hint)
 
     def closeEditor(self, editor: CellEditor | None, hint: QStyledItemDelegate.EndEditHint) -> None:
@@ -896,6 +896,7 @@ class BaseTable(QTableView):
                     )
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
+                    self.close_active_editor()
 
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier or (
             self._element_selection and not event.modifiers() & Qt.KeyboardModifier.ControlModifier
@@ -954,6 +955,7 @@ class BaseTable(QTableView):
 
         # Item is dropped on a different index
         if drop_index.isValid():
+            self.close_active_editor()
             success = self.model().dropMimeData(
                 event.mimeData(),
                 event.dropAction(),
@@ -1140,7 +1142,7 @@ class Table(BaseTable):
 
     def close_active_editor(self, hint=QStyledItemDelegate.EndEditHint.NoHint):
         if self.has_frozen_row() and self.frozen_table.state() == QTableView.State.EditingState:
-            self.frozen_table.close_active_editor()
+            self.frozen_table.close_active_editor(hint)
         else:
             super().close_active_editor(hint)
 
@@ -1462,6 +1464,7 @@ class Table(BaseTable):
         super().wheelEvent(ev)
 
     def show_context_menu(self, position):
+        # NOT FUNCTIONAL ATM
         index = self.indexAt(position)
         if not index.isValid():
             return
@@ -1497,6 +1500,7 @@ class Table(BaseTable):
 
 class FrozenRowTable(BaseTable):
     unfrozen = pyqtSignal()
+    sizeChanged = pyqtSignal(int)
 
     def __init__(self, parent_table: Table, parent=None):
         super().__init__(parent)
@@ -1553,6 +1557,7 @@ class FrozenRowTable(BaseTable):
                     self.verticalHeader().setSectionHidden(row, False)
 
         self.show()
+        self.sizeChanged.emit(self.rowHeight(self._frozen_row) + 35)
 
     def unfreeze(self) -> None:
         self.setModel(None)
@@ -1572,8 +1577,7 @@ class FrozenRowTable(BaseTable):
 
     def paste_index(self, mime_data):
         super().paste_index(mime_data)
-        self.hideRow(self._frozen_row)
-        self.showRow(self._frozen_row)
+        self.sizeChanged.emit(self.sizeHint().height())
 
     def add_column_after_current(self) -> None:
         if self._table.currentIndex().isValid():
@@ -1596,7 +1600,7 @@ class FrozenRowTable(BaseTable):
             self._table.verticalHeader().moveSection(new_logical, visual_current + 1)
 
     def _update_size(self) -> None:
-        pass
+        self.sizeChanged.emit(self.sizeHint().height())
         # self.freeze_row(self.model(), self.frozen_row)
 
     def _on_rows_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
@@ -1615,25 +1619,22 @@ class FrozenRowTable(BaseTable):
             self.horizontalScrollBar().blockSignals(False)
 
     def dropEvent(self, event):
+        self._table.close_active_editor()
         super().dropEvent(event)
         if event.isAccepted():
-            self.hide()
-            self.show()
-            self.setState(QTableView.State.NoState)
-            self.viewport().update()
+            self.sizeChanged.emit(self.sizeHint().height())
 
     def sizeHint(self) -> QSize:
         if self.model():
             height = self.rowHeight(self._frozen_row) + 35
-            if height > self.parent().height():
-                return QSize(self.width(), self.parent().height() // 2)
             return QSize(self.width(), height)
         else:
             return super().sizeHint()
 
     def update_row_geometries(self, index: QModelIndex = QModelIndex()):
         super().update_row_geometries(index)
-        self.adjustSize()
+        self._table.update_row_geometries(index)
+        self.sizeChanged.emit(self.sizeHint().height())
 
     def wheelEvent(self, ev: QWheelEvent):
         if ev.angleDelta().x() != 0:
