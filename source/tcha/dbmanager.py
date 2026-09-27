@@ -211,7 +211,7 @@ class DbManager(QDialog):
             self.ui.pb_remove_schedule.setEnabled(False)
 
     def remove_schedule(self) -> None:
-        if self.tv_schedules.selectionModel().hasSelection():
+        if self.ui.tv_schedules.selectionModel().hasSelection():
             current_idx = self.ui.tv_schedules.selectionModel().currentIndex()
             source_idx = self._filtered_schedule_model.mapToSource(current_idx)
             self._schedule_model.removeRow(source_idx.row())

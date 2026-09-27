@@ -336,7 +336,9 @@ class ScheduleModel(QSqlRelationalTableModel):
             relation_model.select()
         self.select()
 
-    def add_schedule(self, course_id: int, datetime: QDateTime, file_id: int, path: str) -> bool:
+    def add_schedule(
+        self, course_id: int, datetime: QDateTime, file_id: uuid.UUID, path: str
+    ) -> bool:
         record = self.record()
         record.setValue(1, course_id)
         record.setValue("date", datetime.date().toJulianDay())
@@ -766,6 +768,7 @@ class FilteredStudentModel(QSortFilterProxyModel):
 class FilteredScheduleModel(QSortFilterProxyModel):
     def __init__(self, source_model: ScheduleModel, parent=None):
         super().__init__(parent)
+        print("Filtered Schedule Model created")
         self.setSourceModel(source_model)
         self.setSortRole(Qt.ItemDataRole.EditRole)
 

@@ -245,8 +245,8 @@ class SettingsDialog(QDialog):
 
     def create_new_db(self) -> None:
         """Creates new database file without deleting the old one in the standard folder and sets it as the used database."""
-        db = create_database(AppInfo.db_ver)
-        self.settings.dbpath = abspath(db.databaseName())
+        db = create_database()
+        self.settings["User/dbpath"] = abspath(db.databaseName())
         self.ui.le_path.setText(self.settings.get("User/dbpath"))
         self._return_flag |= ReturnFlags.Restart
 

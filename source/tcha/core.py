@@ -309,7 +309,6 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
     def clean_mode_enabled(self) -> bool:
         return self._launch_config.clean
 
-    @cache  # noqa: B019
     def source_id(self) -> str:
         def from_db() -> str:
             if self._db:

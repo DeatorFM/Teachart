@@ -225,8 +225,6 @@ class StartWindow(BaseMainWindow):
         self.ui.tv_pinned.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.ui.tv_pinned.setHeaderHidden(True)
 
-        self._caller = False
-
         self.connect_signals()
         self.update_schedule_message()
 
@@ -300,8 +298,10 @@ class StartWindow(BaseMainWindow):
         self.ui.loading_bar.setValue(0)
 
     def closeEvent(self, ev: QCloseEvent):
-        super().closeEvent(ev)
+        self.ui.lv_scheduledf.setModel(None)
+        self._schedule_model = None
         self.closed.emit("StartWindow", 0)
+        super().closeEvent(ev)
 
 
 class AboutDialog(QDialog):

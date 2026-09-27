@@ -41,7 +41,6 @@ from tcha.lfio import LessonFile
 from tcha.settings import Settings
 from tcha.table import Table
 from tcha.tablemodel import TableModel
-from tcha.utils import WinApi, debug_enabled
 from ui.ui_editor import Ui_Editor
 
 
@@ -105,7 +104,7 @@ class Editor(BaseMainWindow):
         self.toolsets = self.ui.add_toolsets(self, self.element_definitions)
         self.def_for_mime_type = None
         self.presenter_mode = False
-        self.init_display_mode = WinApi.get_display_mode()
+        self.init_display_mode = utils.WinApi.get_display_mode()
 
         # Intial methods
         self.ui.add_element_actions(self.element_definitions)
@@ -114,9 +113,9 @@ class Editor(BaseMainWindow):
         self.table.check_clipboard()
 
     def initialise_editor(self):
-        debug_tag = "(Debug-Mode)" if debug_enabled() else ""
+        debug_tag = "(Debug-Mode)" if utils.debug_enabled() else ""
         if self.lessonfile.mode == "w":
-            self.set_lesson(Lesson(self.courses.source_id(), self.ui.dt_DateTime.dateTime()))
+            self.set_lesson(Lesson(utils.source_id(), self.ui.dt_DateTime.dateTime()))
             tablemodel = TableModel.new(2, 2)
             self.table.setModel(tablemodel)
             self.ui.cb_course.setCurrentIndex(0)
@@ -263,7 +262,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 if button == QMessageBox.StandardButton.Yes:
                     id = self.courses.sourceModel().add_course(lesson.course_name, lesson.duration)
                     lesson = Lesson(
-                        self.courses.source_id(),
+                        utils.source_id(),
                         lesson.datetime,
                         lesson.course_name,
                         id,
@@ -295,7 +294,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         self.table.close_active_editor()
         self.ui.ac_save.setEnabled(False)
         self.ui.tb_save.setEnabled(False)
-        self.lesson.source_id = self.courses.source_id()
+        self.lesson.source_id = utils.source_id()
         if self.lessonfile.path and not save_copy:
             StandardLogger.info(
                 f"Save operation started for file: {self.lessonfile.path} with document properties:\n{self.document_info()}",
@@ -319,10 +318,11 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 save(path)
                 return True
             self.ui.ac_save.setEnabled(True)
+            self.ui.tb_save.setEnabled(True)
             return False
 
     def _on_saving_finished(self, result: bool = True) -> None:
-        debug_tag = "(Debug-Mode)" if debug_enabled() else ""
+        debug_tag = "(Debug-Mode)" if utils.debug_enabled() else ""
         if result:
             StandardLogger.info("Save operation succeeded.", extra={"sender": "EDITOR"})
             self.ui.ac_save.setEnabled(True)
@@ -360,7 +360,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                 self.lessonfile.file_id,
                 self.lessonfile.path,
             )
-            self.lesson.source_id = self.courses.source_id()
+            self.lesson.source_id = utils.source_id()
             StandardLogger.debug(
                 f"New schedule on {self.ui.dt_DateTime.dateTime().toString('dd/MM/yyyy-HH:mm')} created for file_id: {self.lessonfile.file_id}",
                 extra={"sender": "EDITOR"},
