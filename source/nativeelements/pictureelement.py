@@ -567,7 +567,7 @@ class PictureElementDefinitions(BaseElementDefinitions):
     @staticmethod
     def get_file(parent=None) -> str | None:
         path, _ = QFileDialog.getOpenFileName(
-            parent, directory=str(Path.home()), filter=tr("Image files *.png, *.bmp *.jpeg *.jpg")
+            parent, directory=str(Path.home()), filter=tr("Image files (*.png *.bmp *.jpeg *.jpg)")
         )
         if path and Settings.value("User/editor.compress_image"):
             return PictureElementDefinitions.compress_resource(path)
