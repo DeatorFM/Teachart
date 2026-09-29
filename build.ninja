@@ -36,8 +36,11 @@ rule uv
 
 # Build executable script
 build setup: uv
-  args = pip install -e .
+  args = pip install -e . --group build
   desc = Buildung teachart and tpack
+
+build build-dist: run_python build/make_dist.py
+  desc = Building onefile. This will take a while.
 
 # Compile resources
 build source/styling/resources/stylesheets-light: compress_qss resources/themes/light/light.qss
@@ -86,22 +89,6 @@ build pack-all: phony pack-light pack-dark
 
 build build-res: phony compile-all pack-all
 
-# Qt Toolchain
-build linguist-de: qt_tool
-  cmd = $pyside6_linguist translations/de.ts
-  desc = Opening Qt Linguist for German translations
-
-build lupdate: qt_tool
-  cmd = $pyside6_lupdate source/ -ts translations/de.ts
-  desc = Updating translation files
-
-build lrelease: qt_tool translations/compiled/de.qm
-  cmd = $pyside6_lrelease translations/de.ts -qm translations/compiled/de.qm
-  desc = Compiling translations
-
-build translations/compiled/de.qm: qt_tool translations/de.ts
-  cmd = $pyside6_lrelease translations/de.ts -qm translations/compiled/de.qm
-  desc = Compiling German translations
 
 # Default target
 default build-res

@@ -33,7 +33,7 @@ _This application can be build currently on Windows only_<br>
 Make sure to have at least Python 3.12 installed. Clone the repository using `git clone https://github.com/DeatorFM/Teachart.git`. <br>
 Inside the project folder, install all dependencies and build with `pip install . --group build` (uv: `uv sync --group build`). <br>
 You can now run the application from the terminal by entering `teachart` (uv: `uv run teachart`).
-* **Onefile executable using PyInstaller:** Run `ninja build build-dist` after installing dependencies. Alternatively you can download the current version from the releases.
+* **Onefile executable using PyInstaller:** Run `ninja build-dist` after installing dependencies. Alternatively you can run `python build/make-dist.py` or download the current version from the releases.
 
 ## Screenshots
 ![Editor in Light mode](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example1.png)
