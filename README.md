@@ -18,7 +18,7 @@ Teachart is a Qt application written in Python for creating lesson plans in a ri
 The document looks like a typical spreadsheet that can extend by rows and columns but instead of holding numbers, formulas and plain text it can hold rich text, images and even audio files. Furthermore, teachers can organise  courses and students as well as save schedules to their lesson plans.
 This application is currently running only on Windows.
 
-## Idea
+## Background
 As a former language teacher, I've always found it a hassle to have multiple windows open for all the materials used in the lesson. At that time, I've thought of an application where I have lesson plan and materials all accessible in one window. Since I was learning Python and experimented with the PyQt library then, I decided to develop an GUI application with this goal in mind. After three years of basically learning the Qt library and different programminbg concepts I published the first version (B1.0.0).
 
 ## Features
