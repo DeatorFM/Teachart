@@ -506,8 +506,14 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
                 return
             if dialog.return_flags & ReturnFlags.UpdateStyle:
                 load_theme(Settings.value("User/appearance"), self)
-            # ADD HANDLER FOR UpdateLocale AFTER TRANSLATIONS HAVE BEEN INPLEMENTED
+            if dialog.return_flags & ReturnFlags.UpdateLocale:
+                self.update_all_formats()
+                # ADD UPDATE FOR TRANSLATION WHEN TRANSLATION HAS BEEN ADDED
         self._dialog_manager.mark_closed("SettingsDialog")
+
+    def update_all_formats(self) -> None:
+        for editor in self.opened_editors():
+            editor.update_formats()
 
     def open_start_dialog(self, file_mode=False) -> None:
         """Opens a window of type StartWindow. If 'file_mode' is True the window will be shown without the option to create a new file."""

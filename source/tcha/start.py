@@ -11,6 +11,7 @@ from PyQt6.QtCore import (
     QCoreApplication,
     QDate,
     QLibraryInfo,
+    QLocale,
     QModelIndex,
     QSortFilterProxyModel,
     Qt,
@@ -26,6 +27,7 @@ from PyQt6.QtWidgets import (
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
+from tcha.settings import Settings
 from ui.ui_about import Ui_AboutDialog
 from ui.ui_start import Ui_StartWindow
 

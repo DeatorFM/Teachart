@@ -8,6 +8,7 @@ from nativeelements.baseelement import BaseElementDefinitions, BaseElementModel
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QDateTime,
+    QLocale,
     QModelIndex,
     QObject,
     QRunnable,
@@ -634,6 +635,13 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         dialog.open()
 
     # Other controls
+
+    def update_formats(self) -> None:
+        tformat = Settings.value("User/time_format").value
+        qlocale = QLocale()
+        self.ui.dt_DateTime.setDisplayFormat(
+            f"{qlocale.dateFormat(QLocale.FormatType.ShortFormat)} {tformat}"
+        )
 
     def set_status_bar_msg(self, msg: str) -> None:
         self.ui.statusbar.showMessage(msg)
