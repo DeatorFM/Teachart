@@ -342,7 +342,7 @@ class CellModel(QAbstractListModel):
         if index.isValid():
             model: BaseElementModel = self._data[index.row()]
             if role == Qt.ItemDataRole.DisplayRole:
-                return model
+                return self._work_data[index.row()]
             elif role == Qt.ItemDataRole.EditRole:
                 mcopy = model.shcopy()
                 self._work_data[index.row()] = mcopy

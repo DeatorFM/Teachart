@@ -19,6 +19,7 @@ from PyQt6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QPoint,
     QPointF,
     QRect,
@@ -378,10 +379,7 @@ class CellDelegate(QStyledItemDelegate):
             # Apply 2px padding to simulate CellEditor frame
             cell_rect = option.rect.adjusted(2, 2, -2, -2)
             y_offset = 2
-            # if (
-            #     cell_rect.width() < 140 and cell_rect.width() > 135
-            # ):  # Text display problems between 125 and 130 to fix
-            #     cell_rect.setWidth(140)
+
             cell: CellItem[BaseElementModel] = index.data()
             sub_option = QStyleOptionViewItem(option)
             if cell:
@@ -415,7 +413,7 @@ class CellDelegate(QStyledItemDelegate):
             lambda: self.update_cell_geometry(option.rect, index)
         )
         self._editor.setFocus()
-        self._open_editor_index = index
+        self._open_editor_index = QPersistentModelIndex(index)
         return self._editor
 
     def updateEditorGeometry(
@@ -1462,6 +1460,10 @@ class Table(BaseTable):
             elif ev.angleDelta().y() <= -15:
                 self.scroll_by(1)
         super().wheelEvent(ev)
+
+    def dropEvent(self, event):
+        self.frozen_table.close_active_editor()
+        super().dropEvent(event)
 
     def show_context_menu(self, position):
         # NOT FUNCTIONAL ATM

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import pprint
 import unicodedata
 import webbrowser
-from functools import cache
-from typing import NotRequired, TypedDict
+from typing import TypedDict
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -17,7 +15,6 @@ from nativeelements.baseelement import (
     ResourceType,
 )
 from nativeelements.views import TextEditorMenuView
-from PyQt6 import uic
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QBuffer,
@@ -27,6 +24,7 @@ from PyQt6.QtCore import (
     QIODevice,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QPoint,
     QPointF,
     QRectF,
@@ -870,6 +868,9 @@ class TextDelegate(BaseElementDelegate):
             super().paint(painter, option, QModelIndex())
             painter.restore()
 
+            # if index == self.edited_index:
+            #     return
+
         data: TextModel = index.data()
 
         # Apply 2px padding for element content
@@ -883,8 +884,7 @@ class TextDelegate(BaseElementDelegate):
 
         if index.row() < index.model().rowCount() - 1:
             painter.save()
-            pen = QPen(Qt.GlobalColor.lightGray, 1)
-            painter.setPen(pen)
+            painter.setPen(self.pen)
             painter.drawLine(
                 option.rect.bottomLeft().x() + 2,
                 option.rect.bottomLeft().y(),
@@ -904,6 +904,7 @@ class TextDelegate(BaseElementDelegate):
         editor.installEventFilter(self)
         editor.setFocus()
         editor.enable_presenter_mode(self.pres_mode)
+        self.edited_index = QPersistentModelIndex(index)
         return editor
 
     def setEditorData(self, editor: TextEditor | None, index: QModelIndex) -> None:
@@ -942,6 +943,7 @@ class TextDelegate(BaseElementDelegate):
         model.setData(index, editor.model, Qt.ItemDataRole.EditRole)
 
     def destroyEditor(self, editor: TextEditor, index: QModelIndex):
+        self.edited_index = QModelIndex()
         editor.sizeChanged.disconnect()
         self._toolset.close_()
         super().destroyEditor(editor, index)

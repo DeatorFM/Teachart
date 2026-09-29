@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Self, Type
+from typing import Self, Type  # noqa: UP035
 
 from PyQt6.QtCore import (
     QByteArray,
     QDataStream,
     QEvent,
     QMimeData,
+    QModelIndex,
     QObject,
     QSize,
     Qt,
@@ -15,7 +16,7 @@ from PyQt6.QtCore import (
     QXmlStreamWriter,
     pyqtSignal,
 )
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QPen
 from PyQt6.QtWidgets import (
     QFrame,
     QGraphicsItem,
@@ -208,6 +209,8 @@ class BaseTextElementEditor(QTextEdit):
 class BaseElementDelegate(QStyledItemDelegate):
     editorOpened = pyqtSignal([BaseElementEditor], [BaseTextElementEditor])
     editorClosed = pyqtSignal()
+    edited_index = QModelIndex()
+    pen = QPen(Qt.GlobalColor.lightGray, 1)
 
     def __init__(self, toolset: BaseElementToolset | None, parent=None):
         super().__init__(parent)

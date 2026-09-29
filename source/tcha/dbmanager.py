@@ -46,7 +46,7 @@ class DbManager(QDialog):
             self.ui.tv_courses.hideColumn(0)
             self.ui.tv_courses.hideColumn(3)
         self.ui.tv_courses.selectionModel().setCurrentIndex(
-            self._filtered_course_model.index(0, 1),
+            self._filtered_course_model.mapFromSource(self._course_model.index(0, 1)),
             QItemSelectionModel.SelectionFlag.SelectCurrent,
         )
         self.ui.tv_courses.selectionModel().select(
