@@ -19,7 +19,7 @@ The document looks like a typical spreadsheet that can extend by rows and column
 This application is currently running only on Windows.
 
 ## Background
-As a former language teacher, I've always found it a hassle to have multiple windows open for all the materials used in the lesson. At that time, I've thought of an application where I have lesson plan and materials all accessible in one window. Since I was learning Python and experimented with the PyQt library then, I decided to develop an GUI application with this goal in mind. After three years of basically learning the Qt library and different programminbg concepts I published the first version (B1.0.0).
+As a former language teacher, I've always found it a hassle to have multiple windows open for all the materials used in the lesson. At that time, I've thought of an application where I have lesson plan and materials all accessible in one window. Since I was learning Python and experimented with the PyQt library then, I decided to develop an GUI application with this goal in mind. After three years of basically learning the Qt library and different programminbg concepts I published the first version (1.0.0-beta.100).
 
 ## Features
 * Create an extendable table chart where each cell can hold multiple text blocks, images or audio tracks
@@ -38,5 +38,4 @@ You can now run the application from the terminal by entering `teachart` (uv: `u
 ## Screenshots
 ![Editor in Light mode](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example1.png)
 ![Editor in Dark mode](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example2.png)
-![Editing in close up](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example3.png)
 ![Course manager](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example4.png)
