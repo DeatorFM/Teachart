@@ -72,9 +72,45 @@ class ThemeValue:
 
 # Constants
 
+class VersionNumber:
+    class Type(Enum):
+        Alpha = 0
+        Beta = 1
+        Full = 2
+        Dev = 3
+        
+    def __init__(self, major: int, minor: int, patch: int, type=Type.Full, sub_version=0) -> None:
+        self.major = major
+        self.minor = minor
+        self.patch = patch
+        self.type = type
+        self.sub_version = sub_version
+
+    @classmethod
+    def from_string(cls, version_str: str) -> VersionNumber:
+        partitioned = string.replace("-", ".").split(".")
+        if len(partitioned) == 3:
+            major = int(partitioned[0])
+            minor = int(partitioned[1])
+            patch = int(partitioned[2])
+            
+            if len(partitioned) == 5:
+                type = Type[partitioned[3].capitalize()]
+                sub_version = int(partition[4])
+                return cls(major, minor, patch, type, sub_version)
+            return cls(major, minor, patch, Type.Full, 0)
+        raise ValueError("Version string cannot be parsed")
+
+    def __eq__(self, other: VersionNumber) -> bool:
+        return self.major == other.major and self.minor == other.minor and self.patch == other.patch and self.type == other.type and self.sub_version == other.sub_version
+
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}" if self.type == Type.Full else f"{self.major}.{self.minor}.{self.patch}-{self.type.name.lower()}.{self.sub_version}"
+                
+
 
 class AppInfo:
-    app_ver = "1.0.0-b.1"
+    app_ver = "1.0.0-beta.1"
     db_ver = "1"
 
     def __init__(self):
