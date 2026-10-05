@@ -569,11 +569,12 @@ Appearance:    {self._launch_config.test_params.get("theme", Settings.value("Use
     def on_screen_changed(self) -> None:
         """Handler for 'screenChanged' signal."""
         if self._dialog_manager.is_opened("PresenterView"):  # Opens a PresenterView if created
+            pv = self._dialog_manager.get_dialog("PresenterView")
             if WinApi.get_display_mode() == DisplayMode.Single:
                 self.init_display_mode = DisplayMode.Single
                 self._disable_presenter_mode()
             else:
-                if self._presenter_view.isHidden():
+                if pv.isHidden():
                     self.init_display_mode = WinApi.get_display_mode()
                     self.show_presenter()
             return

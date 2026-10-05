@@ -290,7 +290,9 @@ class ScheduledFileDelegate(QStyledItemDelegate):
 
         item_date_time = QDateTime()
         item_date_time.setDate(QDate.fromJulianDay(date_idx.data(Qt.ItemDataRole.EditRole)))
-        item_date_time.addMSecs(time_idx.data(Qt.ItemDataRole.EditRole))
+        item_date_time.setTime(
+            QTime.fromMSecsSinceStartOfDay(time_idx.data(Qt.ItemDataRole.EditRole))
+        )
         current_date_time = QDateTime.currentDateTime()
         remaining_msecs: int = current_date_time.msecsTo(item_date_time)
         remaining_days = remaining_msecs // 86_400_000

@@ -1,6 +1,6 @@
 [project]
 name = "teachart"
-version = "1.0.0-b.100"
+version = "1.0.0-b.101"
 description = "Qt based gui app to create lesson plans for teachers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,7 +12,7 @@ dependencies = [
 teachart = "main:main"
 
 [dependency-groups]
-build = ["ninja>=1.13.0", "pyinstaller>=6.0.0"] # Only includes necessary libraries to run app
+build = ["ninja>=1.13.0", "pyinstaller>=6.0.0"] # Only includes necessary libraries to build and run app
 dev = [ # Includes also libraries used for testing or formatting
     "PyQt6>=6.6.10",
     "PySide6>=6.6.0", # Only needed for parsing .qrc-files
