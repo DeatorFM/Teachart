@@ -424,6 +424,7 @@ class Ui_Editor(object):
         self.ac_course_exp.setObjectName("ac_course_exp")
         self.ac_course_rec = QAction(parent=MainWindow)
         self.ac_course_rec.setObjectName("ac_course_rec")
+        self.ac_course_rec.setEnabled(False)
         icon11 = SvgIcon(":/common/info")
         self.ac_course_rec.setIcon(icon11)
         self.ac_course_rec.setEnabled(True)
@@ -431,7 +432,7 @@ class Ui_Editor(object):
         icon12 = SvgIcon(":/common/schedule")
         icon13 = SvgIcon(":/common/scheduled")
 
-        self.ac_schedule = SwitchAction(icon12, icon13, MainWindow)
+        self.ac_schedule = SwitchAction(icon12, icon13, parent=MainWindow)
         self.ac_schedule.setObjectName("ac_schedule")
 
         # View actions
@@ -778,6 +779,11 @@ class Ui_Editor(object):
 
         self.retranslateUi(MainWindow)
         self.ac_show_notes.toggled["bool"].connect(self.dw_comment.setVisible)  # type: ignore
+        self.ac_show_notes.toggled["bool"].connect(
+            lambda toggled: self.ac_show_notes.setText(
+                MainWindow.tr("Hide notes") if toggled else MainWindow.tr("Show Notes")
+            )
+        )
         self.dw_presenter.visibilityChanged["bool"].connect(self.ac_pres_mode.setChecked)
         self.dw_comment.visibilityChanged["bool"].connect(self.ac_show_notes.setChecked)  # type: ignore
         QMetaObject.connectSlotsByName(MainWindow)
@@ -858,9 +864,14 @@ class Ui_Editor(object):
         self.ac_table_insp.setText(MainWindow.tr("Table Inspector"))
         self.ac_xml_insp.setText(MainWindow.tr("XML Inspector"))
         self.ac_schedule.setText(MainWindow.tr("Schedule"))
+        self.ac_schedule.setToolTip(MainWindow.tr("Add schedule for this document"))
         self.ac_copy.setText(MainWindow.tr("Copy "))
         self.ac_paste.setText(MainWindow.tr("Paste"))
-        self.ac_show_notes.setText(MainWindow.tr("Show Notes"))
+        self.ac_show_notes.setText(
+            MainWindow.tr("Show Notes")
+            if self.dw_comment.isVisible()
+            else MainWindow.tr("Hide Notes")
+        )
         self.ac_show_ttbar.setText(MainWindow.tr("Show Table Tool Bar"))
         self.ac_add_course.setText(MainWindow.tr("New Course"))
         self.ac_rmv_row.setText(MainWindow.tr("Remove Row"))

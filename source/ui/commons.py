@@ -120,29 +120,25 @@ class SwitchButton(QPushButton):
 class SwitchAction(QAction):
     stateChanged = pyqtSignal(int)
 
-    def __init__(self, icon1: QIcon, icon2: QIcon, parent=None) -> None:
-        super().__init__(icon1, None, parent)
-        self.icon1 = icon1
-        self.icon2 = icon2
+    def __init__(self, *icons, parent=None) -> None:
+        self._states = {state: icon for state, icon in enumerate(icons, 1)}
+        super().__init__(self._states[1], None, parent)
         self._state = 1
         self.triggered.connect(self.switch_state)
 
     def switch_state(self) -> None:
-        if self._state == 1:
-            self.setIcon(self.icon2)
-            self._state = 2
+        if self._state + 1 in self._states:
+            self.setIcon(self._states[self._state + 1])
+            self._state += 1
         else:
-            self.setIcon(self.icon1)
+            self.setIcon(self._states[1])
             self._state = 1
         self.stateChanged.emit(self.state())
 
     def changeState(self, state: int) -> None:
-        if state == 1:
-            self.setIcon(self.icon1)
-            self._state = 1
-        elif state == 2:
-            self.setIcon(self.icon2)
-            self._state = 2
+        if state in self._states:
+            self.setIcon(self._states[state])
+            self._state = state
 
     def state(self) -> int:
         return self._state
@@ -296,6 +292,7 @@ class SearchableComboBox(QComboBox):
         self.lineEdit().editingFinished.connect(
             lambda: self.lineEdit().setClearButtonEnabled(False)
         )
+        self.activated.connect(lambda: self.model().set_search_filter(""))
 
     def filter_items(self, text: str):
         self.lineEdit().setClearButtonEnabled(True)
@@ -310,6 +307,7 @@ class SearchableComboBox(QComboBox):
     def setCurrentIndex(self, index):
         self.lineEdit().setClearButtonEnabled(False)
         super().setCurrentIndex(index)
+        # self.model().set_search_filter("")
         self.clearFocus()
 
     def showPopup(self):

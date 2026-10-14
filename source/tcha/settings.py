@@ -120,7 +120,7 @@ class VersionNumber:
 
 
 class AppInfo:
-    app_ver = "1.0.0-b.101"
+    app_ver = "1.0.0-b.102"
     db_ver = "1"
 
     def __init__(self):
@@ -456,9 +456,9 @@ class Values:
         "AppInfo/db_ver": Value(AppInfo.db_ver, str, True),
         "User/appearance": Value("native:light", str, True),
         "User/time_format": Value(TimeFormat.TF24, TimeFormat, False, lambda val: TimeFormat[val]),
-        "User/always_schedule": Value(False, bool, False, lambda val: word_as_bool(val)),
-        "User/editor.compress_image": Value(False, bool, False, lambda val: word_as_bool(val)),
-        "User/editor.single_selection": Value(False, bool, False, lambda val: word_as_bool(val)),
+        "User/always_schedule": Value(False, bool, True, lambda val: word_as_bool(val)),
+        "User/editor.compress_image": Value(False, bool, True, lambda val: word_as_bool(val)),
+        "User/editor.single_selection": Value(False, bool, True, lambda val: word_as_bool(val)),
         "User/dbpath": Value(" ", str, True),
         "Application/pinned": Value([], list, True),
         "Application/recent": Value([], list, True),

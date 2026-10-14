@@ -1311,6 +1311,7 @@ class Table(BaseTable):
             self._exclusive_row = -1
             self.show_all_rows()
             self.on_vscrolled()
+            self.on_vslider_range_changed(0, self.verticalScrollBar().maximum())
 
         elif mode == TableViewMode.SingleRow:
             if self._top_idx.isValid():

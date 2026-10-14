@@ -121,6 +121,8 @@ class Editor(BaseMainWindow):
             self.table.setModel(tablemodel)
             self.ui.cb_course.setCurrentIndex(0)
             self.setWindowTitle(f"{tr('New Document')} - Teachart {debug_tag}")
+            if Settings.value("User/always_schedule"):
+                self.ui.ac_schedule.switch_state()
 
         elif self.lessonfile.mode == "r":
             tablemodel = self.lessonfile.get_table()
@@ -157,11 +159,11 @@ class Editor(BaseMainWindow):
         self.ui.ac_paste.triggered.connect(
             lambda: self.table.paste_index(QApplication.clipboard().mimeData())
         )
-        # self.ui.ac_course_rec.triggered.connect()
-        self.ui.cb_course.activated.connect(self.set_course)
+        self.ui.cb_course.currentIndexChanged.connect(self.set_course)
         self.ui.cb_course.lineEdit().textEdited.connect(self.filter_courses)
         self.ui.dt_DateTime.dateTimeChanged.connect(self.set_datetime)
         self.ui.ac_schedule.triggered.connect(self.set_unsaved)
+        self.ui.ac_schedule.stateChanged.connect(self._on_schedule_state_changed)
         self.ui.sb_duration.valueChanged.connect(self.set_duration)
         self.ui.ac_pres_mode.toggled.connect(self.enable_presenter_mode)
         self.ui.ac_vmode_table.toggled.connect(
@@ -398,8 +400,18 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
         """Checks the button if schedule found."""
         if self.schedules.has_file(file_id):
             self.ui.ac_schedule.changeState(2)
+            self._on_schedule_state_changed(2)
         else:
             self.ui.ac_schedule.changeState(1)
+            self._on_schedule_state_changed(1)
+
+    def _on_schedule_state_changed(self, state: int) -> None:
+        if state == 1:
+            self.ui.ac_schedule.setText(self.tr("Schedule"))
+            self.ui.ac_schedule.setToolTip(self.tr("Add schedule for this document on saving"))
+        else:
+            self.ui.ac_schedule.setText(self.tr("Unschedule"))
+            self.ui.ac_schedule.setToolTip(self.tr("Remove schedule for this document on saving"))
 
     # Course related methods
 
