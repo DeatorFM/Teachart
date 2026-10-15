@@ -704,6 +704,9 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
     # Event handlers
 
+    def createPopupMenu(self):
+        return None
+
     def closeEvent(self, ev: QCloseEvent):
         """
         The user is asked if they want to save the document when there are unsaved changes.

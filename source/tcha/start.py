@@ -302,6 +302,9 @@ class StartWindow(BaseMainWindow):
         self.ui.loading_bar.setVisible(False)
         self.ui.loading_bar.setValue(0)
 
+    def createPopupMenu(self):
+        return None
+
     def closeEvent(self, ev: QCloseEvent):
         self.ui.lv_scheduledf.setModel(None)
         self._schedule_model = None
