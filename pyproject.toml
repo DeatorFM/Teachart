@@ -1,6 +1,6 @@
 [project]
 name = "teachart"
-version = "1.0.0-b.102"
+version = "1.0.0-b.103"
 description = "Qt based gui app to create lesson plans for teachers"
 readme = "README.md"
 requires-python = ">=3.12"

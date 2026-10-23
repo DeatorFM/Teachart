@@ -248,7 +248,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
 
     def set_lesson(self, lesson: Lesson | None) -> None:
         if lesson:
-            if lesson.source_id == utils.source_id():
+            if lesson.source_id == utils.source_id() or lesson.course_id == 0:
                 source_idx = self.courses.sourceModel().index_for_id(lesson.course_id)
                 if source_idx.isValid():
                     mapped_idx = self.courses.mapFromSource(source_idx)

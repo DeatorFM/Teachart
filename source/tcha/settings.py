@@ -120,7 +120,7 @@ class VersionNumber:
 
 
 class AppInfo:
-    app_ver = "1.0.0-b.102"
+    app_ver = "1.0.0-b.103"
     db_ver = "1"
 
     def __init__(self):
