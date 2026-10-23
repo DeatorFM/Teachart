@@ -1004,7 +1004,7 @@ class BaseTable(QTableView):
         if self.editing_level() & EditingLevel.ElementEditing:
             self.editor.copy_current_index()
         elif self.editing_level() & EditingLevel.CellEditing:
-            self.copy_index(self.currentIndex)
+            self.copy_index(self.currentIndex())
 
     def paste_index(self, mime_data: QMimeData) -> None:
         if mime_data and not set(mime_data.formats()).isdisjoint(set(self.model().mimeTypes())):
