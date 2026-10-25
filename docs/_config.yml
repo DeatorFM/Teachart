@@ -1,8 +1,16 @@
-title: Just the Docs Template
-description: A starter template for a Jeykll site using the Just the Docs theme!
+title: Teachart User Documentation
+description: How-to-use guides for new users interested in this application.
 theme: just-the-docs
 
 url: https://just-the-docs.github.io
 
 aux_links:
-  Template Repository: https://github.com/just-the-docs/just-the-docs-template
+  "Website Template Repository": 
+    - "https://github.com/just-the-docs/just-the-docs-template"
+  "Teachart on Github":
+    - "https://github.com/DeatorFM/Teachart"
+
+logo: "/resources/images/logo.png"
+favicon_ico: "resources/icons/logo.ico"
+
+nav_enabled: true
