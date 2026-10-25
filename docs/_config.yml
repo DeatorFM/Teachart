@@ -12,3 +12,19 @@ logo: "/assets/images/help.svg"
 favicon_ico: "/assets/images/favicon.ico"
 
 nav_enabled: true
+
+callouts:
+    note:
+      title: Note
+      color: blue
+    highlight:
+      color: yellow
+    important:
+      title: Important
+      color: red
+    new:
+      title: New
+      color: green
+    warning:
+      title: Warning
+      color: red

@@ -1,6 +1,7 @@
 ---
 title: Home
 layout: home
+nav_order: 1
 ---
 
 
@@ -11,7 +12,7 @@ With Teachart you can create structured plans for you lesson or presentation in 
 
 Because this application was created for teachers to plan their lessons you can also organise youre courses and students in a data base and moreover link your file to a schedule.
 
-Since you might not be familiar with this kind of application browse through the docs to learn about all the different possibilities to make a structured plan.
+Since you might not be familiar with this kind of application browse through the docs to learn about all the different tools to make a structured plan.
 
 {: .note }
 Click on "Getting started" to get rough instructions on how to create you first document and to get familiar with the table controls.
