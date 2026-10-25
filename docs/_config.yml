@@ -10,7 +10,7 @@ aux_links:
   "Teachart on Github":
     - "https://github.com/DeatorFM/Teachart"
 
-logo: "/resources/images/logo.png"
-favicon_ico: "resources/icons/logo.ico"
+logo: "https://github.com/DeatorFM/Teachart/blob/main/resources/images/logo.png"
+favicon_ico: "https://github.com/DeatorFM/Teachart/blob/main/resources/icons/logo.ico"
 
 nav_enabled: true
