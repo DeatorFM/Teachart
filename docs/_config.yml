@@ -8,7 +8,7 @@ aux_links:
   "Teachart on Github":
     - "https://github.com/DeatorFM/Teachart"
 
-logo: "/assets/images/logo.svg"
+logo: "/assets/images/help.svg"
 favicon_ico: "/assets/images/favicon.ico"
 
 nav_enabled: true
