@@ -2,7 +2,7 @@ title: Teachart User Documentation
 description: How-to-use guides for new users interested in this application.
 theme: just-the-docs
 
-url: https://just-the-docs.github.io
+url: https://deatorfm.github.io/Teachart/
 
 aux_links:
   "Website Template Repository": 
@@ -10,7 +10,7 @@ aux_links:
   "Teachart on Github":
     - "https://github.com/DeatorFM/Teachart"
 
-logo: "https://github.com/DeatorFM/Teachart/blob/main/resources/images/logo.png"
-favicon_ico: "https://github.com/DeatorFM/Teachart/blob/main/resources/icons/logo.ico"
+logo: "/resources/images/logo.png"
+favicon_ico: "/resources/icons/logo.ico"
 
 nav_enabled: true
