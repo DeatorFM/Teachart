@@ -120,7 +120,8 @@ class DialogManager:
                 for key, value in list(cont.items()):
                     value: QMainWindow
                     if value.close():
-                        # cont.pop(key)
+                        if key in cont:
+                            cont.pop(key)
                         continue
                     result = False
             else:
