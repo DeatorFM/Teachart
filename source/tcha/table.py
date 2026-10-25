@@ -896,9 +896,9 @@ class BaseTable(QTableView):
                     drag.exec(Qt.DropAction.MoveAction)
                     self.close_active_editor()
 
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier or (
-            self._element_selection and not event.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
+        if bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier) ^ Settings.value(
+            "User/editor.single_selection"
+        ):  # CHANGED b.104
             index = self.indexAt(event.pos())
             cell_rect = self.visualRect(index)
             cell_idx = self._entered_cell.get_cell_index(cell_rect.topLeft(), event.pos())
