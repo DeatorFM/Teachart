@@ -151,8 +151,6 @@ class CellEditor(QListView):
         self._drag_start_position: QPoint | None = None
         self._pres_mode = False
 
-        self.activated.connect(lambda: self.elementActivated.emit(True))
-
     # Toolset methods
 
     def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
@@ -203,9 +201,9 @@ class CellEditor(QListView):
                 self.model().revert_work_data(self.currentIndex())
             super().closeEditor(editor, hint)
             self._editor_just_destroyed = True
-            self.elementActivated.emit(False)
             self.setCurrentIndex(QModelIndex())
             self.setFocus()
+            self.elementActivated.emit(False)
             StandardLogger.debug(
                 f"An element editor has been closed: {editor}, {hint.name}",
                 extra={"sender": "CELLEDITOR"},
@@ -258,6 +256,7 @@ class CellEditor(QListView):
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
         self.currentIndexChanged.emit(current, previous)
+        self.elementActivated.emit(True)
 
     def paintEvent(self, e: QPaintEvent | None) -> None:
         self.scrollToTop()
@@ -838,16 +837,26 @@ class BaseTable(QTableView):
             f"Editor opened '{editor}' at {self.currentIndex().row()}|{self.currentIndex().column()}",
             extra={"sender": "TABLE"},
         )
-        if editor:
+        if isinstance(editor, CellEditor):
+            print("Connecting cell editor")
             self.cache_editor(editor)
             self._editor.set_toolset_reference(self._toolset_reference)
             self._editor.selectionModel().currentChanged.connect(
                 self.currentEditorIndexChanged.emit
             )
+            self._editor.elementActivated.connect(self._on_element_activated)
             self.editingLevelChanged.emit(self.editing_level())
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)
                 self._editor.model().dataChanged.connect(self.changeMade.emit)
+
+    def _on_element_activated(self, activated: bool) -> None:
+        print("Element activated")
+        self.editingLevelChanged.emit(
+            EditingLevel.ElementEditing | EditingLevel.CellEditing
+            if activated
+            else EditingLevel.CellEditing
+        )
 
     def set_toolset_reference(self, toolsets: dict[str, BaseElementToolset]) -> None:
         if not self._toolset_reference:
@@ -1133,6 +1142,7 @@ class Table(BaseTable):
             self._editor.selectionModel().currentChanged.connect(
                 self.currentEditorIndexChanged.emit
             )
+            self._editor.elementActivated.connect(self._on_element_activated)
             self.editingLevelChanged.emit(self.editing_level())
             if self._editor.model():
                 self._editor.model().modelChanged.connect(self.changeMade.emit)

@@ -506,13 +506,16 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
             self.ui.ac_freeze_row.setEnabled(True)
             self.ui.ac_from_clipboard.setEnabled(self.table.can_create_from_clipboard())
             self.ui.ac_goto_active.setEnabled(True)
+            self.ui.lb_editing_mode.setText(self.tr("EDIT MODE: Cell"))
 
             if self.table.frozen_table.frozen_row == self.table.currentIndex().row():
                 self.ui.ac_freeze_row.set_text("unfreeze")
             else:
                 self.ui.ac_freeze_row.set_text("freeze")
 
-        if level & EditingLevel.ElementEditing:  # noqa: SIM102
+        if level & EditingLevel.ElementEditing:
+            print("Element editing emitted")
+            self.ui.lb_editing_mode.setText(self.tr("EDIT MODE: Element"))
             if self.presenter_mode:
                 model: BaseElementModel | None = self.table.current_model()
                 if model:
@@ -521,6 +524,7 @@ Table size (R|C):  {self.tablemodel.rowCount()} | {self.tablemodel.columnCount()
                         self.ui.canvas.change_item(gr_item)
 
         if level == EditingLevel.NoEditing:
+            self.ui.lb_editing_mode.setText("")
             self.ui.table_group.setEnabled(False)
             self.ui.ac_clear_cell.setEnabled(False)
             self.ui.menu_elements.setEnabled(False)

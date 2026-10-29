@@ -788,6 +788,10 @@ class Ui_Editor(object):
         self.dw_comment.visibilityChanged["bool"].connect(self.ac_show_notes.setChecked)  # type: ignore
         QMetaObject.connectSlotsByName(MainWindow)
 
+        self.lb_editing_mode = QLabel(self.statusbar)
+        self.lb_editing_mode.setObjectName("lb_editing_mode")
+        self.statusbar.addPermanentWidget(self.lb_editing_mode)
+
         self.tb_view_mode_group = QButtonGroup()
         self.tb_view_mode_group.setObjectName("tb_view_mode_group")
 
