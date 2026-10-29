@@ -35,7 +35,7 @@ Click on the cell to activate cell edit mode. In the tool bar click on the  butt
 
 
 ### 4. Editing text element and saving changes
-You can now write formatted text like in a word processor using the <span style="color:blue">**toolbar**</span> at the top. When you are finished click on the <span style="color:green">**checkmark**</span> button to save the changes and close the text editor. Click another time when you have finished editing the cell as well. You can also click on a free space in the table area or press Return (Ctrl + Return for the text editor) to confirm changes. You can discard the changes by pressing Escape or <span style="color:red">**X**</span>.
+You can now write formatted text like in a word processor using the <span style="color:blue">**toolbar**</span> at the top. When you are finished click on the <span style="color:green">**checkmark**</span> button to save the changes and close the text editor. Click another time when you have finished editing the cell as well. You can also click on a free space in the table area or press Return (Ctrl + Return for the text editor) to confirm changes. You can discard the changes by pressing Escape or clicking <span style="color:red">**X**</span> in the tool bar.
 
 ![](assets/images/getting_started_5.png)
 
