@@ -12,7 +12,7 @@ description: Using editor features
 ### Contents
 
 1. [Table]()
-    1. [Editing cell contents]()
+    1. [Editing cell contents](https://deatorfm.github.io/Teachart/table.html)
     2. [Elements]()
     3. [View modes]()
 2. [Notes]()
