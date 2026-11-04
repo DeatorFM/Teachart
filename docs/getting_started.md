@@ -10,10 +10,10 @@ description: Get started in creating your first Teachart document
 
 On this page you will learn the first basic steps to get an understanding of how this application works
 What you will learn:
-1. How to create a new document
-2. Insert a text element into a cell and edit the text
-3. Assign a course and set up a schedule 
-4. Save the document
+- How to create a new document
+- Insert a text element into a cell and edit the text
+- Assign a course and set up a schedule 
+- Save the document
 
 ### 1. Make a new document
 On application startup you will see the start window. Click on **New Sheet** and an editor with a blank table will open.

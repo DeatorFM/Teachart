@@ -11,10 +11,15 @@ You can customize your document with formatted text using the text element. The 
 
 ![Missing tool bar image with explaination](assets/images/text_element_1.png)
 
-{. :important }
+You can insert the following special text item:
+- **Table** (A)
+- **Symbol** (B)
+- **Hyperlink** (C)
+
+{: .important }
 Some tool bar options might not visible if the window is too narrow. You can show these by clicking on **»**.
 
-{. :note}
+{: .note}
 Text format options can also be changed in the right click menu*.\
 *\*from version 1.0.0-b.110*
 

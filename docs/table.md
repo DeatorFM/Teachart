@@ -13,11 +13,11 @@ description: Customizing the table
 Clicking on a cell activates the cell editor which enables the tool bar above. You can also find all option in the menu "Edit" as well. To close the editor click on the checkmark (A) or press Enter.
 
 ## Cells and elements
-Table rows x columns cell and in each cell you can insert elemens. Elements can be text, images or audio. Take a look at the element guide to see what kind of elements are available in the latest version. Cells and elements have their own editing mode. Take a look at the status bar in the bottom right to see which editor is open*.
+A table has rows x columns cells and in each cell you can insert elements. Elements can be text, images or audio. Take a look at the [element guide](https://deatorfm.github.io/Teachart/elements.html) to see what kind of elements are available in the latest version. Cells and elements have their own editing mode. Take a look at the status bar in the bottom right to see which editor is open*.
 
 ![](assets/images/table_3.png)
 
-*Since version 1.0.0-b.110
+*\*Since version 1.0.0-b.110*
 
 ## Adding and removing rows and columns
 
@@ -42,7 +42,7 @@ If your are editing an element and use "Copy" the single element is copied and n
 
 
 ## Swapping cells
-Make sure no cell and element editors are not activated. Click the cell and hold the mouse button, then drag it on the cell you want to swap with.\
+Make sure no cell and element editors are activated. Click the cell and hold the mouse button, then drag it on the cell you want to swap with.\
 
 ![](assets/images/table_2.gif)
 
