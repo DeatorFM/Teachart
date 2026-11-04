@@ -12,7 +12,7 @@ Clicking on a cell opens the cell editor. Inside the tool bar click on the (+) "
 {: .note }
 If you can choose "From clipboard" an element suitable for the clipboard content is inserted with the clipboard content.
 
-### Editing elements
+## Editing elements
 ![](assets/images/editing_cell_1.png)
 
 Clicking on an element changes the options in the  tool bar :\
@@ -23,4 +23,12 @@ Clicking on an element changes the options in the  tool bar :\
 **Remove element** (E): Removes selected element.
 
 {: .note }
-You can also move elements by drag&dropping them to a different position or to another another cell.
+You can also move elements by drag & dropping them to a different position or to another another cell.
+
+## Copying elements
+You can copy elements and paste them into another cell or into a table of a different document. Chose "Copy" under the menu "Edit" while the element editor is open or use the shortcut Ctrl + C. Select a cell and paste with "Paste" or shortcut Ctrl + V.
+
+{: .important }
+Copying and pasting with the shortcut does not work with text elements. Use the menu instead.
+
+
