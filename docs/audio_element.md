@@ -1,7 +1,6 @@
 ---
 title: Audio element
 layout: default
-grand_parent: Table
 parent: Elements
 nav-order: 3
 description: Play audio files and customise playback 

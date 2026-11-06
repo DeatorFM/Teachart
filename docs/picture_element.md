@@ -1,7 +1,6 @@
 ---
 title: Picture element
 layout: default
-grand_parent: Table
 parent: Elements
 nav-order: 2
 description: Display and transform images
