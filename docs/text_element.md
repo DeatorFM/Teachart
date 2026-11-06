@@ -2,6 +2,8 @@
 title: Text element
 layout: default
 parent: Elements
+grand_parent: Table
+ancestor: Editor
 nav-order: 1
 description: Display and edit rich text 
 ---

@@ -2,6 +2,8 @@
 title: Picture element
 layout: default
 parent: Elements
+grand_parent: Table
+ancestor: Editor
 nav-order: 2
 description: Display and transform images
 ---

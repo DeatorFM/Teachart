@@ -1,5 +1,5 @@
 ---
-title: Table
+title: Notes
 layout: default
 parent: Editor
 nav-order: 2
