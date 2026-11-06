@@ -2,7 +2,8 @@
 title: Elements
 layout: default
 parent: Table
-nav-order: 2
+nav_order: 2
+has_children: true
 description: Overview of all available elements
 ---
 
@@ -11,4 +12,4 @@ These are all elements available in the latest version. For more information on 
 
 - [Text](https://deatorfm.github.io/Teachart/text_element.html)
 - [Picture](https://deatorfm.github.io/Teachart/picture_element.html)
-- [Audio]()
+- [Audio](https://deatorfm.github.io/Teachart/audio_element.html)
