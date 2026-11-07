@@ -19,6 +19,9 @@ A table has rows x columns cells and in each cell you can insert elements. Eleme
 
 *\*Since version 1.0.0-b.110*
 
+{: .note }
+You can directly open the element editor without opening the cell editor by holding Ctrl and clicking on the element. If you want this to be the default behavior without holding Ctrl you can activate the setting "Always select single elements of cell".
+
 ## Adding and removing rows and columns
 
 **Insert row** (C): Adds a row under the selected cell.\
