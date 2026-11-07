@@ -2,6 +2,7 @@
 title: View modes
 layout: default
 parent: Table
+grand_parent: Editor
 nav_order: 3
 description: Display data in differen view modes
 ---

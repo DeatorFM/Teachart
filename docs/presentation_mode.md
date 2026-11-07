@@ -2,7 +2,7 @@
 title: Presentation mode
 layout: default
 parent: Editor
-nav-order: 4
+nav_order: 4
 description: Present the table's content on asecnd screen
 ---
 

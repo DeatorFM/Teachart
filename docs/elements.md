@@ -2,6 +2,7 @@
 title: Elements
 layout: default
 parent: Table
+grand_parent: Editor
 nav_order: 2
 has_children: true
 description: Overview of all available elements

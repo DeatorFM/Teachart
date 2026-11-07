@@ -2,7 +2,8 @@
 title: Table
 layout: default
 parent: Editor
-nav-order: 1
+nav_order: 1
+has_children: true
 description: Customizing the table
 ---
 

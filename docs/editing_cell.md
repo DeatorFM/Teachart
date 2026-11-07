@@ -2,7 +2,8 @@
 title: Editing cell contents
 layout: default
 parent: Table
-nav-order: 1
+grand_parent: Editor
+nav_order: 1
 description: Edit the contents of the cell
 ---
 

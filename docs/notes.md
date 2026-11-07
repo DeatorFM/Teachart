@@ -2,7 +2,7 @@
 title: Notes
 layout: default
 parent: Editor
-nav-order: 2
+nav_order: 2
 description: Adding notes to the document
 ---
 
