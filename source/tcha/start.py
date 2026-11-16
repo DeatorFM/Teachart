@@ -265,7 +265,8 @@ class StartWindow(BaseMainWindow):
             directory=str(Path.home()),
             filter=tr("Teachart document (*.tch)"),
         )
-        self.fileOpened.emit(Path(path), self)
+        if path:
+            self.fileOpened.emit(Path(path), self)
 
     def set_past_schedules_visible(self, state: Qt.CheckState) -> None:
         """Handles CheckState of the check box for showing past schedules in the list."""
