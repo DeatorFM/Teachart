@@ -380,6 +380,8 @@ class PictureDelegate(BaseElementDelegate):
 
         painter.save()
 
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
         sub_rect = option.rect.adjusted(2, 2, -2, -2)
 
         model: PictureModel = index.data()

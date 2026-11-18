@@ -11,6 +11,7 @@ from nativeelements.baseelement import (
     BaseElementToolset,
     BaseTextElementEditor,
 )
+from PyQt6 import sip
 from PyQt6.QtCore import QT_TR_NOOP as tr
 from PyQt6.QtCore import (
     QAbstractItemModel,
@@ -26,6 +27,7 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
+    QTimer,
     pyqtSignal,
     pyqtSlot,
 )
@@ -396,8 +398,6 @@ class CellDelegate(QStyledItemDelegate):
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()
-                        else:
-                            pass
                         delegate.paint(painter, sub_option, cmodel.index(i, 0), False)
                         y_offset += delegate_size.height()
 
@@ -432,9 +432,14 @@ class CellDelegate(QStyledItemDelegate):
 
             if self.hovered_index.table_index == index:
                 selected = model.index(self.hovered_index.cell_index, 0)
-                editor.setCurrentIndex(selected)
-                editor.edit(selected)
-                return
+                QTimer.singleShot(0, lambda: self._open_element_editor(editor, selected))
+
+    @staticmethod
+    def _open_element_editor(editor: CellEditor, index: QModelIndex) -> None:
+        if sip.isdeleted(editor) or not index.isValid():
+            return
+        editor.setCurrentIndex(index)
+        editor.edit(index)
 
     def setModelData(self, editor: CellEditor, model: TableModel, index: QModelIndex):
         model.setData(index, editor.model().item)
@@ -1638,6 +1643,11 @@ class FrozenRowTable(BaseTable):
         super().update_row_geometries(index)
         self._table.update_row_geometries(index)
         self.sizeChanged.emit(self.sizeHint().height())
+
+    def keyPressEvent(self, ev: QKeyEvent):
+        if ev.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            return self._table.keyPressEvent(ev)
+        return super().keyPressEvent(ev)
 
     def wheelEvent(self, ev: QWheelEvent):
         if ev.angleDelta().x() != 0:
