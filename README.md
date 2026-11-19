@@ -35,6 +35,9 @@ Inside the project folder, install all dependencies and build with `pip install 
 You can now run the application from the terminal by entering `teachart` (uv: `uv run teachart`).
 * **Onefile executable using PyInstaller:** Run `ninja build-dist` after installing dependencies. Alternatively you can run `python build/make-dist.py` or download the current version from the releases.
 
+## Documentation
+A user guide how to use Teachart can be found [here](https://deatorfm.github.io/Teachart/).
+
 ## Screenshots
 ![Editor in Light mode](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example1.png)
 ![Editor in Dark mode](https://github.com/DeatorFM/Teachart/blob/main/resources/images/Example2.png)
