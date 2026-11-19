@@ -23,9 +23,9 @@ Turning on presentation mode without a second screen connected will only show th
 ## Drawing
 The "Presentation View" panel on the right side of the editor mirrors what the audience sees. To draw on the content, choose a tool and a colour in this panel, then draw on the preview. Your drawing appears on the second screen at the same time.
 
-- Pen: Draw freehand lines.
-- Arrow: Draw an arrow. See below.
-- Eraser: Remove drawn lines and arrows.
+- **Pen**: Draw freehand lines.
+- **Arrow**: Draw an arrow. See below.
+- **Eraser**: Remove drawn lines and arrows.
 
 {: .important}
 The drawing is not permanent and is deleted when presentation mode is turned off or the element is changed.
