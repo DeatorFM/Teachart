@@ -9,19 +9,23 @@ description: Customizing the table
 
 # Table
 
-![](assets/images/table_1.png)
+![Image of part of the table and the toolbar](assets/images/table_1.png)
 
-Clicking on a cell activates the cell editor which enables the tool bar above. You can also find all option in the menu **Edit** as well. To close the editor click on the checkmark (A) or press Enter.
+Clicking on a cell activates the cell editor which enables the tool bar above. You can also find all option in the menu **Edit**. To close the editor click on the checkmark (A) or press Enter.
 
 ## Cells and elements
-A table has rows x columns cells and in each cell you can insert elements. Elements can be text, images or audio. Take a look at the [element guide](https://deatorfm.github.io/Teachart/elements.html) to see what kind of elements are available in the latest version. Cells and elements have their own editing mode. Take a look at the status bar in the bottom right to see which editor is open*.
+A table is made up of rows and columns of cells. Each cell can hold one or more elements, such as text, images or audio. Take a look at the [element guide](https://deatorfm.github.io/Teachart/elements.html) to see what kind of elements are available in the latest version. Cells and elements have their own editing mode.
+- The **cell editor** works on the cell as a whole: its elements, and copying or clearing it.
+- The **element editor** edits a single element, for example the text inside it.
 
-![](assets/images/table_3.png)
+Take a look at the status bar in the bottom right to see which editor is open*.
 
-*\*Since version 1.0.0-b.110*
+![Image of status bar showing the current edit mode](assets/images/table_3.png)
+
+*\*Available since version 1.0.0-b.110*
 
 {: .note }
-You can directly open the element editor without opening the cell editor by holding Ctrl and clicking on the element. If you want this to be the default behavior without holding Ctrl you can activate the setting "Always select single elements of cell".
+To open the element editor directly, hold Ctrl and click the element. To make this the default behavior without holding Ctrl you can activate the setting **Always select single elements of cell**.
 
 ## Adding and removing rows and columns
 
@@ -31,38 +35,37 @@ You can directly open the element editor without opening the cell editor by hold
 **Remove column** (F): Removes the column of the selected cell. 
 
 {: .note}
-You can also append rows and columns at either end of the table using the options **Append row** (Ctrl + R) and **Append column** (Ctrl + T). Use the keyboard shortcuts to quickly add them.
+To add a row or column at the end of the table, use **Append row** (Ctrl + R) or **Append column** (Ctrl + T) from the Edit menu.
 
 ## Remove entire cell content
 Select a cell and click on **Clear Cell** (G).
 
 ## Copying and pasting cells
-You can copy whole cells and paste them into another cell even of a different document. Use **Copy** (Ctrl + C) and **Paste** (Ctrl + V) in the **Edit** menu or use the usual shortcuts.\
+You can copy whole cells and paste them into another cell including a cell of a different document. Use **Copy** (Ctrl + C) and **Paste** (Ctrl + V) in the **Edit** menu.\
 \
-If you paste into a cell that has already content you have the option to overwrite the contents of the cell or append the copied contents to the cell.
+If the target cell already has content, Teachart asks whether to **overwrite** it or **append** the copied content to it.
 
 {: .important}
-If your are editing an element and use **Copy** the single element is copied and not the cell. Close the element editor first if you want to copy the whole cell.
+While the element editor is open, **Copy** copies only that element, not the cell. To copy the whole cell, close the element editor first.
 
 
 ## Swapping cells
-Make sure no cell and element editors are activated. Click the cell and hold the mouse button, then drag it on the cell you want to swap with.
+Close the cell and element editors first. Then click and hold a cell, drag it onto the cell you want to swap with, and release the mouse button.
 
-![](assets/images/table_2.gif)
+![Image showing two cells swapped](assets/images/table_2.gif)
 
 ## Moving rows and columns
 Like single cells you can move entire rows or columns by drag & dropping. Click and a row or column header and move it to the desired position.
 
-![](assets/images/table_5.gif)
+![Image showing columns being moved](assets/images/table_5.gif)
 
 ## Changing header text
-The text of horizontal headers can be customised by double clicking on a header. Change the text inside the text field and save your changes with Enter.
+Double-click a column header to rename it. Type the new text and press **Enter** to save.
 
-![](assets/images/table_4.png)
+![Image showing the text edit field for the header](assets/images/table_4.png)
 
 ## Scrolling by row or column
-You can quickly scroll through the table row by row or column by column by using Ctrl and the arrow keys.
-You can also jump to a row by selecting the row number in the status bar.
+To scroll through the table one row or column at a time, hold Ctrl and press the arrow keys. To jump to a specific row, choose its number from "Top row" in the status bar. 
 
-![](assets/images/table_6.png)
+![Image showing the row number menu in the status bar](assets/images/table_6.png)
 
