@@ -14,10 +14,11 @@ from PyQt6.QtCore import (
     QRunnable,
     Qt,
     QThreadPool,
+    QUrl,
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtGui import QAction, QCloseEvent, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -174,6 +175,9 @@ class Editor(BaseMainWindow):
         )
         self.ui.ac_goto_active.triggered.connect(self.table.scroll_to_current)
         self.ui.ac_freeze_row.triggered.connect(self.table.freeze_current_row)
+        self.ui.ac_guide.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://deatorfm.github.io/Teachart/"))
+        )
         self.ui.ac_about.triggered.connect(lambda: self.dialogCalled.emit("AboutDialog"))
         self.ui.te_comment.textChanged.connect(self.set_comment)
 

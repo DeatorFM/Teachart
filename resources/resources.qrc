@@ -68,5 +68,6 @@
         <file alias="underline">svg/underline.svg</file>
         <file alias="up">svg/up.svg</file>
         <file alias="remove_table">svg/remove_table.svg</file>
+        <file alias="guide">svg/guide.svg</file>
     </qresource>
 </RCC>

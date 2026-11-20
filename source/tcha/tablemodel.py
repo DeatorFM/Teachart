@@ -88,6 +88,9 @@ class Trindex:
     def __bool__(self) -> bool:
         return self.table_index.isValid() and self.cell_index > -1
 
+    def lies_on(self, table_idx: QModelIndex, cell_idx: int) -> bool:
+        return self, self.table_index == table_idx and self.cell_index == cell_idx
+
 
 class CellItem(list):
     """Describes the raw data of a cell."""

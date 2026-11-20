@@ -101,8 +101,8 @@ class Ui_Editor(object):
         self.menu_debug = QMenu(parent=self.menubar)
         self.menu_debug.setObjectName("menu_debug")
 
-        self.menuHelp = QMenu(parent=self.menubar)
-        self.menuHelp.setObjectName("menuHelp")
+        self.menu_help = QMenu(parent=self.menubar)
+        self.menu_help.setObjectName("menu_help")
 
         # Corner Widget at right side of menu bar
 
@@ -629,6 +629,11 @@ class Ui_Editor(object):
 
         self.ac_settings = QAction(parent=MainWindow)
         self.ac_settings.setObjectName("ac_settings")
+        self.ac_settings.setShortcut("Ctrl+P")
+
+        self.ac_guide = QAction(parent=MainWindow)
+        self.ac_guide.setObjectName("ac_guide")
+        self.ac_guide.setShortcut("F1")
 
         self.ac_about = QAction(parent=MainWindow)
         self.ac_about.setObjectName("ac_about")
@@ -687,7 +692,9 @@ class Ui_Editor(object):
         self.menu_debug.addAction(self.ac_table_insp)
         self.menu_debug.addAction(self.ac_xml_insp)
 
-        self.menuHelp.addAction(self.ac_about)
+        self.menu_help.addAction(self.ac_guide)
+        self.menu_help.addSeparator()
+        self.menu_help.addAction(self.ac_about)
 
         self.menubar.addAction(self.menu_file.menuAction())
         self.menubar.addAction(self.menu_edit.menuAction())
@@ -695,7 +702,7 @@ class Ui_Editor(object):
         self.menubar.addAction(self.menu_opt.menuAction())
         self.menubar.addAction(self.menu_debug.menuAction())
         self.menu_debug.menuAction().setVisible(debug_enabled())
-        self.menubar.addAction(self.menuHelp.menuAction())
+        self.menubar.addAction(self.menu_help.menuAction())
 
         # Construct Lesson Toolbar
 
@@ -816,7 +823,7 @@ class Ui_Editor(object):
         self.menu_view.setTitle(MainWindow.tr("View"))
         self.menu_opt.setTitle(MainWindow.tr("Options"))
         self.menu_debug.setTitle(MainWindow.tr("Debugging"))
-        self.menuHelp.setTitle(MainWindow.tr("Help"))
+        self.menu_help.setTitle(MainWindow.tr("Help"))
         self.dw_presenter.setWindowTitle(MainWindow.tr("Presentation View"))
         self.dw_comment.setWindowTitle(MainWindow.tr("Notes"))
         self.tb_lesson.setWindowTitle(MainWindow.tr("Lesson Details"))
@@ -863,6 +870,7 @@ class Ui_Editor(object):
         self.ac_course_exp.setText(MainWindow.tr("Course Explorer"))
         self.ac_course_rec.setText(MainWindow.tr("View Course Record"))
         self.ac_file_insp.setText(MainWindow.tr("File Inspector"))
+        self.ac_guide.setText(MainWindow.tr("User manual"))
         self.ac_about.setText(MainWindow.tr("About Teachart"))
         self.ac_res_view.setText(MainWindow.tr("Resource View"))
         self.ac_table_insp.setText(MainWindow.tr("Table Inspector"))

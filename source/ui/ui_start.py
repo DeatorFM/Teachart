@@ -177,6 +177,13 @@ class Ui_StartWindow(object):
         self.loading_bar.setVisible(False)
         self.status_bar.addPermanentWidget(self.loading_bar)
 
+        self.tb_guide = QToolButton(self.status_bar)
+        self.tb_guide.setObjectName("tb_guide")
+        icon6 = SvgIcon(":/common/guide")
+        self.tb_guide.setIcon(icon6)
+        self.tb_guide.setIconSize(QSize(22, 22))
+        self.status_bar.addPermanentWidget(self.tb_guide)
+
         self.tb_about = QToolButton(self.status_bar)
         self.tb_about.setObjectName("tb_about")
         icon5 = SvgIcon(":/common/about")
@@ -207,6 +214,7 @@ class Ui_StartWindow(object):
         self.ac_open.setText(_translate("start_window", "Browse"))
         self.ac_new.setText(_translate("start_window", "New Sheet"))
         self.ac_course_mng.setText(_translate("start_window", "Course Explorer"))
+        self.tb_guide.setToolTip(_translate("start_window", "Open user manual"))
         self.tb_about.setToolTip(_translate("start_window", "About Teachart"))
 
 

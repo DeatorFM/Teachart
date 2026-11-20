@@ -11,13 +11,13 @@ from PyQt6.QtCore import (
     QCoreApplication,
     QDate,
     QLibraryInfo,
-    QLocale,
     QModelIndex,
     QSortFilterProxyModel,
     Qt,
+    QUrl,
     pyqtSignal,
 )
-from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtGui import QCloseEvent, QDesktopServices
 from PyQt6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
 from tcha import utils
 from tcha.base import BaseMainWindow
 from tcha.dbmodels import FilteredScheduleModel, ScheduleModel
-from tcha.settings import Settings
 from ui.ui_about import Ui_AboutDialog
 from ui.ui_start import Ui_StartWindow
 
@@ -240,6 +239,9 @@ class StartWindow(BaseMainWindow):
         self.ui.lv_scheduledf.clicked.connect(self.open_scheduled)
         self.ui.de_date_selector.dateChanged.connect(self.on_date_changed)
         self.ui.cb_show_past_schedules.checkStateChanged.connect(self.set_past_schedules_visible)
+        self.ui.tb_guide.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://deatorfm.github.io/Teachart/"))
+        )
         self.ui.tb_about.clicked.connect(lambda: self.dialogCalled.emit("AboutDialog"))
 
     @property

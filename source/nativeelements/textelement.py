@@ -7,6 +7,7 @@ from typing import TypedDict
 from nativeelements.baseelement import (
     BaseElementDefinitions,
     BaseElementDelegate,
+    BaseElementMenu,
     BaseElementModel,
     BaseElementToolset,
     BaseTextElementEditor,
@@ -236,15 +237,13 @@ class TextModel(QTextDocument, BaseElementModel):
         return TextDelegate(toolset, parent)
 
     def presentable_item(self) -> QGraphicsSvgItem:
-        # item = QGraphicsTextItem()
+        # item = QGraphicsTextItem() // TextItem has performance problems when drawing
         bytearr = QByteArray()
         buffer = QBuffer()
         buffer.setBuffer(bytearr)
         svg_gen = QSvgGenerator()
         svg_gen.setOutputDevice(buffer)
         painter = QPainter(svg_gen)
-        # item.setDocument(self.clone())
-        # item.setCacheMode(QGraphicsTextItem.CacheMode.DeviceCoordinateCache)
         self.drawContents(painter, QRectF(QPointF(0, 0), self.size()))
         painter.end()
         renderer = QSvgRenderer(bytearr)
@@ -719,11 +718,11 @@ class TextEditor(BaseTextElementEditor):
         )
 
 
-class TextEditorMenu(QMenu):
+class TextEditorMenu(BaseElementMenu):
     fontSet = pyqtSignal(dict)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__("TextElement", parent)
         self.ui = TextEditorMenuView()
         self.ui.setUi(self)
 
@@ -736,7 +735,7 @@ class TextEditorMenu(QMenu):
     def open_(
         self,
         globalPos: QPoint,
-        props: dict,
+        props: TextProps,
         copy: bool,
         paste: bool,
         table: bool,

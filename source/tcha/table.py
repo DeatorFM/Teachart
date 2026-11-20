@@ -391,7 +391,7 @@ class CellDelegate(QStyledItemDelegate):
                             QPoint(cell_rect.x(), cell_rect.y() + y_offset),
                             delegate_size,
                         )
-                        if Trindex(index, i) == self.hovered_index:
+                        if self.hovered_index.lies_on(index, i):
                             painter.save()
                             super().paint(painter, sub_option, QModelIndex())
                             painter.restore()

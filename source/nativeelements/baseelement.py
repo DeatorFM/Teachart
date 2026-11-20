@@ -51,7 +51,7 @@ class BaseElementToolset(QToolBar):
         return ""
 
     @abstractmethod
-    def connect_editor(self, editor: "BaseElementEditor") -> None:
+    def connect_editor(self, editor: BaseElementEditor) -> None:
         """Connect signals between editor and toolset to have editing interface.
         Editor must be made visible and emit called in this method."""
         return
@@ -61,6 +61,14 @@ class BaseElementToolset(QToolBar):
 
     def close_(self) -> None:
         self.setVisible(False)
+
+
+class BaseElementMenu(QMenu):
+    def __init__(self, title, parent=None):
+        super().__init__(title, parent)
+        self.ac_copy_elem = self.addAction(self.tr("Copy Element"))
+        self.ac_paste_elem = self.addAction(self.tr("Paste Element"))
+        self.addSeparator()
 
 
 class BaseElementModel(QObject):
