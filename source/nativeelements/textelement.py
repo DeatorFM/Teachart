@@ -321,7 +321,7 @@ class TextEditor(BaseTextElementEditor):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setMouseTracking(True)  # When a hyperlink is under the mouse
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setLineWrapMode(TextEditor.LineWrapMode.FixedPixelWidth)
         self.setLineWrapColumnOrWidth(3)
         self.connect_signals()
@@ -698,7 +698,6 @@ class TextEditor(BaseTextElementEditor):
             if include_color:
                 props["color"] = self.textColor()
 
-        # pprint.pp(props)
         return props
 
     def has_format(self, fmt, default):
@@ -770,35 +769,40 @@ class TextEditorMenu(BaseElementMenu):
                 case "size":
                     self.ui.cb_FontSize.display_size(value)  # QComboBox with point sizes
                 case "bold":
-                    self.ui.pb_Bold.setChecked(value)  # Checkable QPushButton
+                    self.ui.tb_Bold.setChecked(value)  # Checkable QPushButton
                 case "italic":
-                    self.ui.pb_Italic.setChecked(value)  # Checkable QPushButton
+                    self.ui.tb_Italic.setChecked(value)  # Checkable QPushButton
                 case "underlined":
-                    self.ui.pb_Underline.setChecked(value)  # Checkable QPushButton
+                    self.ui.tb_Underline.setChecked(value)  # Checkable QPushButton
                 case "alignment":
                     self.show_alignment(value)
-                # case "color":
-                #     self.set_button_color(self._fontProperties["color"], value)
+                case "color":
+                    self.set_button_color(value)
             self._fontProperties[key] = value
 
-    def set_button_color(self, old: QColor, color: QColor) -> None:
-        self.ui.tb_TextColor.setProperty("color", color)
-        ic_engine = SvgIconEngine(Svg.from_file(":/common/text_color"))
-        ic_engine.set_path_color("lineBottom", color)
-        self.ui.tb_TextColor.setIcon(QIcon(ic_engine))
+    def set_button_color(self, color: QColor) -> None:
+        if color:
+            svg = Svg.from_file(":/common/text_color")
+            ic_engine = SvgIconEngine(svg)
+            if color.isValid():
+                ic_engine.set_path_color("lineBottom", color)
+            else:
+                ic_engine.set_path_color("lineBottom", self.palette().text().color())
+            self.ui.tb_TextColor.setProperty("color", color)
+            self.ui.tb_TextColor.setIcon(QIcon(ic_engine))
 
     def text_color(self) -> QColor:
         return self.ui.tb_TextColor.property("color")
 
     def show_alignment(self, alignment: Qt.AlignmentFlag) -> None:
         if alignment == Qt.AlignmentFlag.AlignLeft:
-            self.ui.pb_AlignLeft.setChecked(True)
+            self.ui.tb_AlignLeft.setChecked(True)
         elif alignment == Qt.AlignmentFlag.AlignCenter:
-            self.ui.pb_AlignCenter.setChecked(True)
+            self.ui.tb_AlignCenter.setChecked(True)
         else:
             self.ui.align_group.setExclusive(False)
-            self.ui.pb_AlignCenter.setChecked(False)
-            self.ui.pb_AlignLeft.setChecked(False)
+            self.ui.tb_AlignCenter.setChecked(False)
+            self.ui.tb_AlignLeft.setChecked(False)
             self.ui.align_group.setExclusive(True)
 
     def on_font_family_set(self) -> None:
@@ -813,37 +817,37 @@ class TextEditorMenu(BaseElementMenu):
 
     def on_font_color_set(self, color: QColor) -> None:
         props = {}
-        self.set_button_color(self._fontProperties["color"], color)
+        self.set_button_color(color)
         props["color"] = color
         self.fontSet.emit(props)
 
     def on_bold_set(self) -> None:
         props = {}
-        props["bold"] = self.ui.pb_Bold.isChecked()
+        props["bold"] = self.ui.tb_Bold.isChecked()
         self.fontSet.emit(props)
 
     def on_italic_set(self) -> None:
         props = {}
-        props["italic"] = self.ui.pb_Italic.isChecked()
+        props["italic"] = self.ui.tb_Italic.isChecked()
         self.fontSet.emit(props)
 
     def on_underlined_set(self) -> None:
         props = {}
-        props["underlined"] = self.ui.pb_Underline.isChecked()
+        props["underlined"] = self.ui.tb_Underline.isChecked()
         self.fontSet.emit(props)
 
     def on_alignment_set(self) -> None:
         props = {}
-        if self.ui.pb_AlignLeft.isChecked():
+        if self.ui.tb_AlignLeft.isChecked():
             props["alignment"] = Qt.AlignmentFlag.AlignLeft
-        elif self.ui.pb_AlignCenter.isChecked():
+        elif self.ui.tb_AlignCenter.isChecked():
             props["alignment"] = Qt.AlignmentFlag.AlignCenter
         self.fontSet.emit(props)
 
     def get_alignment(self) -> Qt.AlignmentFlag | None:
-        if self.ui.pb_AlignLeft.isChecked():
+        if self.ui.tb_AlignLeft.isChecked():
             return Qt.AlignmentFlag.AlignLeft
-        elif self.ui.pb_AlignCenter.isChecked():
+        elif self.ui.tb_AlignCenter.isChecked():
             return Qt.AlignmentFlag.AlignCenter
 
     def enable_table_tools(self, enable: bool) -> None:

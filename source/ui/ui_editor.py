@@ -1,12 +1,5 @@
 from nativeelements.baseelement import BaseElementDefinitions, BaseElementToolset
-from PyQt6.QtCore import (
-    QCoreApplication,
-    QDateTime,
-    QLocale,
-    QMetaObject,
-    QSize,
-    Qt,
-)
+from PyQt6.QtCore import QCoreApplication, QDateTime, QLocale, QMetaObject, QPoint, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
@@ -34,8 +27,9 @@ from PyQt6.QtWidgets import (
 from styling.utils import SvgIcon
 from tcha.consts import CanvasTool, CellAction
 from tcha.error import StandardLogger
+from tcha.presenter import PresenterCanvas
 from tcha.settings import Settings, TimeFormat
-from tcha.table import PresenterCanvas, Table
+from tcha.table import Table
 from tcha.utils import debug_enabled
 from ui.commons import MultiLabelAction, NoteEdit, SearchableComboBox, SwitchAction
 
@@ -922,6 +916,7 @@ class Ui_Editor(object):
         for key in edefinitions:  # noqa: PLC0206
             action = edefinitions[key].action(self.menu_elements)
             self.menu_elements.addAction(action)
+            self.table.menu.menu_element.addAction(action)
 
     def add_toolsets(
         self, window: QMainWindow, edefinitions: dict[str, BaseElementDefinitions]

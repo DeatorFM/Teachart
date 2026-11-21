@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 from styling.utils import SvgIcon
 from ui.commons import SwitchButton
 from ui.StyledWidget import convertColors
-from ui.ui_etoolsets import ColorMenu, FontSizeBox
+from ui.ui_etoolsets import TEXTCOLORS, ColorMenu, FontSizeBox
 
 
 class TextEditorMenuView:
@@ -40,6 +40,7 @@ class TextEditorMenuView:
 
         self.tools_widget = QWidget(agent)
         self.text_tools_layout = QVBoxLayout(self.tools_widget)
+
         self.tools_widget.setLayout(self.text_tools_layout)
 
         self.wac_textTools.setDefaultWidget(self.tools_widget)
@@ -49,12 +50,12 @@ class TextEditorMenuView:
         self.row1.setObjectName("Row1")
 
         self.cb_Font = QFontComboBox(self.tools_widget)
-        # self.cb_Font.setMaximumSize(QSize(120, 25))
+        self.cb_Font.setMaximumSize(QSize(120, 25))
         self.cb_Font.setObjectName("CB_Font")
         self.row1.addWidget(self.cb_Font)
 
         self.cb_FontSize = FontSizeBox(self.tools_widget)
-        self.cb_FontSize.setMinimumSize(QSize(40, 25))
+        self.cb_FontSize.setMinimumWidth(60)
         self.cb_FontSize.setObjectName("CB_FontSize")
         self.cb_FontSize.setContentsMargins(5, 0, 5, 0)
         self.row1.addWidget(self.cb_FontSize)
@@ -66,8 +67,8 @@ class TextEditorMenuView:
         self.row2.setSpacing(2)
         self.row2.setObjectName("Row2")
 
-        spa1 = QSpacerItem(15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.row2.addItem(spa1)
+        # spa1 = QSpacerItem(15, 5, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        # self.row2.addItem(spa1)
 
         self.tb_Bold = QToolButton(self.tools_widget)
         self.tb_Bold.setMaximumSize(QSize(22, 22))
@@ -100,7 +101,7 @@ class TextEditorMenuView:
         self.row2.addWidget(self.tb_Underline)
 
         self.tb_TextColor = QToolButton(agent)
-        self.tb_TextColor.setFixedSize(QSize(22, 22))
+        # self.tb_TextColor.setFixedSize(QSize(22, 22))
         icon5 = SvgIcon(":/common/text_color")
         self.tb_TextColor.setIcon(icon5)
         self.tb_TextColor.setIconSize(QSize(20, 20))
@@ -108,89 +109,7 @@ class TextEditorMenuView:
         self.tb_TextColor.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.tb_TextColor.setProperty("color", QColor())
 
-        textcolors = [
-            "#000000",
-            "#434343",
-            "#666666",
-            "#999999",
-            "#b7b7b7",
-            "#cccccc",
-            "#d9d9d9",
-            "#efefef",
-            "#f3f3f3",
-            "#ffffff",
-            "#980000",
-            "#ff0000",
-            "#ff9900",
-            "#ffff00",
-            "#00ff00",
-            "#00ffff",
-            "#4a86e8",
-            "#0000ff",
-            "#9900ff",
-            "#ff00ff",
-            "#e6b8af",
-            "#f4cccc",
-            "#fce5cd",
-            "#fff2cc",
-            "#d9ead3",
-            "#d0e0e3",
-            "#c9daf8",
-            "#cfe2f3",
-            "#d9d2e9",
-            "#ead1dc",
-            "#dd7e6b",
-            "#ea9999",
-            "#f9cb9c",
-            "#ffe599",
-            "#b6d7a8",
-            "#a2c4c9",
-            "#a4c2f4",
-            "#9fc5e8",
-            "#b4a7d6",
-            "#d5a6bd",
-            "#cc4125",
-            "#e06666",
-            "#f6b26b",
-            "#ffd966",
-            "#93c47d",
-            "#76a5af",
-            "#6d9eeb",
-            "#6fa8dc",
-            "#8e7cc3",
-            "#c27ba0",
-            "#a61c00",
-            "#cc0000",
-            "#e69138",
-            "#f1c232",
-            "#6aa84f",
-            "#45818e",
-            "#3c78d8",
-            "#3d85c6",
-            "#674ea7",
-            "#a64d79",
-            "#85200c",
-            "#990000",
-            "#b45f06",
-            "#bf9000",
-            "#38761d",
-            "#134f5c",
-            "#1155cc",
-            "#0b5394",
-            "#351c75",
-            "#741b47",
-            "#5b0f00",
-            "#660000",
-            "#783f04",
-            "#7f6000",
-            "#274e13",
-            "#0c343d",
-            "#1c4587",
-            "#073763",
-            "#20124d",
-            "#4c1130",
-        ]
-        self.color_menu = ColorMenu(convertColors(textcolors), self.tb_TextColor)
+        self.color_menu = ColorMenu(convertColors(TEXTCOLORS), self.tb_TextColor)
         self.tb_TextColor.setMenu(self.color_menu)
         self.row2.addWidget(self.tb_TextColor)
 
@@ -227,6 +146,7 @@ class TextEditorMenuView:
         self.row2.addWidget(self.tb_AlignCenter)
 
         self.text_tools_layout.addLayout(self.row2)
+        self.text_tools_layout.setAlignment(self.row2, Qt.AlignmentFlag.AlignCenter)
 
         agent.addAction(self.wac_textTools)
 

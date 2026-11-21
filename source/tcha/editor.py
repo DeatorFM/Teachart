@@ -200,8 +200,8 @@ class Editor(BaseMainWindow):
         self.ui.ac_append_column.triggered.connect(self.table.add_column_at_end)
         self.ui.ac_add_row.triggered.connect(self.table.add_row_after_current)
         self.ui.ac_add_column.triggered.connect(self.table.add_column_after_current)
-        self.ui.ac_rmv_row.triggered.connect(lambda: self.table.remove_row())  # Move to model
-        self.ui.ac_rmv_column.triggered.connect(lambda: self.table.remove_column())  # Move to model
+        self.ui.ac_rmv_row.triggered.connect(self.table.remove_current_row)
+        self.ui.ac_rmv_column.triggered.connect(self.table.remove_current_column)
 
         self.ui.cell_group.triggered.connect(self.table.handle_cell_action)
         self.ui.menu_elements.triggered.connect(self.table.handle_element_action)

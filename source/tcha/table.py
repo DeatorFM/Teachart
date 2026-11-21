@@ -1,7 +1,6 @@
 import bisect
 from collections.abc import Iterator
 from itertools import accumulate
-from math import sqrt
 
 from nativeelements.baseelement import (
     BaseElementDefinitions,
@@ -16,14 +15,13 @@ from PyQt6.QtCore import (
     QAbstractItemModel,
     QByteArray,
     QEvent,
+    QItemSelectionModel,
     QMimeData,
     QModelIndex,
     QObject,
     QPersistentModelIndex,
     QPoint,
-    QPointF,
     QRect,
-    QRectF,
     QSize,
     Qt,
     pyqtSignal,
@@ -31,27 +29,18 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QAction,
-    QBrush,
+    QContextMenuEvent,
     QDrag,
     QDropEvent,
     QKeyEvent,
     QMouseEvent,
     QPainter,
-    QPainterPath,
     QPaintEvent,
-    QPen,
-    QPolygonF,
-    QScreen,
     QWheelEvent,
 )
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
-    QDialog,
-    QGraphicsItem,
-    QGraphicsScene,
-    QGraphicsSceneMouseEvent,
-    QGraphicsView,
     QHeaderView,
     QLabel,
     QLineEdit,
@@ -59,15 +48,15 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QSizePolicy,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
-    QToolButton,
-    QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
+from styling.utils import SvgIcon
 from tcha.consts import (
-    CanvasTool,
     CellAction,
     ClipboardContent,
     EditingLevel,
@@ -604,6 +593,10 @@ class BaseTable(QTableView):
 
     # States
 
+    def cell_copied(self) -> bool:
+        mime_data = QApplication.clipboard().mimeData()
+        return mime_data and "application/x-teachart" in mime_data.formats()
+
     def check_clipboard(self) -> None:
         self._on_clipboard_changed()
 
@@ -921,16 +914,21 @@ class BaseTable(QTableView):
 
         super().mouseMoveEvent(event)
 
-    def mousePressEvent(self, e) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         index = self.indexAt(e.pos())
         if e.button() == Qt.MouseButton.LeftButton and self.underMouse():
             self._drag_start_position = e.pos()
             if self.editor:
                 self.close_active_editor()
-                if index.isValid():
-                    self.setCurrentIndex(index)
+                self.setCurrentIndex(index)
+                self.edit(index)
                 e.accept()
                 return
+        elif e.button() == Qt.MouseButton.RightButton:
+            self.setCurrentIndex(index)
+        #     self.selectionModel().select(index, QItemSelectionModel.SelectionFlag.Select)
+        #     e.accept()
+        #     return
         super().mousePressEvent(e)
 
     def dropEvent(self, event: QDropEvent):
@@ -1048,6 +1046,8 @@ class Table(BaseTable):
         self.horizontalScrollBar().valueChanged.connect(self.on_hscrolled)
         self.horizontalScrollBar().rangeChanged.connect(self.on_hslider_range_changed)
 
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+
         # Linked Widgets
 
         self.row_list = QComboBox()
@@ -1068,6 +1068,18 @@ class Table(BaseTable):
         self.verticalHeader().sectionMoved.connect(
             lambda x, y, z: self.frozen_table.verticalHeader().moveSection(y, z)
         )
+
+        self.menu = TableMenu(self)
+        self.menu.ac_copy_cell.triggered.connect(self.copy_current_index)
+        self.menu.ac_paste_cell.triggered.connect(
+            lambda: self.paste_index(QApplication.clipboard().mimeData())
+        )
+        # self.menu.menu_element.triggered.connect(self.handle_element_action)
+        self.menu.ac_insert_row.triggered.connect(self.add_row_after_current)
+        self.menu.ac_insert_column.triggered.connect(self.add_column_after_current)
+        self.menu.ac_remove_row.triggered.connect(self.remove_current_row)
+        self.menu.ac_remove_column.triggered.connect(self.remove_current_column)
+        self.menu.ac_freeze_row.triggered.connect(self.freeze_current_row)
 
     # Model setter / getter
 
@@ -1111,7 +1123,7 @@ class Table(BaseTable):
             super().add_row_after_current()
 
     def _on_rows_about_to_be_removed(self, parent: QModelIndex, first: int, last: int) -> None:
-        if self._view_mode == TableViewMode.SingleRow:
+        if self._view_mode == TableViewMode.SingleRow:  # noqa: SIM102
             if self._exclusive_row >= first and self._exclusive_row <= last:
                 incr = 1 if self._exclusive_row < self.model().rowCount() - 1 else -1
                 self.scroll_by(incr)
@@ -1400,11 +1412,11 @@ class Table(BaseTable):
 
     # Special model editing behaviour
 
-    def remove_row(self, row: int = -1) -> None:
+    def remove_current_row(self) -> None:
         """Removes specified row or if not current row"""
-        rmv_row = row if row > -1 else self.currentIndex().row()
         model: TableModel = self.model()
-        if self.editor and model.rowCount() > 1:
+        if self.currentIndex().isValid():
+            rmv_row = self.currentIndex().row()
             if any(model.get_row(rmv_row)):
                 result = QMessageBox.question(
                     None,
@@ -1415,32 +1427,32 @@ class Table(BaseTable):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if result == QMessageBox.StandardButton.Yes:
-                    self.setCurrentIndex(QModelIndex())
+                    self.close_active_editor()
                     model.removeRow(rmv_row)
 
             else:
-                self.setCurrentIndex(QModelIndex())
+                self.close_active_editor()
                 model.removeRow(rmv_row)
 
-    def remove_column(self, column: int = -1) -> None:
+    def remove_current_column(self) -> None:
         """Removes column from model and clears clipboard if index with same column was copied"""
-        rmv_col = column if column > -1 else self.currentIndex().column()
         model: TableModel = self.model()
-        if self.editor and self.model().columnCount() > 1:
+        if self.currentIndex().isValid():
+            rmv_col = self.currentIndex().column()
             if any(model.get_column(rmv_col)):
                 result = QMessageBox.question(
                     None,
-                    tr("Confirm removal"),
-                    tr(
+                    self.tr("Confirm removal"),
+                    self.tr(
                         "This column has content. Are you sure you want to permanently remove this column?"
                     ),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if result == QMessageBox.StandardButton.Yes:
-                    self.setCurrentIndex(QModelIndex())
+                    self.close_active_editor()
                     model.removeColumn(rmv_col)
             else:
-                self.setCurrentIndex(QModelIndex())
+                self.close_active_editor()
                 model.removeColumn(rmv_col)
 
     def keyPressEvent(self, e: QKeyEvent):
@@ -1476,39 +1488,18 @@ class Table(BaseTable):
         self.frozen_table.close_active_editor()
         super().dropEvent(event)
 
-    def show_context_menu(self, position):
-        # NOT FUNCTIONAL ATM
-        index = self.indexAt(position)
-        if not index.isValid():
-            return
-
-        menu = QMenu(self)
-
-        add_row_above_action = QAction("Add Row Above", self)
-        add_row_above_action.triggered.connect(lambda: self.add_row(index.row()))
-        menu.addAction(add_row_above_action)
-
-        add_row_below_action = QAction("Add Row Below", self)
-        add_row_below_action.triggered.connect(lambda: self.add_row(index.row() + 1))
-        menu.addAction(add_row_below_action)
-
-        add_column_left_action = QAction("Add Column Left", self)
-        add_column_left_action.triggered.connect(lambda: self.add_column(index.column()))
-        menu.addAction(add_column_left_action)
-
-        add_column_right_action = QAction("Add Column Right", self)
-        add_column_right_action.triggered.connect(lambda: self.add_column(index.column() + 1))
-        menu.addAction(add_column_right_action)
-
-        remove_row_action = QAction("Remove Row", self)
-        remove_row_action.triggered.connect(lambda: self.remove_row(index.row()))
-        menu.addAction(remove_row_action)
-
-        remove_column_action = QAction("Remove Column", self)
-        remove_column_action.triggered.connect(lambda: self.remove_column(index.column()))
-        menu.addAction(remove_column_action)
-
-        menu.exec(self.viewport().mapToGlobal(position))
+    def contextMenuEvent(self, ev: QContextMenuEvent):
+        index = self.indexAt(ev.pos())
+        print(f"Context menu opened at index: {index.row()}|{index.column()}")
+        if index.isValid():
+            self.setCurrentIndex(index)
+            self.menu.open_(
+                ev.globalPos(),
+                self.cell_copied(),
+                self.has_frozen_row() and index.row() == self.frozen_table.frozen_row,
+            )
+            self.close_active_editor()
+        return super().contextMenuEvent(ev)
 
 
 class FrozenRowTable(BaseTable):
@@ -1529,6 +1520,8 @@ class FrozenRowTable(BaseTable):
             lambda x, y, z: self._table.horizontalHeader().moveSection(y, z)
         )
         self.verticalHeader().sectionMoved.disconnect()
+
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
 
     def model(self) -> TableModel | None:
         return super().model()
@@ -1654,248 +1647,46 @@ class FrozenRowTable(BaseTable):
             self._table.wheelEvent(ev)
         return super().wheelEvent(ev)
 
-
-class ArrowPath(QPainterPath):
-    def __init__(self, p1: QPointF, p2: QPointF, pen: QPen = QPen()):
-        super().__init__()
-        self.pen = pen
-        self.pen.setWidthF(1.0)
-        self.brush = QBrush(Qt.BrushStyle.SolidPattern)
-        self.brush.setColor(self.pen.color())
-        self.mode = QPainter.CompositionMode.CompositionMode_SourceOver
-
-        # Sorry I'm bad at maths so I made an AI write the vector calculations for me
-
-        # Draw line from p1 to p2
-        self.moveTo(p1)
-        self.lineTo(p2)
-
-        # Calculate direction vector from p1 to p2
-        dx = p2.x() - p1.x()
-        dy = p2.y() - p1.y()
-        length = sqrt(dx**2 + dy**2)
-
-        # If points are the same, just return (no arrow to draw)
-        if length == 0:
-            return
-
-        # Normalize direction vector
-        dx_norm = dx / length
-        dy_norm = dy / length
-
-        # Arrow head height (0.25 of the line length)
-        arrow_height = length * 0.25
-
-        # For equilateral triangle: side = 2 * height / sqrt(3)
-        side_length = 2 * arrow_height / sqrt(3)
-
-        # Calculate base center point (0.25 length back from p2)
-        base_x = p2.x() - arrow_height * dx_norm
-        base_y = p2.y() - arrow_height * dy_norm
-
-        # Perpendicular vector (rotated 90 degrees counter-clockwise)
-        perp_x = -dy_norm
-        perp_y = dx_norm
-
-        # Two base points of the triangle (half side length on each side)
-        half_side = side_length / 2
-        a1 = QPointF(base_x + half_side * perp_x, base_y + half_side * perp_y)
-        a2 = QPointF(base_x - half_side * perp_x, base_y - half_side * perp_y)
-
-        # Create equilateral triangle with p2 as the apex
-        head = QPolygonF()
-        head.append(p2)
-        head.append(a1)
-        head.append(a2)
-        head.append(p2)
-
-        self.addPolygon(head)
+    def contextMenuEvent(self, ev: QContextMenuEvent):
+        index = self.indexAt(ev.pos())
+        if index.isValid():
+            self.setCurrentIndex(index)
+            self._table.menu.open_(
+                ev.globalPos(),
+                self._table.cell_copied(),
+                index.row() == self.frozen_row,
+            )
+            self._table.close_active_editor()
+        return super().contextMenuEvent(ev)
 
 
-class FormattedLine(QPolygonF):
-    def __init__(self):
-        super().__init__()
-        self.pen = QPen()
-        self.mode = QPainter.CompositionMode.CompositionMode_SourceOver
-
-    def contains(self, value: QPointF):
-        return self.containsPoint(value, Qt.FillRule.OddEvenFill)
-
-
-class PointerPen(QPen):
-    def __init__(self):
-        super().__init__()
-        self.setWidthF(2.0)
-        self.setColor(Qt.GlobalColor.red)
-
-
-class CanvasScene(QGraphicsScene):
-    def __init__(self):
-        super().__init__()
-        self._lines: list[FormattedLine | ArrowPath] = []
-
-        self.pen = QPen()
-        self.pen.setWidthF(3.0)
-        self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        self.tool = CanvasTool.Pointer
-
-        self._start = QPointF(0.0, 0.0)
-        self._end = QPointF(0.0, 0.0)
-        self._current_pos = QPointF(0.0, 0.0)
-
-        self._painting = False
-
-    @property
-    def lines(self) -> list[QPolygonF]:
-        return self._lines
-
-    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
-        # self._current_pos == event.scenePos()
-
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            if self._painting:
-                pointf = event.scenePos()
-
-                if self.tool == CanvasTool.Pen and self._lines:
-                    self._lines[-1].append(pointf)
-                    self.update()
-                elif self.tool == CanvasTool.Rubber:
-                    for i, line in enumerate(self._lines):
-                        if line.contains(pointf):
-                            del self._lines[i]
-                            break
-
-                    self.update()
-
-        event.accept()
-
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            self._painting = bool(self.items())
-            if self.tool == CanvasTool.Pen:
-                new_line = FormattedLine()
-                new_line.pen = QPen(self.pen)
-                self._lines.append(new_line)
-                pointf = event.scenePos()
-                new_line.append(pointf)
-            elif self.tool == CanvasTool.Arrow:
-                self._start = event.scenePos()
-
-        event.accept()
-
-    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
-        self._painting = False
-        self._eraser_path = None
-        if self._start != event.scenePos():
-            self._end = event.scenePos()
-            if self.tool == CanvasTool.Arrow:
-                path = ArrowPath(self._start, self._end, QPen(self.pen))
-                self._lines.append(path)
-                self.update()
-        event.accept()
-
-    def drawForeground(self, painter: QPainter, rect: QRectF):
-        for line in self._lines:
-            painter.setPen(line.pen)
-            painter.setCompositionMode(line.mode)
-            if isinstance(line, QPolygonF):
-                painter.drawPolyline(line)
-                continue
-            painter.setBrush(line.brush)
-            painter.drawPath(line)
-
-        if self.tool == CanvasTool.Pointer:
-            painter.setPen(PointerPen())
-            painter.drawEllipse(self._current_pos, 2.0, 2.0)
-
-
-class PresenterCanvas(QGraphicsView):
-    def __init__(self, parent: QWidget | None = None):
+class TableMenu(QMenu):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        scene = CanvasScene()
-        self.setScene(scene)
+        # self.ac_cut_cell = self.addAction(self.tr("Cut Cell"))
+        self.ac_copy_cell = self.addAction(SvgIcon(":/common/copy"), self.tr("Copy Cell"))
+        self.ac_paste_cell = self.addAction(SvgIcon(":/common/paste"), self.tr("Paste Cell"))
+        self.ac_paste_cell.setEnabled(False)
+        self.addSeparator()
+        self.menu_element = self.addMenu(self.tr("Add to cell"))
+        self.addSeparator()
+        self.ac_insert_row = self.addAction(
+            SvgIcon(":/common/add_row"), self.tr("Insert row below")
+        )
+        self.ac_insert_column = self.addAction(
+            SvgIcon(":/common/add_column"), self.tr("Insert column right")
+        )
+        self.ac_remove_row = self.addAction(SvgIcon(":/common/remove_row"), self.tr("Remove row"))
+        self.ac_remove_column = self.addAction(
+            SvgIcon(":/common/remove_column"), self.tr("Remove column")
+        )
+        self.addSeparator()
+        self.ac_freeze_row = self.addAction(self.tr("Freeze selected row"))
 
-        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
-        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, True)
-        self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
-        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-
-    def change_item(self, item: QGraphicsItem):
-
-        self.scene().lines.clear()
-        self.scene().clear()
-        self.scene().addItem(item)
-        StandardLogger.debug(f"Changed current item to {item}", extra={"sender": "PRESENTERCANVAS"})
-
-        self.rescale()
-
-    def clear(self) -> None:
-        self.scene().clear()
-
-    def rescale(self) -> None:
-        for item in self.scene().items():
-            self.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
-
-    def set_color(self, button: QToolButton) -> None:
-        color: Qt.GlobalColor = button.property("color")
-        self.scene().pen.setColor(color)
-
-    def set_tool(self, button: QToolButton) -> None:
-        tool: CanvasTool = button.property("tool")
-        self.scene().tool = tool
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.rescale()
-
-
-class PresenterView(QDialog):
-    def __init__(self, scene: QGraphicsScene, editor: "Editor", parent=None):
-        super().__init__(parent, Qt.WindowType.Dialog)
-        lo = QVBoxLayout(self)
-        self._view = QGraphicsView(scene)
-        self._my_editor = editor
-        self.setWindowTitle(tr("Presentation View - Teachart"))
-        lo.addWidget(self._view)
-        self.setLayout(lo)
-        self.rescale()
-
-        self._view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        self._view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        self._view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-        self._view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
-        self._view.setInteractive(False)
-
-        self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        scene.changed.connect(self.rescale)
-
-    @property
-    def scene(self) -> QGraphicsScene:
-        return self.view.scene()
-
-    @property
-    def editor(self) -> "Editor":
-        return self._my_editor
-
-    @property
-    def view(self) -> QGraphicsView:
-        return self._view
-
-    def rescale(self) -> None:
-        for item in self.scene.items():
-            self.view.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
-
-    def set_current_editor(self, editor: "Editor") -> None:
-        self.my_editor = editor
-
-    def showFullScreen(self):
-        editor_screen: QScreen = self._my_editor.windowHandle().screen()
-        other_screens = [s for s in editor_screen.virtualSiblings() if s != editor_screen]
-        if other_screens:
-            target_screen = other_screens[0]
-            self.setGeometry(target_screen.geometry())
-            super().showFullScreen()
-            self.rescale()
+    def open_(self, globalPos: QPoint, valid_clipboard: bool, index_is_frozen: bool) -> None:
+        self.ac_paste_cell.setEnabled(valid_clipboard)
+        if index_is_frozen:
+            self.ac_freeze_row.setText(self.tr("Unfreeze selected row"))
+        else:
+            self.ac_freeze_row.setText(self.tr("Freeze selected row"))
+        self.exec(globalPos)

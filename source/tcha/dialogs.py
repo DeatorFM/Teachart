@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import QMainWindow, QWidget
 from tcha.dbmanager import DbManager
 from tcha.editor import Editor
 from tcha.error import StandardLogger
+from tcha.presenter import PresenterView
 from tcha.settings import SettingsDialog
 from tcha.start import AboutDialog, StartWindow
-from tcha.table import PresenterView
 
 
 class DialogContainer(dict):
