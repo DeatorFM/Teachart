@@ -916,7 +916,7 @@ class Ui_Editor(object):
         for key in edefinitions:  # noqa: PLC0206
             action = edefinitions[key].action(self.menu_elements)
             self.menu_elements.addAction(action)
-            self.table.menu.menu_element.addAction(action)
+            self.table.menu.menu_elements.addAction(action)
 
     def add_toolsets(
         self, window: QMainWindow, edefinitions: dict[str, BaseElementDefinitions]
